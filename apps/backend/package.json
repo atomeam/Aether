@@ -13,6 +13,7 @@
     "@aether/curator": "*",
     "@aether/env": "^1.0.0",
     "@google/genai": "^1.29.0",
+    "@vercel/speed-insights": "^1.1.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "vite": "^6.2.3",
