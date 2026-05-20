@@ -191,6 +191,78 @@ export default {
         return json({ ok: true, hash, collision });
       }
       
+      // POST /proposals - write proposal to STATE KV
+      if (path === '/proposals' && method === 'POST') {
+        try {
+          const body = await request.json() as { proposal?: unknown; proposals?: unknown[] };
+          
+          if (!env.STATE) {
+            return json({ ok: false, error: 'STATE binding missing' }, 500);
+          }
+          
+          const now = new Date().toISOString();
+          let proposals = [] as unknown[];
+          
+          // Get existing
+          try {
+            const raw = await env.STATE.get('proposals:snapshot');
+            const parsed = raw ? JSON.parse(raw) : null;
+            proposals = (parsed?.proposals || parsed) || [];
+          } catch { /* ignore */ }
+          
+          // Add new proposal(s)
+          if (body.proposal) {
+            proposals.push(body.proposal);
+          } else if (body.proposals) {
+            proposals.push(...body.proposals);
+          }
+          
+          // Save back
+          const snapshot = { updatedAt: now, proposals };
+          await env.STATE.put('proposals:snapshot', JSON.stringify(snapshot));
+          
+          return json({ ok: true, count: proposals.length });
+        } catch (e) {
+          return json({ ok: false, error: e instanceof Error ? e.message : 'Write failed' }, 500);
+        }
+      }
+      
+      // POST /lessons - write lesson to STATE_CACHE KV
+      if (path === '/lessons' && method === 'POST') {
+        try {
+          const body = await request.json() as { lesson?: unknown; lessons?: unknown[] };
+          
+          if (!env.STATE_CACHE) {
+            return json({ ok: false, error: 'STATE_CACHE binding missing' }, 500);
+          }
+          
+          const now = new Date().toISOString();
+          let lessons = [] as unknown[];
+          
+          // Get existing
+          try {
+            const raw = await env.STATE_CACHE.get('lessons:index');
+            const parsed = raw ? JSON.parse(raw) : null;
+            lessons = (parsed?.lessons || parsed) || [];
+          } catch { /* ignore */ }
+          
+          // Add new lesson(s)
+          if (body.lesson) {
+            lessons.push(body.lesson);
+          } else if (body.lessons) {
+            lessons.push(...body.lessons);
+          }
+          
+          // Save back
+          const index = { updatedAt: now, lessons };
+          await env.STATE_CACHE.put('lessons:index', JSON.stringify(index));
+          
+          return json({ ok: true, count: lessons.length });
+        } catch (e) {
+          return json({ ok: false, error: e instanceof Error ? e.message : 'Write failed' }, 500);
+        }
+      }
+      
       // Legacy API: /api/stack
       if (path === '/api/stack') {
         return json({
