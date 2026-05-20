@@ -1,0 +1,43 @@
+name: proposals-writer
+
+on:
+  workflow_dispatch: {}        # manual trigger
+  schedule:
+    - cron: "*/10 * * * *"    # every 10 minutes
+
+concurrency:
+  group: proposals-writer
+  cancel-in-progress: false
+
+jobs:
+  write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build --workspaces --if-present
+
+      - name: Run ProposalsWatcher one cycle
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_KV_STATE_ID: ${{ secrets.CF_KV_STATE_ID }}
+          CF_KV_STATE_CACHE_ID: ${{ secrets.CF_KV_STATE_CACHE_ID }}
+        run: node packages/chaos/dist/proposals-watcher.js --once
+
+      - name: Verify writer output
+        run: |
+          curl -sS "https://aether.atomicmoonbeam88.workers.dev/crew/status" \
+            | jq -e '.proposals.items[0].source == "backend-proposals-watcher"' \
+            && echo "✅ proposals writer confirmed" \
+            || (echo "❌ source marker not flipped"; exit 1)
