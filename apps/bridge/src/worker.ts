@@ -1,14 +1,29 @@
 /**
  * Cloudflare Worker Entry Point
  * 
- * Aether Bridge - Provides:
+ * Aether Bridge v0.2.0 - Provides:
  * - /health - Bridge status and bindings
  * - /proposals - Proposal queue
- * - /lessons - Lesson learnd
+ * - /lessons - Lesson learned
+ * - /crew/status - Summary with all bindings
  * - /api/* - Legacy API compatibility
  */
 
 import { default as app } from './server';
+
+// Shared constants
+const VERSION = '0.2.0';
+const SERVICE = 'aether-bridge';
+
+// Shared helper - returns binding status
+function getBindings(env: Env) {
+  return {
+    DB: !!env.DB,
+    STATE: !!env.STATE,
+    STATE_CACHE: !!env.STATE_CACHE,
+    MYBROWSER: !!env.MYBROWSER,
+  };
+}
 
 // Cloudflare Workers export
 export default {
@@ -30,20 +45,69 @@ export default {
       const path = url.pathname;
       const method = request.method;
       
-      // Health check - returns v0.2 contract
+      // Use shared helper for /health
       if (path === '/health') {
-        const bindings = {
-          DB: !!env.DB,
-          STATE: !!env.STATE,
-          STATE_CACHE: !!env.STATE_CACHE,
-          MYBROWSER: !!env.MYBROWSER,
-        };
         return new Response(JSON.stringify({
           ok: true,
-          service: 'aether-bridge',
-          version: '0.2.0',
+          service: SERVICE,
+          version: VERSION,
+          ts: new Date().toISOString(),
+          bindings: getBindings(env),
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Crew status summary
+      if (path === '/crew/status' || path === '/crew') {
+        const bindings = getBindings(env);
+        const bindingsMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE || !bindings.MYBROWSER;
+        
+        let proposals = { count: 0, updatedAt: null, items: [] as unknown[] };
+        let lessons = { count: 0, updatedAt: null, items: [] as unknown[] };
+        
+        if (env.STATE) {
+          try {
+            const raw = await env.STATE.get('proposals:snapshot');
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (Array.isArray(parsed)) {
+              proposals.items = parsed;
+            } else if (parsed && Array.isArray(parsed.proposals)) {
+              proposals.items = parsed.proposals;
+              proposals.updatedAt = parsed.updatedAt ?? null;
+            }
+            proposals.count = proposals.items.length;
+            proposals.updatedAt = proposals.updatedAt || (proposals.count > 0 ? new Date().toISOString() : null);
+          } catch { /* ignore */ }
+        }
+        
+        if (env.STATE_CACHE) {
+          try {
+            const raw = await env.STATE_CACHE.get('lessons:index');
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (Array.isArray(parsed)) {
+              lessons.items = parsed;
+            } else if (parsed && Array.isArray(parsed.lessons)) {
+              lessons.items = parsed.lessons;
+              lessons.updatedAt = parsed.updatedAt ?? null;
+            }
+            lessons.count = lessons.items.length;
+            lessons.updatedAt = lessons.updatedAt || (lessons.count > 0 ? new Date().toISOString() : null);
+          } catch { /* ignore */ }
+        }
+        
+        return new Response(JSON.stringify({
+          ok: true,
+          service: SERVICE,
+          version: VERSION,
           ts: new Date().toISOString(),
           bindings,
+          bindingsMissing,
+          proposals,
+          lessons,
         }), {
           headers: { 
             'Content-Type': 'application/json',
