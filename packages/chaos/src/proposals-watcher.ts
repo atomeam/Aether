@@ -35,6 +35,68 @@ const PROPOSALS_DB_ID = process.env.PROPOSALS_DB_ID || process.env.ALPHA_PROPOSA
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '5000');
 const USE_MOCK = process.env.USE_MOCK === 'true';
 
+// Cloudflare KV config
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+const CF_API_TOKEN = process.env.CF_API_TOKEN;
+const CF_KV_STATE_ID = process.env.CF_KV_STATE_ID || '7319ee9195df4ccf8f4b2c8449dd7930';
+const CF_KV_STATE_CACHE_ID = process.env.CF_KV_STATE_CACHE_ID || 'd22e703c3af9451a9942fa2a551a1aa8';
+
+// Write to Cloudflare KV
+async function writeToKV(namespaceId: string, key: string, value: unknown): Promise<boolean> {
+  if (!CF_ACCOUNT_ID || !CF_API_TOKEN) {
+    console.log(`[KV] Skipping write - CF credentials not set`);
+    return false;
+  }
+  
+  try {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(key)}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${CF_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(value),
+    });
+    
+    if (!response.ok) {
+      console.log(`[KV] Write failed: ${response.status}`);
+      return false;
+    }
+    
+    console.log(`[KV] Wrote ${key} to namespace ${namespaceId}`);
+    return true;
+  } catch (e) {
+    console.log(`[KV] Write error: ${e}`);
+    return false;
+  }
+}
+
+// Write proposals snapshot to KV
+async function pushProposalsSnapshot(proposals: Proposal[]): Promise<boolean> {
+  const snapshot = {
+    updatedAt: new Date().toISOString(),
+    proposals: proposals.map(p => ({
+      id: p.id,
+      title: p.title,
+      stage: p.status,
+      source: 'backend-proposals-watcher',
+    })),
+  };
+  
+  return writeToKV(CF_KV_STATE_ID, 'proposals:snapshot', JSON.stringify(snapshot));
+}
+
+// Write lessons index to KV (mock for now - would come from Lessons system)
+async function pushLessonsIndex(lessons: unknown[]): Promise<boolean> {
+  const index = {
+    updatedAt: new Date().toISOString(),
+    lessons,
+  };
+  
+  return writeToKV(CF_KV_STATE_CACHE_ID, 'lessons:index', JSON.stringify(index));
+}
+
 // Local fallback path
 const PROPOSALS_LOG = './logs/proposals.jsonl';
 
@@ -99,8 +161,18 @@ async function dispatch(proposal: Proposal): Promise<void> {
   console.log(`  Title: ${proposal.title}`);
   console.log(`  Status: ${proposal.status}`);
   
-  // In production, hand off to dispatcher.ts
-  // For now, log the dispatch
+  // Write proposal to Cloudflare KV
+  const snapshot = {
+    updatedAt: new Date().toISOString(),
+    proposals: [{
+      id: proposal.id,
+      title: proposal.title,
+      stage: proposal.status,
+      source: 'backend-proposals-watcher',
+    }],
+  };
+  
+  await writeToKV(CF_KV_STATE_ID, 'proposals:snapshot', JSON.stringify(snapshot));
 }
 
 async function poll(): Promise<void> {
