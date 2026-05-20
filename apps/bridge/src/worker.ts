@@ -50,25 +50,21 @@ export default {
         });
       }
       
-      // Proposals endpoint
-      if (path === '/proposals') {
-        // Try to fetch from KV if bound
-        if (env.STATE) {
-          try {
-            const value = await env.STATE.get('proposals');
-            const proposals = value ? JSON.parse(value) : [];
-            return new Response(JSON.stringify(proposals), {
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
-          } catch {
-            // Fall through to empty array
-          }
-        }
-        // Return empty if no KV or error
-        return new Response(JSON.stringify([]), {
+      // Health check - returns v0.2 contract
+      if (path === '/health') {
+        const bindings = {
+          DB: !!env.DB,
+          STATE: !!env.STATE,
+          STATE_CACHE: !!env.STATE_CACHE,
+          MYBROWSER: !!env.MYBROWSER,
+        };
+        return new Response(JSON.stringify({
+          ok: true,
+          service: 'aether-bridge',
+          version: '0.2.0',
+          ts: new Date().toISOString(),
+          bindings,
+        }), {
           headers: { 
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
@@ -76,25 +72,82 @@ export default {
         });
       }
       
-      // Lessons endpoint
-      if (path === '/lessons') {
-        // Try to fetch from KV if bound
+      // Proposals endpoint - v0.2 contract
+      if (path === '/proposals') {
+        let proposals: unknown[] = [];
+        let updatedAt: string | null = null;
+        
         if (env.STATE) {
           try {
-            const value = await env.STATE.get('lessons');
-            const lessons = value ? JSON.parse(value) : [];
-            return new Response(JSON.stringify(lessons), {
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            const value = await env.STATE.get('proposals:snapshot');
+            proposals = value ? JSON.parse(value) : [];
+            updatedAt = proposals.length > 0 ? new Date().toISOString() : null;
           } catch {
-            // Fall through to empty array
+            // Fall through
           }
         }
-        // Return empty if no KV or error
-        return new Response(JSON.stringify([]), {
+        
+        return new Response(JSON.stringify({
+          ok: true,
+          proposals,
+          updatedAt,
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Lessons endpoint - v0.2 contract
+      if (path === '/lessons') {
+        let lessons: unknown[] = [];
+        let updatedAt: string | null = null;
+        
+        if (env.STATE_CACHE) {
+          try {
+            const value = await env.STATE_CACHE.get('lessons:index');
+            lessons = value ? JSON.parse(value) : [];
+            updatedAt = lessons.length > 0 ? new Date().toISOString() : null;
+          } catch {
+            // Fall through
+          }
+        }
+        
+        return new Response(JSON.stringify({
+          ok: true,
+          lessons,
+          updatedAt,
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Lessons check - detect hash collisions
+      if (path === '/lessons/check' && method === 'POST') {
+        let collision: unknown | null = null;
+        
+        try {
+          const { hash } = await request.json() as { hash: string };
+          
+          if (env.STATE_CACHE) {
+            const existing = await env.STATE_CACHE.get(`lessons:hash:${hash}`);
+            if (existing) {
+              collision = JSON.parse(existing);
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+        
+        return new Response(JSON.stringify({
+          ok: true,
+          hash: '',
+          collision,
+        }), {
           headers: { 
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'

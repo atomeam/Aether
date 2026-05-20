@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Users, 
   Activity, 
@@ -17,25 +17,63 @@ import {
   Brain,
   Zap,
   Gauge,
-  Server
+  Server,
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 
 import { cn } from '../lib/utils';
 
-// Bridge API URL - can be overridden via env
-const BRIDGE_URL = import.meta.env.VITE_BRIDGE_URL || 'http://localhost:8787';
+// Bridge API URL - live worker is default, localhost override
+const BRIDGE_URL = import.meta.env.VITE_BRIDGE_URL || 'https://aether.atomicmoonbeam88.workers.dev';
 
-// Actor registry - the crew members
-const CREW_ACTORS: Actor[] = [
-  { id: 'atom-bomb', name: 'Atom Bomb', role: 'Orchestrator', status: 'active', lastSeen: new Date().toISOString(), capabilities: ['Review', 'Approve', 'Reject'] },
-  { id: 'notion', name: 'Notion', role: 'Source of Truth', status: 'active', lastSeen: new Date().toISOString(), capabilities: ['Wiki', 'Artifacts', 'Drift Detection'] },
-  { id: 'openhands', name: 'OpenHands', role: 'Agent Executor', status: 'active', lastSeen: new Date().toISOString(), capabilities: ['Code', 'Artifact Apply', 'PR Open'] },
-  { id: 'cloudflare-worker', name: 'Cloudflare Worker', role: 'Runtime Bridge', status: 'active', lastSeen: new Date().toISOString(), capabilities: ['/health', '/proposals', '/lessons'] },
-  { id: 'backend', name: 'Aether Backend', role: 'API Server', status: 'active', lastSeen: new Date().toISOString(), capabilities: ['/api/build', '/api/stack'] },
-  { id: 'frontend', name: 'Aether Frontend', role: 'UI', status: 'active', lastSeen: new Date().toISOString(), capabilities: ['#/crew', '/', '/api/agents'] },
-  { id: 'curator', name: 'Curator', role: 'Security Gate', status: 'idle', lastSeen: new Date().toISOString(), capabilities: ['Allow-list', 'Rate Limit', '422 on denial'] },
-  { id: 'proposals', name: 'Proposals', role: 'Queue', status: 'idle', lastSeen: new Date().toISOString(), capabilities: ['Enqueue', 'Dequeue', 'Prioritize'] },
-  { id: 'lessons', name: 'Lessons', role: 'Memory', status: 'idle', lastSeen: new Date().toISOString(), capabilities: ['Log', 'Query', 'Index'] },
+// Explicit Bridge UI state machine
+type BridgeUiState = 'checking' | 'bridge-offline' | 'bindings-missing' | 'data-empty' | 'operational';
+
+// Normalize bindings to uppercase shape
+function normalizeBindings(bindings: Record<string, boolean>): Record<string, boolean> {
+  return {
+    DB: !!bindings.DB || !!bindings.db || !!bindings.DB,
+    STATE: !!bindings.STATE || !!bindings.state,
+    STATE_CACHE: !!bindings.STATE_CACHE || !!bindings.state_cache,
+    MYBROWSER: !!bindings.MYBROWSER || !!bindings.mybrowser,
+  };
+}
+
+// Actor status derived from runtime calls
+type ActorStatus = 'online' | 'waiting' | 'error' | 'offline';
+
+// Computed actor status based on bridge health
+function computeActorStatus(bridgeState: BridgeUiState, actorId: string): ActorStatus {
+  if (bridgeState === 'bridge-offline') {
+    if (actorId === 'Cloudflare Worker') return 'offline';
+    if (actorId === 'Proposals') return 'offline';
+    if (actorId === 'Lessons') return 'offline';
+  }
+  if (bridgeState === 'bindings-missing') {
+    if (actorId === 'Cloudflare Worker') return 'error';
+  }
+  if (bridgeState === 'data-empty') {
+    if (actorId === 'Proposals') return 'waiting';
+    if (actorId === 'Lessons') return 'waiting';
+  }
+  if (bridgeState === 'operational') {
+    return 'online';
+  }
+  return 'waiting';
+}
+
+// Actor registry - the crew members (status derived from runtime)
+const BASE_ACTORS: { id: string; name: string; role: string; capabilities: string[] }[] = [
+  { id: 'atom-bomb', name: 'Atom Bomb', role: 'Orchestrator', capabilities: ['Review', 'Approve', 'Reject'] },
+  { id: 'notion', name: 'Notion', role: 'Source of Truth', capabilities: ['Wiki', 'Artifacts', 'Drift Detection'] },
+  { id: 'openhands', name: 'OpenHands', role: 'Agent Executor', capabilities: ['Code', 'Artifact Apply', 'PR Open'] },
+  { id: 'cloudflare-worker', name: 'Cloudflare Worker', role: 'Runtime Bridge', capabilities: ['/health', '/proposals', '/lessons'] },
+  { id: 'backend', name: 'Aether Backend', role: 'API Server', capabilities: ['/api/build', '/api/stack'] },
+  { id: 'frontend', name: 'Aether Frontend', role: 'UI', capabilities: ['#/crew', '/', '/api/agents'] },
+  { id: 'curator', name: 'Curator', role: 'Security Gate', capabilities: ['Allow-list', 'Rate Limit', '422 on denial'] },
+  { id: 'proposals', name: 'Proposals', role: 'Queue', capabilities: ['Enqueue', 'Dequeue', 'Prioritize'] },
+  { id: 'lessons', name: 'Lessons', role: 'Memory', capabilities: ['Log', 'Query', 'Index'] },
 ];
 
 // Next action registry - what each actor should do next
@@ -53,15 +91,11 @@ const CREW_ACTIONS: NextAction[] = [
 
 // Types for Bridge API responses
 interface BridgeHealth {
-  status: string;
-  worker: string;
-  timestamp: string;
-  bindings: {
-    db: boolean;
-    state: boolean;
-    state_cache: boolean;
-    mybrowser: boolean;
-  };
+  ok: boolean;
+  service: string;
+  version: string;
+  ts: string;
+  bindings: Record<string, boolean>;
 }
 
 interface Proposal {
@@ -85,7 +119,7 @@ interface Actor {
   id: string;
   name: string;
   role: string;
-  status: 'active' | 'idle' | 'error' | 'offline';
+  status: ActorStatus;
   lastSeen: string;
   capabilities?: string[];
 }
@@ -305,7 +339,15 @@ export default function CrewPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setBridgeHealth(data);
+        // Support both old { status, worker, timestamp, bindings } and new { ok, service, version, ts, bindings } shapes
+        const normalized = {
+          ok: data.ok ?? data.status === 'ok',
+          service: data.service || data.worker || 'aether-bridge',
+          version: data.version || 'unknown',
+          ts: data.ts || data.timestamp || new Date().toISOString(),
+          bindings: data.bindings || {},
+        };
+        setBridgeHealth(normalized);
         setBridgeError(null);
       } else {
         setBridgeError(`HTTP ${res.status}`);
@@ -324,7 +366,9 @@ export default function CrewPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setProposals(Array.isArray(data) ? data : []);
+        // Support both old array and new { proposals: [] } shape
+        const arr = Array.isArray(data) ? data : (data?.proposals || []);
+        setProposals(Array.isArray(arr) ? arr : []);
       }
     } catch {
       setProposals([]);
@@ -340,7 +384,9 @@ export default function CrewPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setLessons(Array.isArray(data) ? data : []);
+        // Support both old array and new { lessons: [] } shape
+        const arr = Array.isArray(data) ? data : (data?.lessons || []);
+        setLessons(Array.isArray(arr) ? arr : []);
       }
     } catch {
       setLessons([]);
@@ -364,8 +410,28 @@ export default function CrewPage() {
     return () => clearInterval(interval);
   }, [fetchBridgeHealth, fetchProposals, fetchLessons]);
 
-  // Check if bridge is up
-  const bridgeUp = bridgeHealth && !bridgeError;
+  // Compute bridge UI state from health response
+  const bridgeUiState = useMemo((): BridgeUiState => {
+    if (bridgeError || loading) return 'checking';
+    
+    const bindings = bridgeHealth?.bindings ? normalizeBindings(bridgeHealth.bindings) : {};
+    const hasMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE;
+    
+    if (hasMissing) return 'bindings-missing';
+    if (proposals.length === 0 && lessons.length === 0) return 'data-empty';
+    if (proposals.length > 0 || lessons.length > 0) return 'operational';
+    
+    return 'data-empty';
+  }, [bridgeHealth, bridgeError, loading, proposals.length, lessons.length]);
+
+  // Compute actor status from bridge state
+  const actorsWithStatus = useMemo(() => {
+    return BASE_ACTORS.map(actor => ({
+      ...actor,
+      status: computeActorStatus(bridgeUiState, actor.name) as ActorStatus,
+      lastSeen: new Date().toISOString(),
+    }));
+  }, [bridgeUiState]);
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8">
@@ -382,9 +448,17 @@ export default function CrewPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Radio className={cn("w-4 h-4", bridgeUp ? "text-green-400 animate-pulse" : "text-red-400")} />
-            <span className="text-[8px] font-mono text-white/40">
-              {bridgeUp ? 'LIVE' : 'OFFLINE'}
+            {bridgeUiState === 'checking' ? (
+              <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
+            ) : bridgeUiState === 'bridge-offline' ? (
+              <WifiOff className="w-4 h-4 text-red-400" />
+            ) : bridgeUiState === 'bindings-missing' ? (
+              <AlertCircle className="w-4 h-4 text-orange-400" />
+            ) : (
+              <Radio className="w-4 h-4 text-green-400 animate-pulse" />
+            )}
+            <span className="text-[8px] font-mono text-white/40 uppercase">
+              {bridgeUiState.replace('-', ' ')}
             </span>
           </div>
         </div>
@@ -400,7 +474,7 @@ export default function CrewPage() {
           <section>
             <h2 className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-3">Actors</h2>
             <div className="space-y-2">
-              {actors.map(actor => (
+              {actorsWithStatus.map(actor => (
                 <ActorCard key={actor.id} actor={actor} />
               ))}
             </div>

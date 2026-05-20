@@ -1,14 +1,14 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
+import { StrictMode, useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import CrewPage from './components/CrewPage';
 import './index.css';
 
 // Simple hash-based router
 function Router() {
-  const [route, setRoute] = React.useState(window.location.hash || '#/');
+  const [route, setRoute] = useState(window.location.hash || '#/');
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleHashChange = () => {
       setRoute(window.location.hash || '#/');
     };
