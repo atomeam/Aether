@@ -1,0 +1,26 @@
+# Cloudflare Tunnel Configuration
+# Topology: Direct tunnel (Option A)
+# Notion → bridge.atomeam.com → cloudflared → http://127.0.0.1:8787
+
+tunnel: aether-bridge
+credentials-file: ./credentials.json
+
+ingress:
+  # Main webhook endpoint
+  - hostname: bridge.atomeam.com
+    service: http://127.0.0.1:8787
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 30s
+      tlsTimeout: 10s
+
+  # Health check (optional, for monitoring)
+  - hostname: health.bridge.atomeam.com  
+    service: http://127.0.0.1:8787/health
+
+  # Catch-all for undefined routes (404)
+  - service: http_status_404
+
+# Logging
+logLevel: info
+transport-loglevel: warn
