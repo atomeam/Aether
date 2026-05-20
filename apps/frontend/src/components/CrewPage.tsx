@@ -412,10 +412,11 @@ export default function CrewPage() {
 
   // Compute bridge UI state from health response
   const bridgeUiState = useMemo((): BridgeUiState => {
-    if (bridgeError || loading) return 'checking';
+    if (loading) return 'checking';
+    if (bridgeError || !bridgeHealth?.ok) return 'bridge-offline';
     
     const bindings = bridgeHealth?.bindings ? normalizeBindings(bridgeHealth.bindings) : {};
-    const hasMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE;
+    const hasMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE || !bindings.MYBROWSER;
     
     if (hasMissing) return 'bindings-missing';
     if (proposals.length === 0 && lessons.length === 0) return 'data-empty';
