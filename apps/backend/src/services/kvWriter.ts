@@ -6,110 +6,107 @@
  * 
  * Required env vars:
  *   CF_ACCOUNT_ID - Cloudflare account ID
- *   CF_API_TOKEN - Cloudflare API token
+ *   CF_API_TOKEN - Cloudflare API token  
  *   CF_KV_STATE_ID - KV namespace ID for STATE (proposals)
  *   CF_KV_STATE_CACHE_ID - KV namespace ID for STATE_CACHE (lessons)
  */
 
-const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
-const CF_API_TOKEN = process.env.CF_API_TOKEN;
-const CF_KV_STATE_ID = process.env.CF_KV_STATE_ID || '7319ee9195df4ccf8f4b2c8449dd7930';
-const CF_KV_STATE_CACHE_ID = process.env.CF_KV_STATE_CACHE_ID || 'd22e703c3af9451a9942fa2a551a1aa8';
-
-export interface Proposal {
+export type ProposalSnapshotItem = {
   id: string;
   title: string;
   stage: string;
   source?: string;
-  updatedAt?: string;
-}
+  [key: string]: unknown;
+};
 
-export interface Lesson {
+export type LessonIndexItem = {
   id: string;
   hash: string;
   title: string;
   source?: string;
-  updatedAt?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Require an environment variable to be set
+ */
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value;
 }
 
 /**
  * Write a value to Cloudflare KV namespace
  */
-async function writeToKV(namespaceId: string, key: string, value: unknown): Promise<boolean> {
-  if (!CF_ACCOUNT_ID || !CF_API_TOKEN) {
-    console.log('[KV] Skipping write - CF credentials not configured');
-    return false;
-  }
+async function putKv(namespaceId: string, key: string, value: unknown): Promise<void> {
+  const accountId = requireEnv('CF_ACCOUNT_ID');
+  const apiToken = requireEnv('CF_API_TOKEN');
 
-  try {
-    const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(key)}`;
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${CF_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(value),
-    });
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(key)}`;
 
-    if (!response.ok) {
-      console.log(`[KV] Write failed: ${response.status} ${await response.text()}`);
-      return false;
-    }
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(value),
+  });
 
-    console.log(`[KV] Wrote ${key} to namespace ${namespaceId}`);
-    return true;
-  } catch (e) {
-    console.log(`[KV] Write error: ${e}`);
-    return false;
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`KV write failed for ${key}: ${res.status} ${text}`);
   }
 }
 
 /**
  * Write proposals snapshot to STATE KV
- * 
- * @param proposals - Array of proposals to write
- * @returns true if write succeeded
  */
-export async function pushProposalsSnapshot(proposals: Proposal[]): Promise<boolean> {
-  const snapshot = {
+export async function pushProposalsSnapshot(proposals: ProposalSnapshotItem[]): Promise<void> {
+  const namespaceId = requireEnv('CF_KV_STATE_ID');
+  const payload = {
     updatedAt: new Date().toISOString(),
-    proposals: proposals.map(p => ({
-      id: p.id,
-      title: p.title,
-      stage: p.stage,
-      source: p.source || 'backend-kv-writer',
+    proposals: proposals.map((p) => ({
+      ...p,
+      source: p.source ?? 'backend-proposals-watcher',
     })),
   };
 
-  console.log(`[KV] Writing ${proposals.length} proposals to STATE`);
-  return writeToKV(CF_KV_STATE_ID, 'proposals:snapshot', JSON.stringify(snapshot));
+  await putKv(namespaceId, 'proposals:snapshot', payload);
+  console.info('KV write', {
+    key: 'proposals:snapshot',
+    count: payload.proposals.length,
+    updatedAt: payload.updatedAt,
+  });
 }
 
 /**
  * Write lessons index to STATE_CACHE KV
- * 
- * @param lessons - Array of lessons to write
- * @returns true if write succeeded
  */
-export async function pushLessonsIndex(lessons: Lesson[]): Promise<boolean> {
-  const index = {
+export async function pushLessonsIndex(lessons: LessonIndexItem[]): Promise<void> {
+  const namespaceId = requireEnv('CF_KV_STATE_CACHE_ID');
+  const payload = {
     updatedAt: new Date().toISOString(),
-    lessons: lessons.map(l => ({
-      id: l.id,
-      hash: l.hash,
-      title: l.title,
-      source: l.source || 'backend-kv-writer',
+    lessons: lessons.map((l) => ({
+      ...l,
+      source: l.source ?? 'backend-lessons-index',
     })),
   };
 
-  console.log(`[KV] Writing ${lessons.length} lessons to STATE_CACHE`);
-  return writeToKV(CF_KV_STATE_CACHE_ID, 'lessons:index', JSON.stringify(index));
+  await putKv(namespaceId, 'lessons:index', payload);
+  console.info('KV write', {
+    key: 'lessons:index',
+    count: payload.lessons.length,
+    updatedAt: payload.updatedAt,
+  });
 }
 
 /**
- * Check if KV writer is configured
+ * Check if KV writer is configured with credentials
  */
 export function isConfigured(): boolean {
-  return !!(CF_ACCOUNT_ID && CF_API_TOKEN);
+  return !!(process.env.CF_ACCOUNT_ID && process.env.CF_API_TOKEN);
 }
