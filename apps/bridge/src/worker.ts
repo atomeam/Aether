@@ -15,6 +15,22 @@ import { default as app } from './server';
 const VERSION = '0.2.0';
 const SERVICE = 'aether-bridge';
 
+// No-store JSON helper - prevents stale cache
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+  });
+}
+
 // Shared helper - returns binding status
 function getBindings(env: Env) {
   return {
@@ -28,40 +44,29 @@ function getBindings(env: Env) {
 // Cloudflare Workers export
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // Handle CORS
     const url = new URL(request.url);
     
+    // CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
+      return json(null, 204);
     }
     
     try {
       const path = url.pathname;
       const method = request.method;
       
-      // Use shared helper for /health
+      // GET /health - returns v0.2 contract with bindings
       if (path === '/health') {
-        return new Response(JSON.stringify({
+        return json({
           ok: true,
           service: SERVICE,
           version: VERSION,
           ts: new Date().toISOString(),
           bindings: getBindings(env),
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
         });
       }
       
-      // Crew status summary
+      // GET /crew/status - summary with all bindings
       if (path === '/crew/status' || path === '/crew') {
         const bindings = getBindings(env);
         const bindingsMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE || !bindings.MYBROWSER;
@@ -99,7 +104,7 @@ export default {
           } catch { /* ignore */ }
         }
         
-        return new Response(JSON.stringify({
+        return json({
           ok: true,
           service: SERVICE,
           version: VERSION,
@@ -108,15 +113,10 @@ export default {
           bindingsMissing,
           proposals,
           lessons,
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
         });
       }
       
-      // Proposals endpoint - v0.2 contract
+      // GET /proposals - returns proposals from STATE KV
       if (path === '/proposals') {
         let proposals: unknown[] = [];
         let updatedAt: string | null = null;
@@ -125,33 +125,24 @@ export default {
           try {
             const value = await env.STATE.get('proposals:snapshot');
             const parsed = value ? JSON.parse(value) : null;
-            
-            // Support both raw array and object snapshot
             if (Array.isArray(parsed)) {
               proposals = parsed;
-              updatedAt = proposals.length > 0 ? new Date().toISOString() : null;
             } else if (parsed && Array.isArray(parsed.proposals)) {
               proposals = parsed.proposals;
-              updatedAt = parsed.updatedAt ?? (proposals.length > 0 ? new Date().toISOString() : null);
+              updatedAt = parsed.updatedAt ?? null;
             }
-          } catch {
-            // Fall through
-          }
+          } catch { /* ignore */ }
         }
         
-        return new Response(JSON.stringify({
+        return json({
           ok: true,
           proposals,
           updatedAt,
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+          count: proposals.length,
         });
       }
       
-      // Lessons endpoint - v0.2 contract
+      // GET /lessons - returns lessons from STATE_CACHE KV
       if (path === '/lessons') {
         let lessons: unknown[] = [];
         let updatedAt: string | null = null;
@@ -160,33 +151,24 @@ export default {
           try {
             const value = await env.STATE_CACHE.get('lessons:index');
             const parsed = value ? JSON.parse(value) : null;
-            
-            // Support both raw array and object snapshot
             if (Array.isArray(parsed)) {
               lessons = parsed;
-              updatedAt = lessons.length > 0 ? new Date().toISOString() : null;
             } else if (parsed && Array.isArray(parsed.lessons)) {
               lessons = parsed.lessons;
-              updatedAt = parsed.updatedAt ?? (lessons.length > 0 ? new Date().toISOString() : null);
+              updatedAt = parsed.updatedAt ?? null;
             }
-          } catch {
-            // Fall through
-          }
+          } catch { /* ignore */ }
         }
         
-        return new Response(JSON.stringify({
+        return json({
           ok: true,
           lessons,
           updatedAt,
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+          count: lessons.length,
         });
       }
       
-      // Lessons check - detect hash collisions
+      // POST /lessons/check - detect hash collisions
       if (path === '/lessons/check' && method === 'POST') {
         let hash = '';
         let collision: unknown | null = null;
@@ -195,111 +177,44 @@ export default {
           const body = await request.json() as { hash?: string };
           if (typeof body.hash === 'string' && body.hash.length > 0) {
             hash = body.hash;
-            
             if (env.STATE_CACHE) {
               const existing = await env.STATE_CACHE.get(`lessons:hash:${hash}`);
-              if (existing) {
-                collision = JSON.parse(existing);
-              }
+              if (existing) collision = JSON.parse(existing);
             }
           } else {
-            return new Response(JSON.stringify({
-              ok: false,
-              error: 'Missing hash',
-            }), {
-              status: 400,
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-              }
-            });
+            return json({ ok: false, error: 'Missing hash' }, 400);
           }
         } catch {
-          return new Response(JSON.stringify({
-            ok: false,
-            error: 'Invalid request body',
-          }), {
-            status: 400,
-            headers: { 
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
+          return json({ ok: false, error: 'Invalid request body' }, 400);
         }
         
-        return new Response(JSON.stringify({
-          ok: true,
-          hash,
-          collision,
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        return json({ ok: true, hash, collision });
       }
       
       // Legacy API: /api/stack
       if (path === '/api/stack') {
-        return new Response(JSON.stringify({
+        return json({
           status: 'online',
           backend: 'alpha-bridge',
           timestamp: new Date().toISOString()
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
         });
       }
       
       // Legacy API: /api/execute
       if (path === '/api/execute' && method === 'POST') {
-        const body = await request.json();
-        return new Response(JSON.stringify({
-          success: true,
-          result: { message: 'Execution queued' }
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        return json({ success: true, result: { message: 'Execution queued' } });
       }
       
       // Legacy API: /api/execute/status
       if (path === '/api/execute/status' && method === 'GET') {
-        return new Response(JSON.stringify({
-          status: 'idle',
-          currentStep: 0,
-          totalSteps: 0
-        }), {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+        return json({ status: 'idle', currentStep: 0, totalSteps: 0 });
       }
       
       // 404
-      return new Response(JSON.stringify({ error: 'Not found' }), {
-        status: 404,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      return json({ error: 'Not found' }, 404);
       
     } catch (error) {
-      return new Response(JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      }), {
-        status: 500,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
   }
 };
@@ -319,6 +234,5 @@ interface ExecutionContext {
 
 // Fallback for local dev
 if (typeof globalThis !== 'undefined' && !('fetch' in globalThis)) {
-  // Development export
   export { default as app };
 }
