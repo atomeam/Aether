@@ -1,8 +1,11 @@
 /**
  * Cloudflare Worker Entry Point
  * 
- * Wraps Express app for Cloudflare Workers compatibility.
- * Uses the 'fetch' event listener pattern.
+ * Aether Bridge - Provides:
+ * - /health - Bridge status and bindings
+ * - /proposals - Proposal queue
+ * - /lessons - Lesson learnd
+ * - /api/* - Legacy API compatibility
  */
 
 import { default as app } from './server';
@@ -23,16 +26,12 @@ export default {
       });
     }
     
-    // Map request to Express-like call
-    // Note: Full Express wrapper would need more work
-    // This is a light translation layer
-    
     try {
       const path = url.pathname;
       const method = request.method;
       
-      // Simple routing
-      if (path === '/api/health') {
+      // Health check - returns bridge status and binding status
+      if (path === '/health') {
         return new Response(JSON.stringify({
           status: 'ok',
           worker: 'aether-bridge',
@@ -44,45 +43,114 @@ export default {
             mybrowser: !!env.MYBROWSER,
           }
         }), {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
       
+      // Proposals endpoint
+      if (path === '/proposals') {
+        // Try to fetch from KV if bound
+        if (env.STATE) {
+          try {
+            const value = await env.STATE.get('proposals');
+            const proposals = value ? JSON.parse(value) : [];
+            return new Response(JSON.stringify(proposals), {
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              }
+            });
+          } catch {
+            // Fall through to empty array
+          }
+        }
+        // Return empty if no KV or error
+        return new Response(JSON.stringify([]), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Lessons endpoint
+      if (path === '/lessons') {
+        // Try to fetch from KV if bound
+        if (env.STATE) {
+          try {
+            const value = await env.STATE.get('lessons');
+            const lessons = value ? JSON.parse(value) : [];
+            return new Response(JSON.stringify(lessons), {
+              headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              }
+            });
+          } catch {
+            // Fall through to empty array
+          }
+        }
+        // Return empty if no KV or error
+        return new Response(JSON.stringify([]), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Legacy API: /api/stack
       if (path === '/api/stack') {
         return new Response(JSON.stringify({
           status: 'online',
           backend: 'alpha-bridge',
           timestamp: new Date().toISOString()
         }), {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
       
+      // Legacy API: /api/execute
       if (path === '/api/execute' && method === 'POST') {
         const body = await request.json();
-        // Execute endpoint - note: orchestrator integration needs async
         return new Response(JSON.stringify({
           success: true,
           result: { message: 'Execution queued' }
         }), {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
       
+      // Legacy API: /api/execute/status
       if (path === '/api/execute/status' && method === 'GET') {
         return new Response(JSON.stringify({
           status: 'idle',
           currentStep: 0,
           totalSteps: 0
         }), {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
       
       // 404
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
       
     } catch (error) {
@@ -90,7 +158,10 @@ export default {
         error: error instanceof Error ? error.message : 'Unknown error' 
       }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
   }
