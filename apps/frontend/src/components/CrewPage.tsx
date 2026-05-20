@@ -333,8 +333,10 @@ export default function CrewPage() {
   // Fetch bridge status
   const fetchBridgeHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${BRIDGE_URL}/health`, { 
+      const cacheBust = `?_=${Date.now()}`;
+      const res = await fetch(`${BRIDGE_URL}/health${cacheBust}`, { 
         method: 'GET',
+        cache: 'no-store',
         signal: AbortSignal.timeout(5000)
       });
       if (res.ok) {
@@ -360,8 +362,10 @@ export default function CrewPage() {
   // Fetch proposals from bridge
   const fetchProposals = useCallback(async () => {
     try {
-      const res = await fetch(`${BRIDGE_URL}/proposals`, {
+      const cacheBust = `?_=${Date.now()}`;
+      const res = await fetch(`${BRIDGE_URL}/proposals${cacheBust}`, {
         method: 'GET',
+        cache: 'no-store',
         signal: AbortSignal.timeout(5000)
       });
       if (res.ok) {
@@ -378,8 +382,10 @@ export default function CrewPage() {
   // Fetch lessons from bridge
   const fetchLessons = useCallback(async () => {
     try {
-      const res = await fetch(`${BRIDGE_URL}/lessons`, {
+      const cacheBust = `?_=${Date.now()}`;
+      const res = await fetch(`${BRIDGE_URL}/lessons${cacheBust}`, {
         method: 'GET',
+        cache: 'no-store',
         signal: AbortSignal.timeout(5000)
       });
       if (res.ok) {
