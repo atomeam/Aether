@@ -1,0 +1,24 @@
+# =============================================================================
+# HOMEBASE WORKER - Static Dashboard / Landing Page
+# =============================================================================
+# 
+# This worker serves as the static dashboard/landing page for the Aether workspace.
+# It provides a user-facing UI showing workspace status and links.
+# =============================================================================
+
+name = "homebase"
+main = "src/worker.ts"
+compatibility_date = "2026-05-19"
+
+# KV Namespace for workspace status (read-only)
+[[kv_namespaces]]
+binding = "STATE"
+id = "7319ee9195df4ccf8f4b2c8449dd7930"
+
+# R2 to read logs (read-only)
+[[r2_buckets]]
+binding = "_LOGS"
+bucket_name = "aether-logs"
+
+[vars]
+WORKER_ROLE = "dashboard"
