@@ -99,7 +99,7 @@ export function executeChaos(scenario: ChaosScenario, targetPath?: string): Chao
   
   switch (scenario) {
     case 'broken_package_json': {
-      const pkg = JSON.stringify({ name: "broken", version: "1.0", dependencies: { invalid: "}" }, null, 2);
+      const pkg = JSON.stringify({ name: "broken", version: "1.0", dependencies: { invalid: "}" } }, null, 2);
       fs.writeFileSync(path.join(fullPath, 'package.json'), pkg);
       return {
         status: 'success',
