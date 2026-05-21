@@ -43,7 +43,7 @@ export function generateMockStripeVote(context: Record<string, unknown>): MockSt
   return {
     assistantName: 'stripe-mcp',
     scope: 'payments',
-    vote: vote as string,
+    vote: vote as 'approve' | 'reject' | 'abstain',
     confidence,
     rationale,
     timestamp: Math.floor(Date.now() / 1000),
