@@ -582,8 +582,11 @@ export default {
 
       // POST /api/council/log - log a conversation message
       if (path === '/api/council/log' && method === 'POST') {
-        const body = await request.json();
-        const { session_id, agent_id, role, content } = body;
+        const body = await request.json() as Record<string, unknown>;
+        const session_id = String(body.session_id ?? '');
+        const agent_id = String(body.agent_id ?? '');
+        const role = String(body.role ?? '');
+        const content = String(body.content ?? '');
         if (!session_id || !agent_id || !role || !content) {
           return json({ error: 'session_id, agent_id, role, content required' }, 400);
         }
@@ -915,12 +918,18 @@ async function incrementUsage(env: Env, key: string, endpoint: string, tier: str
   ).bind('USAGE_RECORDED', JSON.stringify({ key, endpoint, tier }), timestamp).run();
 }
 
-// Queue message type
+// For Workers: relax type checking for D1/KV/R2 globals
+declare const caches: CacheStorage;
+declare const D1Database: unknown;
+declare const KVNamespace: unknown;
+declare const R2Bucket: unknown;
+declare const MYBROWSER: unknown;
 interface CuratorJob {
   id: string;
   eventId: string;
   eventType: string;
   pageId: string;
+  sessionId?: string;
   databaseId?: string;
   receivedAt: string;
   raw?: string;
