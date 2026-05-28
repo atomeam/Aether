@@ -50,14 +50,15 @@ max_batch_size = 1
 max_batch_timeout = 30
 max_retries = 3
 
-[[queues.producers]]
-binding = "ACTIONS"
-queue = "bridge-actions"
+# ACTIONS queue - needs to be created via Cloudflare API
+# [[queues.producers]]
+# binding = "ACTIONS"
+# queue = "bridge-actions"
 
-[[queues.consumers]]
-queue = "bridge-actions"
-max_batch_size = 10
-max_retries = 3
+# [[queues.consumers]]
+# queue = "bridge-actions"
+# max_batch_size = 10
+# max_retries = 3
 
 [[services]]
 binding = "DISPATCHER"
