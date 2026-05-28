@@ -582,7 +582,7 @@ export default {
 
       // POST /api/council/log - log a conversation message
       if (path === '/api/council/log' && method === 'POST') {
-        const body = await request.json();
+        const body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
         const { session_id, agent_id, role, content } = body;
         if (!session_id || !agent_id || !role || !content) {
           return json({ error: 'session_id, agent_id, role, content required' }, 400);
@@ -815,7 +815,7 @@ export default {
         // Process the job - write to KV as processed marker
         if (job.pageId && env.STATE_CACHE) {
           const existingStr = await env.STATE_CACHE.get("lessons:index");
-          let existing = { ok: true, lessons: [], source: "curator-queue", updatedAt: "" };
+          let existing: { ok: boolean; lessons: Array<Record<string, string>>; source: string; updatedAt: string } = { ok: true, lessons: [], source: "curator-queue", updatedAt: "" };
           if (existingStr) {
             try { existing = JSON.parse(existingStr); } catch {}
           }
@@ -922,6 +922,7 @@ interface CuratorJob {
   eventType: string;
   pageId: string;
   databaseId?: string;
+  sessionId?: string;
   receivedAt: string;
   raw?: string;
   source?: string;
