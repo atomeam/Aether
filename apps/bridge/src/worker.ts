@@ -156,8 +156,8 @@ export default {
         const bindings = getBindings(env);
         const bindingsMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE || !bindings.MYBROWSER;
         
-        let proposals = { count: 0, updatedAt: null, items: [] as unknown[] };
-        let lessons = { count: 0, updatedAt: null, items: [] as unknown[] };
+        let proposals = { count: 0, updatedAt: null as string | null, items: [] as unknown[] };
+        let lessons = { count: 0, updatedAt: null as string | null, items: [] as unknown[] };
         
         if (env.STATE) {
           try {
@@ -170,7 +170,9 @@ export default {
               proposals.updatedAt = parsed.updatedAt ?? null;
             }
             proposals.count = proposals.items.length;
-            proposals.updatedAt = proposals.updatedAt || (proposals.count > 0 ? new Date().toISOString() : null);
+            if (!proposals.updatedAt && proposals.count > 0) {
+              proposals.updatedAt = new Date().toISOString();
+            }
           } catch { /* ignore */ }
         }
         
@@ -185,7 +187,9 @@ export default {
               lessons.updatedAt = parsed.updatedAt ?? null;
             }
             lessons.count = lessons.items.length;
-            lessons.updatedAt = lessons.updatedAt || (lessons.count > 0 ? new Date().toISOString() : null);
+            if (!lessons.updatedAt && lessons.count > 0) {
+              lessons.updatedAt = new Date().toISOString();
+            }
           } catch { /* ignore */ }
         }
         
@@ -351,6 +355,7 @@ export default {
           const event = JSON.parse(rawBody);
           console.log('[Webhook] Received Notion event');
           const timestamp = new Date().toISOString();
+          const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
 
           // Deduplication check
         const existingEvent = await env.DB.prepare(
@@ -363,7 +368,6 @@ export default {
 
         // Log to D1 events table for audit trail (idempotent)
           if (env.DB) {
-            const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
             const pageId = event.data?.id || '';
             const databaseId = event.data?.parent?.database_id || event.data?.parent?.page_id || '';
             // Idempotent insert - ignore if exists

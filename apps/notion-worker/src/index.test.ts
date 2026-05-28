@@ -98,6 +98,8 @@ describe('State Transition Logic', () => {
       status: 'RUNNING',
       created_at: '2026-05-28T14:30:00Z',
       updated_at: '2026-05-28T14:30:00Z',
+      ended: null as string | null,
+      result: null as string | null,
     };
 
     const updateRow = {
