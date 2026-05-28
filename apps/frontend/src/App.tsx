@@ -26,10 +26,15 @@ import {
   Monitor,
   Info,
   TriangleAlert,
-  GitPullRequest
+  GitPullRequest,
+  TrendingUp,
+  Server
 } from 'lucide-react';
 
 import { PrimitiveRenderer, ComponentSpec } from './components/Primitives';
+import NotionGitHubSyncView from './components/NotionGitHubSyncView';
+import ProfitLoopMetrics from './components/ProfitLoopMetrics';
+import InfrastructureStatus from './components/InfrastructureStatus';
 import { cn } from './lib/utils';
 
 interface ThemeState {
@@ -423,6 +428,7 @@ export default function App() {
   const [homeBaseSynced, setHomeBaseSynced] = useState(false);
   const [hardwareStats, setHardwareStats] = useState<{cpu: number, mem: number, networkDrift?: number, integrity?: number}>({ cpu: 22.4, mem: 15420, networkDrift: 42, integrity: 0.98 });
   const [signalLogs, setSignalLogs] = useState<string[]>([]);
+  const [dashboardView, setDashboardView] = useState<'council' | 'notion-github' | 'profit-loop' | 'infrastructure'>('council');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // HomeBase Telemetry Polling (High-Integrity Bridge) with Fallback
@@ -1406,29 +1412,103 @@ export default function App() {
 
       {/* Main Canvas */}
       <main className="flex-1 overflow-y-auto relative p-12 custom-scrollbar">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="max-w-5xl mx-auto mb-12 border-l border-white/5 pl-8"
-        >
-          <div className="text-[10px] uppercase font-mono tracking-[0.6em] text-white/20 mb-2">Systems Manifesto</div>
-          <h2 className="text-xl font-serif text-white/60 italic leading-relaxed tracking-tight">
-            "{manifesto}"
-          </h2>
-        </motion.div>
-
-        <div className={cn(
-          "grid grid-cols-1 gap-8 max-w-5xl mx-auto pb-48 transition-all duration-1000",
-          isAnalysisMode ? "opacity-0 scale-95 pointer-events-none" : "opacity-100 scale-100"
-        )}>
-          <AnimatePresence mode="popLayout">
-            {components.map((spec) => (
-              <div key={spec.id}>
-                <PrimitiveRenderer spec={spec} theme={theme} onAction={handleNodeAction} />
-              </div>
+        {/* Dashboard Navigation */}
+        <div className="max-w-5xl mx-auto mb-8">
+          <div className="flex items-center gap-2 border-b border-white/5 pb-4">
+            {[
+              { id: 'council' as const, label: 'Council', icon: Layout },
+              { id: 'notion-github' as const, label: 'Notion ↔ GitHub', icon: GitBranch },
+              { id: 'profit-loop' as const, label: 'Profit Loop', icon: TrendingUp },
+              { id: 'infrastructure' as const, label: 'Infrastructure', icon: Server }
+            ].map(view => (
+              <button
+                key={view.id}
+                onClick={() => setDashboardView(view.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-[8px] uppercase tracking-widest transition-all cursor-pointer",
+                  dashboardView === view.id 
+                    ? "text-gold border-b-2 border-gold" 
+                    : "text-white/30 hover:text-white/60"
+                )}
+              >
+                <view.icon className="w-3 h-3" />
+                {view.label}
+              </button>
             ))}
-          </AnimatePresence>
+          </div>
         </div>
+
+        {/* Dashboard Content */}
+        <AnimatePresence mode="wait">
+          {dashboardView === 'council' && (
+            <motion.div
+              key="council"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="max-w-5xl mx-auto mb-12 border-l border-white/5 pl-8"
+              >
+                <div className="text-[10px] uppercase font-mono tracking-[0.6em] text-white/20 mb-2">Systems Manifesto</div>
+                <h2 className="text-xl font-serif text-white/60 italic leading-relaxed tracking-tight">
+                  "{manifesto}"
+                </h2>
+              </motion.div>
+
+              <div className={cn(
+                "grid grid-cols-1 gap-8 max-w-5xl mx-auto pb-48 transition-all duration-1000",
+                isAnalysisMode ? "opacity-0 scale-95 pointer-events-none" : "opacity-100 scale-100"
+              )}>
+                <AnimatePresence mode="popLayout">
+                  {components.map((spec) => (
+                    <div key={spec.id}>
+                      <PrimitiveRenderer spec={spec} theme={theme} onAction={handleNodeAction} />
+                    </div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+
+          {dashboardView === 'notion-github' && (
+            <motion.div
+              key="notion-github"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-5xl mx-auto"
+            >
+              <NotionGitHubSyncView />
+            </motion.div>
+          )}
+
+          {dashboardView === 'profit-loop' && (
+            <motion.div
+              key="profit-loop"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-5xl mx-auto"
+            >
+              <ProfitLoopMetrics />
+            </motion.div>
+          )}
+
+          {dashboardView === 'infrastructure' && (
+            <motion.div
+              key="infrastructure"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-5xl mx-auto"
+            >
+              <InfrastructureStatus />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Deep Analysis Fluid Geometry */}
         <AnimatePresence>
