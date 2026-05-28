@@ -7,7 +7,7 @@
  * Usage: npx tsx packages/chaos/src/fire-drill.ts
  */
 
-import { generateMockStripeVote, injectMockStripeVoteIfNeeded } from './mock-stripe-mcp';
+import { generateMockStripeVote, injectMockStripeVoteIfNeeded } from './mock-stripe-mcp.js';
 
 const CONVENE_URL = process.env.CONVENE_URL || 'http://localhost:8080';
 const PROFILE_ID = process.env.PROFILE_ID || 'prod-user';
