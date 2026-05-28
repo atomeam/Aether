@@ -1,0 +1,15 @@
+name = "aether-metrics-cron"
+main = "src/worker.ts"
+compatibility_date = "2024-12-01"
+
+# Mon 09:00 ET = 13:00 UTC
+[triggers]
+crons = ["0 13 * * 1"]
+
+[[kv_namespaces]]
+binding = "SCOREBOARD"
+id = "PLACEHOLDER_CREATE_WITH_wrangler_kv_namespace_create"
+
+# Secrets (set via `wrangler secret put`):
+# NOTION_API_KEY  — Notion integration token with Runs ledger read access
+# STRIPE_API_KEY  — Stripe restricted key with subscriptions:read
