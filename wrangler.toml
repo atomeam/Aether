@@ -12,6 +12,11 @@ binding = "DB"
 database_name = "council-routing-db"
 database_id = "218e0bc6-f955-45d1-b9bf-276d384917c7"
 
+[[d1_databases]]
+binding = "BRIDGE_DB"
+database_name = "aether-bridge-db"
+database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
+
 # KV Namespaces
 [[kv_namespaces]]
 binding = "STATE"
@@ -21,9 +26,18 @@ id = "7319ee9195df4ccf8f4b2c8449dd7930"
 binding = "STATE_CACHE"
 id = "d22e703c3af9451a9942fa2a551a1aa8"
 
+[[kv_namespaces]]
+binding = "METRICS"
+id = "60b673736ef943949cd8df154105e11e"
+
 # Browser Run
 [browser]
 binding = "MYBROWSER"
+
+# R2 Bucket
+[[r2_buckets]]
+binding = "_LOGS"
+bucket_name = "aether-logs"
 
 # Cloudflare Queues (created manually: npx wrangler queues create curator-jobs)
 [[queues.producers]]
@@ -35,3 +49,19 @@ queue = "curator-jobs"
 max_batch_size = 1
 max_batch_timeout = 30
 max_retries = 3
+
+[[queues.producers]]
+binding = "ACTIONS"
+queue = "bridge-actions"
+
+[[queues.consumers]]
+queue = "bridge-actions"
+max_batch_size = 10
+max_retries = 3
+
+[[services]]
+binding = "DISPATCHER"
+service = "aether"
+
+[triggers]
+crons = ["*/15 * * * *", "0 * * * *"]
