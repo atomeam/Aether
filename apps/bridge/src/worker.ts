@@ -567,14 +567,15 @@ export default {
       }
 
       // POST /api/ai/heartbeat - update AI presence
-      if (path === '/api/ai/heartbeat' && method === 'POST')
-        if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500); {
+      if (path === '/api/ai/heartbeat' && method === 'POST') {
+        if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
         const body = await request.json();
         const { ai_id, name, status = 'active', role } = body;
         if (!ai_id) return json({ error: 'ai_id required' }, 400);
 
         const rawStr = await env.STATE_CACHE.get('ai:presence');
-        const raw = rawStr ? JSON.parse(rawStr) : {};
+        let raw: Record<string, unknown>;
+        try { raw = rawStr ? JSON.parse(rawStr) : {}; } catch { raw = {}; }
         raw[ai_id] = { name: name || ai_id, status, role, last_seen: new Date().toISOString(), expires_at: new Date(Date.now() + 300000).toISOString() };
         await env.STATE_CACHE.put('ai:presence', JSON.stringify(raw));
         return json({ ok: true, ai_id, status });
