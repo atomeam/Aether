@@ -96,6 +96,8 @@ describe('State Transition Logic', () => {
       started: '2026-05-28T14:30:00Z',
       owner: 'Council',
       status: 'RUNNING',
+      ended: null as string | null,
+      result: null as string | null,
       created_at: '2026-05-28T14:30:00Z',
       updated_at: '2026-05-28T14:30:00Z',
       ended: null as string | null,
