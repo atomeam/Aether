@@ -65,10 +65,17 @@ async function handlePostRuns(request: Request, env: Env): Promise<Response> {
     
     const now = new Date().toISOString();
     
-    // Idempotent insert using INSERT OR IGNORE
+    // Idempotent upsert with state transitions using ON CONFLICT
     const stmt = env.DB_RUNS.prepare(`
-      INSERT OR IGNORE INTO runs (task_id, run_id, type, started, owner, status, ended, result, error, metadata, created_at, updated_at)
+      INSERT INTO runs (task_id, run_id, type, started, owner, status, ended, result, error, metadata, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(run_id) DO UPDATE SET
+        status = excluded.status,
+        ended = excluded.ended,
+        result = excluded.result,
+        error = excluded.error,
+        metadata = excluded.metadata,
+        updated_at = excluded.updated_at
     `);
     
     try {

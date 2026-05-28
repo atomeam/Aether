@@ -6,7 +6,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest"
   },
   "dependencies": {
     "@aether/ledger": "file:../../packages/ledger",
@@ -17,6 +18,7 @@
     "@cloudflare/workers-types": "^4.20260523.1",
     "@types/node": "^22.14.0",
     "typescript": "^5.6.0",
+    "vitest": "^1.6.0",
     "wrangler": "^3.0.0"
   }
 }
