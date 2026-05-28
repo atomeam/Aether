@@ -156,8 +156,8 @@ export default {
         const bindings = getBindings(env);
         const bindingsMissing = !bindings.DB || !bindings.STATE || !bindings.STATE_CACHE || !bindings.MYBROWSER;
         
-        let proposals = { count: 0, updatedAt: null, items: [] as unknown[] };
-        let lessons = { count: 0, updatedAt: null, items: [] as unknown[] };
+        let proposals = { count: 0, updatedAt: null as string | null, items: [] as unknown[] };
+        let lessons = { count: 0, updatedAt: null as string | null, items: [] as unknown[] };
         
         if (env.STATE) {
           try {
@@ -351,19 +351,19 @@ export default {
           const event = JSON.parse(rawBody);
           console.log('[Webhook] Received Notion event');
           const timestamp = new Date().toISOString();
+          const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
 
           // Deduplication check
-        const existingEvent = await env.DB.prepare(
-          "SELECT event_id FROM events WHERE event_id = ? LIMIT 1"
-        ).bind(eventId).first();
-        if (existingEvent) {
-          console.log('[Webhook] Duplicate event skipped: ' + eventId);
-          return json({ ok: true, duplicate: true });
-        }
+          const existingEvent = await env.DB.prepare(
+            "SELECT event_id FROM events WHERE event_id = ? LIMIT 1"
+          ).bind(eventId).first();
+          if (existingEvent) {
+            console.log('[Webhook] Duplicate event skipped: ' + eventId);
+            return json({ ok: true, duplicate: true });
+          }
 
-        // Log to D1 events table for audit trail (idempotent)
+          // Log to D1 events table for audit trail (idempotent)
           if (env.DB) {
-            const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
             const pageId = event.data?.id || '';
             const databaseId = event.data?.parent?.database_id || event.data?.parent?.page_id || '';
             // Idempotent insert - ignore if exists

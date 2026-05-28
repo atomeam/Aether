@@ -89,7 +89,16 @@ describe('State Transition Logic', () => {
 
   it('should preserve created_at and started on state transitions', () => {
     // This validates the ON CONFLICT logic: created_at and started are NOT in the UPDATE clause
-    const originalRow = {
+    const originalRow: {
+      task_id: string;
+      run_id: string;
+      type: string;
+      started: string;
+      owner: string;
+      status: string;
+      created_at: string;
+      updated_at: string;
+    } = {
       task_id: 'test-task',
       run_id: 'test-run-001',
       type: 'COUNCIL',
@@ -100,7 +109,7 @@ describe('State Transition Logic', () => {
       updated_at: '2026-05-28T14:30:00Z',
     };
 
-    const updateRow = {
+    const updateRow: typeof originalRow & { ended: string; result: string } = {
       ...originalRow,
       status: 'COMPLETED',
       ended: '2026-05-28T14:35:00Z',
@@ -118,8 +127,8 @@ describe('State Transition Logic', () => {
 
     // Verify mutable fields
     expect(updateRow.status).not.toBe(originalRow.status);
-    expect(updateRow.ended).not.toBe(originalRow.ended);
-    expect(updateRow.result).not.toBe(originalRow.result);
+    expect((updateRow as any).ended).not.toBe((originalRow as any).ended);
+    expect((updateRow as any).result).not.toBe((originalRow as any).result);
     expect(updateRow.updated_at).not.toBe(originalRow.updated_at);
   });
 });
