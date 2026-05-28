@@ -26,12 +26,12 @@ export const RUN_ROW_SCHEMA = z.object({
   started: z.string().datetime(),
   owner: z.enum(['Council', 'Human']),
   status: z.enum(['RUNNING', 'COMPLETED', 'FAILED', 'BLOCKED']),
-  ended: z.string().datetime().nullable(),
-  result: z.string().nullable(),
-  error: z.string().nullable(),
-  metadata: z.string().nullable(), // JSON string
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  ended: z.string().datetime().optional(),
+  result: z.enum(['SUCCESS', 'FAILURE', 'BLOCKED']).optional(),
+  error: z.string().optional(),
+  metadata: z.record(z.string()).optional(), // JSON object
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
 });
 
 export type RunRow = z.infer<typeof RUN_ROW_SCHEMA>;
@@ -41,7 +41,6 @@ export type RunRow = z.infer<typeof RUN_ROW_SCHEMA>;
 // ============================================================================
 
 export const TASK_CLOSE_PAYLOAD_SCHEMA = z.object({
-  task_id: z.string(),
   run_id: z.string(),
   result: z.enum(['SUCCESS', 'FAILURE', 'BLOCKED']),
   artifact_links: z.array(z.object({
@@ -64,7 +63,7 @@ export const REGISTRY_ENTRY_SCHEMA = z.object({
   system_type: z.enum(['WORKER', 'AGENT', 'SERVICE', 'EXTERNAL']),
   status: z.enum(['ACTIVE', 'INACTIVE', 'DEGRADED']),
   health_endpoint: z.string().url().optional(),
-  last_heartbeat: z.string().datetime().nullable(),
+  last_heartbeat: z.string().datetime().optional(),
   metadata: z.record(z.string()).optional(),
 });
 

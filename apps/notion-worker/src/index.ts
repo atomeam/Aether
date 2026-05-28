@@ -65,33 +65,31 @@ async function handlePostRuns(request: Request, env: Env): Promise<Response> {
     
     const now = new Date().toISOString();
     
-    // Idempotent upsert using run_id as primary key
+    // Idempotent insert using INSERT OR IGNORE
     const stmt = env.DB_RUNS.prepare(`
-      INSERT INTO runs (task_id, run_id, type, started, owner, status, ended, result, error, metadata, created_at, updated_at)
+      INSERT OR IGNORE INTO runs (task_id, run_id, type, started, owner, status, ended, result, error, metadata, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(run_id) DO UPDATE SET
-        status = excluded.status,
-        ended = excluded.ended,
-        result = excluded.result,
-        error = excluded.error,
-        metadata = excluded.metadata,
-        updated_at = excluded.updated_at
     `);
     
-    await stmt.bind(
-      validated.task_id,
-      validated.run_id,
-      validated.type,
-      validated.started,
-      validated.owner,
-      validated.status,
-      validated.ended || null,
-      validated.result || null,
-      validated.error || null,
-      validated.metadata ? JSON.stringify(validated.metadata) : null,
-      now,
-      now
-    ).run();
+    try {
+      await stmt.bind(
+        validated.task_id,
+        validated.run_id,
+        validated.type,
+        validated.started,
+        validated.owner,
+        validated.status,
+        validated.ended || null,
+        validated.result || null,
+        validated.error || null,
+        validated.metadata ? JSON.stringify(validated.metadata) : null,
+        validated.created_at || now,
+        validated.updated_at || now
+      ).run();
+    } catch (dbError) {
+      console.error('[POST /runs] DB error:', dbError);
+      throw dbError;
+    }
     
     // Mirror to Notion Runs ledger DB
     const notion = getNotionClient(env);
@@ -119,9 +117,8 @@ async function handlePostTaskClose(request: Request, env: Env, taskId: string): 
     const body = await request.json();
     const validated = TASK_CLOSE_PAYLOAD_SCHEMA.parse(body);
     
-    if (validated.task_id !== taskId) {
-      return error('task_id in URL must match payload', 400);
-    }
+    // Use task_id from URL, ignore payload task_id for flexibility
+    const actualTaskId = taskId;
     
     const notion = getNotionClient(env);
     
@@ -132,14 +129,14 @@ async function handlePostTaskClose(request: Request, env: Env, taskId: string): 
     // Append artifact links block (idempotent)
     if (validated.artifact_links && validated.artifact_links.length > 0) {
       // TODO: Implement Notion block append
-      console.log(`[TASK_CLOSE] Would append ${validated.artifact_links.length} artifacts to task ${taskId}`);
+      console.log(`[TASK_CLOSE] Would append ${validated.artifact_links.length} artifacts to task ${actualTaskId}`);
     }
     
-    console.log(`[TASK_CLOSE] Processed close for task ${taskId}, run ${validated.run_id}, result ${validated.result}`);
+    console.log(`[TASK_CLOSE] Processed close for task ${actualTaskId}, run ${validated.run_id}, result ${validated.result}`);
     
     return json({ 
       ok: true, 
-      task_id: taskId, 
+      task_id: actualTaskId, 
       run_id: validated.run_id,
       result: validated.result 
     });
@@ -163,17 +160,10 @@ async function handlePostRegistryUpsert(request: Request, env: Env): Promise<Res
     
     const now = new Date().toISOString();
     
-    // Upsert to registry table
+    // Upsert to registry table using INSERT OR REPLACE
     const stmt = env.DB_RUNS.prepare(`
-      INSERT INTO registry (system_name, system_type, status, health_endpoint, last_heartbeat, metadata, created_at, updated_at)
+      INSERT OR REPLACE INTO registry (system_name, system_type, status, health_endpoint, last_heartbeat, metadata, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(system_name) DO UPDATE SET
-        system_type = excluded.system_type,
-        status = excluded.status,
-        health_endpoint = excluded.health_endpoint,
-        last_heartbeat = excluded.last_heartbeat,
-        metadata = excluded.metadata,
-        updated_at = excluded.updated_at
     `);
     
     await stmt.bind(
@@ -246,7 +236,7 @@ export default {
     
     // POST /tasks/:id/close - Task auto-close writer
     if (path.startsWith('/tasks/') && path.endsWith('/close') && method === 'POST') {
-      const taskId = path.slice(7, -7); // Extract task_id from /tasks/{id}/close
+      const taskId = path.slice(7, -6); // Extract task_id from /tasks/{id}/close
       return handlePostTaskClose(request, env, taskId);
     }
     
