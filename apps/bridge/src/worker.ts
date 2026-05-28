@@ -12,7 +12,7 @@
 import { default as app } from './server';
 
 // Shared constants
-const VERSION = '0.15.3';
+const VERSION = '0.16.0';
 const SERVICE = 'aether-bridge';
 
 // No-store JSON helper - prevents stale cache
@@ -35,6 +35,7 @@ function json(data: unknown, status = 200): Response {
 function getBindings(env: Env) {
   return {
     DB: !!env.DB,
+    BRIDGE_DB: !!env.BRIDGE_DB,
     STATE: !!env.STATE,
     STATE_CACHE: !!env.STATE_CACHE,
     MYBROWSER: !!env.MYBROWSER,
@@ -560,21 +561,37 @@ export default {
       if (path === '/api/ai/presence') {
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
         const rawStr = await env.STATE_CACHE.get('ai:presence');
-        const raw = rawStr ? JSON.parse(rawStr) : {};
+        let raw: Record<string, unknown> = {};
+        if (rawStr) {
+          try {
+            let parsed = JSON.parse(rawStr);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) raw = parsed as Record<string, unknown>;
+          } catch { /* empty */ }
+        }
         const aiList = Object.entries(raw);
         if (env.STATE) trackUsage(env, ip, 'ai_call');
         return json({ ok: true, count: aiList.length, ais: Object.fromEntries(aiList) });
       }
 
       // POST /api/ai/heartbeat - update AI presence
-      if (path === '/api/ai/heartbeat' && method === 'POST')
-        if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500); {
-        const body = await request.json();
-        const { ai_id, name, status = 'active', role } = body;
+      if (path === '/api/ai/heartbeat' && method === 'POST') {
+        if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
+        const body = await request.json() as Record<string, unknown>;
+        const { ai_id, name, status = 'active', role } = body as { ai_id?: string; name?: string; status?: string; role?: string };
         if (!ai_id) return json({ error: 'ai_id required' }, 400);
 
+        // Resilient KV parse — handles double-encoded JSON strings
         const rawStr = await env.STATE_CACHE.get('ai:presence');
-        const raw = rawStr ? JSON.parse(rawStr) : {};
+        let raw: Record<string, unknown> = {};
+        if (rawStr) {
+          try {
+            let parsed = JSON.parse(rawStr);
+            // Handle double-encoded values (string after first parse)
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) raw = parsed as Record<string, unknown>;
+          } catch { /* start fresh if corrupt */ }
+        }
         raw[ai_id] = { name: name || ai_id, status, role, last_seen: new Date().toISOString(), expires_at: new Date(Date.now() + 300000).toISOString() };
         await env.STATE_CACHE.put('ai:presence', JSON.stringify(raw));
         return json({ ok: true, ai_id, status });
@@ -786,6 +803,26 @@ export default {
         }
       }
 
+      // POST /tasks - create a task and log to BRIDGE_DB audit trail
+      if (path === '/tasks' && method === 'POST') {
+        if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
+        const body = await request.json() as Record<string, unknown>;
+        const { ai_id, title, description } = body as { ai_id?: string; title?: string; description?: string };
+        if (!ai_id) return json({ error: 'ai_id required' }, 400);
+        if (!title) return json({ error: 'title required' }, 400);
+
+        const task_id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const timestamp = new Date().toISOString();
+
+        // Write audit event to BRIDGE_DB
+        await env.BRIDGE_DB.prepare(
+          "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(task_id, 'api', 'TASK_CREATED', 'info', JSON.stringify({ ai_id, title, description: (description || '').substring(0, 1000) }), timestamp).run();
+
+        if (env.STATE) trackUsage(env, ip, 'd1_query');
+        return json({ ok: true, task_id, ai_id, title, timestamp });
+      }
+
       // 404
       return json({ error: 'Not found' }, 404);
       
@@ -859,6 +896,7 @@ export default {
 // Types for Cloudflare
 interface Env {
   DB: D1Database;
+  BRIDGE_DB: D1Database; // aether-bridge-db — runs, registry, audit
   STATE: KVNamespace;
   STATE_CACHE: KVNamespace;
   MYBROWSER: any;
