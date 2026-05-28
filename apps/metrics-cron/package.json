@@ -1,0 +1,15 @@
+{
+  "name": "@aether/metrics-cron",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250525.0",
+    "typescript": "~5.8.2",
+    "wrangler": "^4.0.0"
+  }
+}
