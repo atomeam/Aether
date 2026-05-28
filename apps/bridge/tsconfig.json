@@ -15,7 +15,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "isolatedModules": true,
-    "noEmit": false
+    "noEmit": false,
+    "types": ["@cloudflare/workers-types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "../node_modules", "../apps/backend"]
