@@ -1,0 +1,24 @@
+{
+  "name": "@aether/notion-worker",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@aether/ledger": "file:../../packages/ledger",
+    "@notionhq/client": "^2.2.15",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260523.1",
+    "@types/node": "^22.14.0",
+    "typescript": "^5.6.0",
+    "vitest": "^1.6.0",
+    "wrangler": "^3.0.0"
+  }
+}
