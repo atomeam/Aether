@@ -102,3 +102,7 @@ wrangler secret put WEBHOOK_SECRET
 - General Notion DB CRUD (Todo List, etc.)
 - Notion task status updates
 - Artifact block appends to Notion pages
+
+## Cross-Reference
+
+See coordinated architecture documentation: https://www.notion.so/Coordinated-architecture-bridge-notion-worker-ledger-v0-decision-smoke-evidence-2d375f7558c1418a98c53be4fda8a45b
