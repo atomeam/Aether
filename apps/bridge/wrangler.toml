@@ -16,10 +16,12 @@ binding = "DB"
 database_name = "council-routing-db"
 database_id = "218e0bc6-f955-45d1-b9bf-276d384917c7"
 
-[[d1_databases]]
-binding = "BRIDGE_DB"
-database_name = "aether-bridge-db"
-database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
+# BRIDGE_DB temporarily disabled — database_id was empty (invalid TOML)
+# TODO: fill in aether-bridge-db UUID from CF dashboard
+# [[d1_databases]]
+# binding = "BRIDGE_DB"
+# database_name = "aether-bridge-db"
+# database_id = "<fill-in>""f29243db-5b7a-407b-aa38-64091c1e0676"
 
 [[kv_namespaces]]
 binding = "METRICS"
