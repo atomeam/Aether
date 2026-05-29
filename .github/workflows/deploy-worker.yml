@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'apps/bridge/src/worker.ts'
+      - 'apps/*/src/**'
+      - 'apps/*/wrangler.toml'
       - 'wrangler.toml'
 
 jobs:
