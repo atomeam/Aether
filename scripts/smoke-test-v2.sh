@@ -5,7 +5,7 @@
 # ═══════════════════════════════════════════════════════════════
 # Usage: ./smoke-test-v2.sh [--verbose] [--json-output]
 # Domains: Uses atomicmoonbeam88.workers.dev (fallback until NS swap)
-#           Will migrate to atomind.io subdomains post-DNS migration
+#           Will migrate to a-to-mind.com subdomains post-DNS migration
 # ═══════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -14,7 +14,7 @@ set -euo pipefail
 # Configuration
 # ─────────────────────────────────────────────────────────────────
 BASE_DOMAIN="atomicmoonbeam88.workers.dev"  # Fallback domain
-CANONICAL_DOMAIN="atomind.io"               # Post-migration domain
+CANONICAL_DOMAIN="a-to-mind.com"               # Post-migration domain
 VERBOSE=false
 JSON_OUTPUT=false
 

@@ -14,18 +14,18 @@
 | # | Worker Name | Route | Status | Owner |
 |---|-------------|-------|--------|-------|
 | 1 | aether | `atomicmoonbeam88.workers.dev/aether` | ACTIVE | Viktor |
-| 2 | aether-bridge | `bridge.atomind.io` | ACTIVE | Viktor |
-| 3 | homebase | `home.atomind.io` | ACTIVE | Viktor |
-| 4 | intake-run | `intake-run.atomind.io` | ACTIVE | Viktor |
-| 5 | billing-worker | `billing.atomind.io` | ACTIVE | Viktor |
-| 6 | crew-room | `crew.atomind.io` | ACTIVE | Viktor |
-| 7 | grants-api | `grants.atomind.io` | ACTIVE | Viktor |
-| 8 | adamm | `adamm.atomind.io` | ACTIVE | Viktor |
+| 2 | aether-bridge | `bridge.a-to-mind.com` | ACTIVE | Viktor |
+| 3 | homebase | `home.a-to-mind.com` | ACTIVE | Viktor |
+| 4 | intake-run | `intake-run.a-to-mind.com` | ACTIVE | Viktor |
+| 5 | billing-worker | `billing.a-to-mind.com` | ACTIVE | Viktor |
+| 6 | crew-room | `crew.a-to-mind.com` | ACTIVE | Viktor |
+| 7 | grants-api | `grants.a-to-mind.com` | ACTIVE | Viktor |
+| 8 | adamm | `adamm.a-to-mind.com` | ACTIVE | Viktor |
 | 9 | cool-credit-fb9b | — | STALE — slated for deletion | Viktor |
-| 10 | self-adaptive-app | `self-adaptive-app.atomind.io` | ACTIVE | Viktor |
-| 11 | notion-worker | `notion.atomind.io` | ACTIVE | Viktor |
-| 12 | alpha-orchestrator | `alpha.atomind.io` | ACTIVE | Viktor |
-| 13 | alpha-hub | `alpha-hub.atomind.io` | ACTIVE | Viktor |
+| 10 | self-adaptive-app | `self-adaptive-app.a-to-mind.com` | ACTIVE | Viktor |
+| 11 | notion-worker | `notion.a-to-mind.com` | ACTIVE | Viktor |
+| 12 | alpha-orchestrator | `alpha.a-to-mind.com` | ACTIVE | Viktor |
+| 13 | alpha-hub | `alpha-hub.a-to-mind.com` | ACTIVE | Viktor |
 
 ---
 
@@ -52,7 +52,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `bridge.atomind.io` (primary) / `atomicmoonbeam88.workers.dev/aether-bridge` (fallback) |
+| **Route** | `bridge.a-to-mind.com` (primary) / `atomicmoonbeam88.workers.dev/aether-bridge` (fallback) |
 | **Entry** | `apps/bridge/src/worker.ts` |
 | **D1 Bindings** | `DB` → `council-routing-db` (`218e0bc6-f955-45d1-b9bf-276d384917c7`) |
 | | `BRIDGE_DB` → `aether-bridge-db` (`f29243db-5b7a-407b-aa38-64091c1e0676`) |
@@ -87,7 +87,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `home.atomind.io` |
+| **Route** | `home.a-to-mind.com` |
 | **Entry** | `apps/frontend` |
 | **D1 Bindings** | None in wrangler.toml |
 | **KV Bindings** | None in wrangler.toml |
@@ -104,7 +104,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `intake-run.atomind.io` |
+| **Route** | `intake-run.a-to-mind.com` |
 | **Entry** | Not in apps/ structure — likely separate |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -121,7 +121,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `billing.atomind.io` |
+| **Route** | `billing.a-to-mind.com` |
 | **Entry** | Not in apps/ structure — likely separate |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -139,7 +139,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `crew.atomind.io` |
+| **Route** | `crew.a-to-mind.com` |
 | **Entry** | Not in apps/ structure |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -156,7 +156,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `grants.atomind.io` |
+| **Route** | `grants.a-to-mind.com` |
 | **Entry** | Not in apps/ structure |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -173,7 +173,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `adamm.atomind.io` |
+| **Route** | `adamm.a-to-mind.com` |
 | **Entry** | Not in apps/ structure |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -208,7 +208,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `self-adaptive-app.atomind.io` |
+| **Route** | `self-adaptive-app.a-to-mind.com` |
 | **Entry** | Not in apps/ structure |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -225,7 +225,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `notion.atomind.io` / `notion-worker.atomicmoonbeam88.workers.dev` (fallback) |
+| **Route** | `notion.a-to-mind.com` / `notion-worker.atomicmoonbeam88.workers.dev` (fallback) |
 | **Entry** | `apps/notion-worker/src/index.ts` |
 | **D1 Bindings** | `DB_RUNS` — runs ledger D1 |
 | **KV Bindings** | None in source |
@@ -248,7 +248,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `alpha.atomind.io` |
+| **Route** | `alpha.a-to-mind.com` |
 | **Entry** | Not in apps/ structure |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -265,7 +265,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Route** | `alpha-hub.atomind.io` |
+| **Route** | `alpha-hub.a-to-mind.com` |
 | **Entry** | Not in apps/ structure |
 | **D1 Bindings** | Unknown |
 | **KV Bindings** | Unknown |
@@ -292,16 +292,16 @@
 
 ## Canonical Domain Routing (Post-NS Swap)
 
-Once DNS NS swap completes to `atomind.io`:
+Once DNS NS swap completes to `a-to-mind.com`:
 
 | Worker | Canonical Route |
 |--------|-----------------|
-| aether-frontend | `app.atomind.io` |
-| aether-bridge | `bridge.atomind.io` |
-| notion-worker | `notion.atomind.io` |
-| billing-worker | `billing.atomind.io` |
-| grants-api | `grants.atomind.io` |
-| crew-room | `crew.atomind.io` |
+| aether-frontend | `app.a-to-mind.com` |
+| aether-bridge | `bridge.a-to-mind.com` |
+| notion-worker | `notion.a-to-mind.com` |
+| billing-worker | `billing.a-to-mind.com` |
+| grants-api | `grants.a-to-mind.com` |
+| crew-room | `crew.a-to-mind.com` |
 
 ---
 
