@@ -56,3 +56,7 @@ crons = ["*/15 * * * *", "0 * * * *"]
 [[r2_buckets]]
 binding = "_LOGS"
 bucket_name = "aether-logs"
+
+[[routes]]
+pattern = "bridge.a-to-mind.com"
+custom_domain = true

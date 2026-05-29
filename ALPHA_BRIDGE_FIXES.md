@@ -43,7 +43,7 @@
 **Fixed**:
 - Updated `scripts/smoke-aether-bridge.sh` to check for `BRIDGE_DB` binding in addition to existing bindings
 - Now validates: `DB, BRIDGE_DB, STATE, STATE_CACHE, MYBROWSER`
-- Updated base URL to use `aether.atomind.io`
+- Updated base URL to use `aether.a-to-mind.com`
 - Created `scripts/smoke-aether-bridge-extended.sh` with webhook persistence and idempotency checks
 
 ### 6. Documentation Updates
@@ -83,10 +83,10 @@ wrangler d1 execute aether-bridge-db --file=apps/bridge/migrations/0002_events_c
 After deployment, verify:
 ```bash
 # Check health endpoint
-curl https://aether.atomind.io/health
+curl https://aether.a-to-mind.com/health
 
 # Check crew status
-curl https://aether.atomind.io/crew/status
+curl https://aether.a-to-mind.com/crew/status
 
 # Run basic smoke test
 ./scripts/smoke-aether-bridge.sh
@@ -95,7 +95,7 @@ curl https://aether.atomind.io/crew/status
 ./scripts/smoke-aether-bridge-extended.sh
 
 # Manual webhook test
-curl -X POST https://aether.atomind.io/webhooks/notion \
+curl -X POST https://aether.a-to-mind.com/webhooks/notion \
   -H "Content-Type: application/json" \
   -d '{"data":{"id":"test-123","title":"Test Event"}}'
 

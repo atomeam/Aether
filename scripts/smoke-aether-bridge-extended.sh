@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE="${AETHER_BRIDGE_URL:-https://aether.atomind.io}"
+BASE="${AETHER_BRIDGE_URL:-https://aether.a-to-mind.com}"
 DB_NAME="${AETHER_BRIDGE_DB:-aether-bridge-db}"
 
 echo "Testing Aether Bridge v0.2.0 (Extended Smoke Test)..."

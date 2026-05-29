@@ -211,7 +211,7 @@ CREATE TABLE audit_events (
 - Adds indexes for events and council_logs
 
 ## Custom Domain
-- **Custom Hostname**: `aether.atomind.io`
+- **Custom Hostname**: `aether.a-to-mind.com`
 - **Status**: Locked and configured
 
 ## Observability
