@@ -69,6 +69,10 @@ export const MetricsKeys = {
 } as const;
 
 // ─── Type helpers ────────────────────────────────────────────────────
-export type StateKey = ReturnType<(typeof StateKeys)[keyof typeof StateKeys]>;
-export type CacheKey = ReturnType<(typeof CacheKeys)[keyof typeof CacheKeys]> | typeof CacheKeys[keyof typeof CacheKeys];
-export type MetricsKey = ReturnType<(typeof MetricsKeys)[keyof typeof MetricsKeys]>;
+
+/** Resolve a key entry: if it's a function return its return type, otherwise the value type. */
+type ResolveKey<T> = T extends (...args: any[]) => any ? ReturnType<T> : T;
+
+export type StateKey = ResolveKey<(typeof StateKeys)[keyof typeof StateKeys]>;
+export type CacheKey = ResolveKey<(typeof CacheKeys)[keyof typeof CacheKeys]>;
+export type MetricsKey = ResolveKey<(typeof MetricsKeys)[keyof typeof MetricsKeys]>;
