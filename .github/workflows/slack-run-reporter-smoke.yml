@@ -1,0 +1,28 @@
+name: Slack RUN Reporter Smoke Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Test RUN header posting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate test run_id
+        id: run_id
+        run: echo "run_id=$(uuidgen)" >> $GITHUB_OUTPUT
+        
+      - name: Post RUN header
+        uses: ./_slack-run-report.yml
+        with:
+          run_id: ${{ steps.run_id.outputs.run_id }}
+          task_id: https://www.notion.so/8e4f0dd509de420080efd152907773d3#P1-9
+          type: code_change
+          repo: ${{ github.repository }}
+          actor: ${{ github.actor }}
+          commit_sha: ${{ github.sha }}
+          ci_run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          state: succeeded
+          result: smoke test passed
