@@ -11,6 +11,7 @@
 
 import { default as app } from './server';
 import { handlePostRunEvent } from './ops-routes';
+import { handlePostRunClose } from './ops-run-close';
 
 // Shared constants
 const VERSION = '0.16.0';
@@ -155,6 +156,11 @@ export default {
       // POST /ops/run-event - runs ledger writer (combined deploy + run events)
       if (path === '/ops/run-event' && method === 'POST') {
         return handlePostRunEvent(request, env);
+      }
+
+      // POST /ops/run-close - Slack event handler for task auto-close
+      if (path === '/ops/run-close' && method === 'POST') {
+        return handlePostRunClose(request, env);
       }
       
       // GET /crew/status - summary with all bindings
@@ -914,6 +920,8 @@ interface Env {
   CURATOR_QUEUE: any; // Cloudflare Queue producer
   _LOGS: R2Bucket; // R2 bucket for logs
   OPS_SECRET?: string; // Auth secret for /ops/* endpoints
+  NOTION_TOKEN?: string; // Notion API token for task closing
+  SLACK_SIGNING_SECRET?: string; // Slack signing secret for event verification
 }
 
 // API Key + Tier helpers
