@@ -10,6 +10,7 @@
  */
 
 import { default as app } from './server';
+import { handlePostRunEvent } from './ops-routes';
 
 // Shared constants
 const VERSION = '0.16.0';
@@ -149,6 +150,11 @@ export default {
           ts: new Date().toISOString(),
           bindings: getBindings(env),
         });
+      }
+
+      // POST /ops/run-event - runs ledger writer (combined deploy + run events)
+      if (path === '/ops/run-event' && method === 'POST') {
+        return handlePostRunEvent(request, env);
       }
       
       // GET /crew/status - summary with all bindings
@@ -907,6 +913,7 @@ interface Env {
   NOTION_WEBHOOK_SECRET: string;
   CURATOR_QUEUE: any; // Cloudflare Queue producer
   _LOGS: R2Bucket; // R2 bucket for logs
+  OPS_SECRET?: string; // Auth secret for /ops/* endpoints
 }
 
 // API Key + Tier helpers
