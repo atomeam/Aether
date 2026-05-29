@@ -903,9 +903,11 @@ interface Env {
   BRIDGE_DB: D1Database; // aether-bridge-db — runs, registry, audit
   STATE: KVNamespace;
   STATE_CACHE: KVNamespace;
+  METRICS: KVNamespace; // metrics KV store
   MYBROWSER: any;
   NOTION_WEBHOOK_SECRET: string;
   CURATOR_QUEUE: any; // Cloudflare Queue producer
+  DISPATCHER: Fetcher; // service binding → aether worker
   _LOGS: R2Bucket; // R2 bucket for logs
 }
 
