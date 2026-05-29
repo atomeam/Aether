@@ -12,7 +12,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite/client"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
