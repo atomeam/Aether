@@ -3,6 +3,16 @@ main = "apps/bridge/src/worker.ts"
 compatibility_date = "2026-05-19"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain routes — a-to-mind.com subdomains
+routes = [
+  { pattern = "aether.a-to-mind.com/*", zone_id = "f14fc312aa45f081586a59053b442017" },
+  { pattern = "bridge.a-to-mind.com/*", zone_id = "f14fc312aa45f081586a59053b442017" },
+  { pattern = "home.a-to-mind.com/*",   zone_id = "f14fc312aa45f081586a59053b442017" },
+  { pattern = "billing.a-to-mind.com/*", zone_id = "f14fc312aa45f081586a59053b442017" },
+  { pattern = "grants.a-to-mind.com/*",  zone_id = "f14fc312aa45f081586a59053b442017" },
+  { pattern = "crew.a-to-mind.com/*",    zone_id = "f14fc312aa45f081586a59053b442017" },
+]
+
 [observability]
 enabled = true
 
