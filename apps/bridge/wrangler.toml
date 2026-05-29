@@ -62,6 +62,6 @@ crons = ["*/15 * * * *", "0 * * * *"]
 binding = "_LOGS"
 bucket_name = "aether-logs"
 
-[[routes]]
-pattern = "bridge.a-to-mind.com"
-custom_domain = true
+routes = [
+  { pattern = "bridge.a-to-mind.com", custom_domain = true }
+]
