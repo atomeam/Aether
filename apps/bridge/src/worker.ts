@@ -12,7 +12,7 @@
 import { default as app } from './server';
 
 // Shared constants
-const VERSION = '0.16.1';
+const VERSION = '0.16.2';
 const SERVICE = 'aether-bridge';
 
 // No-store JSON helper - prevents stale cache
