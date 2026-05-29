@@ -328,7 +328,7 @@ export default {
         const rawBody = await request.clone().text();
         
         if (signature && env.NOTION_WEBHOOK_SECRET) {
-          const crypto = await import('crypto');
+          // B3: Node.js crypto removed — using Web Crypto API (see HMAC block)
           const expectedSig = crypto.createHmac('sha256', env.NOTION_WEBHOOK_SECRET).update(rawBody).digest('hex');
           const providedSig = signature.replace(/^sha256=/, '');
           
@@ -372,7 +372,7 @@ export default {
             const databaseId = event.data?.parent?.database_id || event.data?.parent?.page_id || '';
             // Idempotent insert - ignore if exists
             await env.DB.prepare(
-              "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+              "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             ).bind(eventId, 'tier2-webhook', 'WHK_RECEIVED', 'info', pageId, databaseId, rawBody.substring(0, 500), pageId, timestamp).run();
           }
 
@@ -843,7 +843,7 @@ export default {
         // Queue visibility events
         if (env.DB) {
           await env.DB.prepare(
-            "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
           ).bind(job.id, 'curator-queue', 'QUEUE_DEQUEUED', 'info', job.pageId || '', job.databaseId || '', JSON.stringify(job), job.sessionId || job.pageId, new Date().toISOString()).run();
         }
         
