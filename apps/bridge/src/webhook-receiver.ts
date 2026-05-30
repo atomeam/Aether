@@ -93,7 +93,7 @@ async function dispatchToCurator(payload: unknown): Promise<boolean> {
 /**
  * Webhook endpoint - verifies HMAC, then async-dispatches to Curator
  */
-app.post('/webhook', async (req, res) => {
+app.post('/webhooks/notion', async (req, res) => {
   const signature = req.get('X-Notion-Signature');
   const body = req.body as Buffer;
   
