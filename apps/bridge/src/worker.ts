@@ -327,6 +327,23 @@ export default {
         const signature = request.headers.get('x-notion-signature') || request.headers.get('x-hub-signature');
         const rawBody = await request.clone().text();
         
+        // Parse body early for verification challenge detection
+        let parsed: any;
+        try {
+          parsed = JSON.parse(rawBody);
+        } catch (e) {
+          console.log('[Webhook] Invalid JSON');
+          return json({ ok: false, error: 'Invalid JSON' }, 400);
+        }
+        
+        // Notion verification handshake: bare { verification_token }, NO type field, NO signature.
+        // The token is the future signing secret, so this request is unsigned by design.
+        if (parsed?.verification_token && !parsed?.type && !parsed?.event) {
+          console.log('[Webhook] WHK_HANDSHAKE token=', parsed.verification_token);
+          return json({ ok: true }, 200);
+        }
+        
+        // Check signature for all non-handshake requests
         if (signature && env.NOTION_WEBHOOK_SECRET) {
           const crypto = await import('crypto');
           const expectedSig = crypto.createHmac('sha256', env.NOTION_WEBHOOK_SECRET).update(rawBody).digest('hex');
@@ -352,7 +369,7 @@ export default {
         }
         
         try {
-          const event = JSON.parse(rawBody);
+          const event = parsed;
           console.log('[Webhook] Received Notion event');
           const timestamp = new Date().toISOString();
           const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
