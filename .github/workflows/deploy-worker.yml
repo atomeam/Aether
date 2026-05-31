@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'apps/bridge/src/worker.ts'
-      - 'apps/bridge/wrangler.toml'
-      - 'apps/bridge/package.json'
+      - 'apps/*/src/**'
+      - 'apps/*/wrangler.toml'
+      - 'wrangler.toml'
 
 jobs:
   deploy:
@@ -20,13 +20,14 @@ jobs:
         with:
           node-version: 22
           cache: "npm"
-          cache-dependency-path: apps/bridge/package-lock.json
           
-      - name: Install wrangler
-        run: npm install -g wrangler@4
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/bridge
         
       - name: Deploy to Cloudflare
-        run: wrangler deploy --config apps/bridge/wrangler.toml
+        run: npx wrangler deploy
+        working-directory: apps/bridge
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

@@ -75,7 +75,7 @@ export async function suggestFromLessons(proposalFiles: string[]): Promise<strin
   return related
     .filter(l => l.outcome === 'failure')
     .map(l => l.errorType)
-    .filter(Boolean);
+    .filter((error): error is string => Boolean(error));
 }
 
 // --- Event Trigger (The Nervous System) ---
