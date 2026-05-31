@@ -1,8 +1,17 @@
+# =============================================================================
+# AETHER-BRIDGE WORKER - Crew Executor
+# =============================================================================
+# 
+# This worker consumes jobs from curator-jobs queue and executes them.
+# It receives jobs from aether (dispatcher) and reports back when complete.
+# =============================================================================
+
 name = "aether-bridge"
 account_id = "95745fedbea06314e24c27233033a37d"
 main = "src/worker.ts"
 compatibility_date = "2024-12-01"
 
+# KV Namespaces
 routes = [
   { pattern = "bridge.a-to-mind.com/*", custom_domain = true }
 ]
@@ -15,11 +24,13 @@ id = "7319ee9195df4ccf8f4b2c8449dd7930"
 binding = "STATE_CACHE"
 id = "d22e703c3af9451a9942fa2a551a1aa8"
 
+# D1 Database
 [[d1_databases]]
 binding = "DB"
 database_name = "council-routing-db"
 database_id = "218e0bc6-f955-45d1-b9bf-276d384917c7"
 
+# Cloudflare Queue - Consumer (processes curator-jobs)
 [[d1_databases]]
 binding = "BRIDGE_DB"
 database_name = "aether-bridge-db"
@@ -38,6 +49,11 @@ queue = "curator-jobs"
 max_batch_size = 1
 max_retries = 3
 
+# Browser for Puppeteer screenshots
+[browser]
+binding = "MYBROWSER"
+
+# R2 Bucket for execution logs
 # ACTIONS queue - needs to be created via Cloudflare API
 # [[queues.producers]]
 # binding = "ACTIONS"
@@ -62,6 +78,13 @@ crons = ["*/15 * * * *", "0 * * * *"]
 binding = "_LOGS"
 bucket_name = "aether-logs"
 
+# Service Binding - Call aether (dispatcher) directly
+[[services]]
+binding = "AETHER"
+service = "aether"
+
+[vars]
+WORKER_ROLE = "executor"
 [[routes]]
 pattern = "bridge.a-to-mind.com"
 custom_domain = true
