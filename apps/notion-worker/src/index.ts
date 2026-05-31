@@ -9,6 +9,13 @@ import {
 } from '@aether/ledger';
 
 // ============================================================================
+// Shared Constants
+// ============================================================================
+
+const VERSION = '0.1.0';
+const SERVICE = 'notion-worker';
+
+// ============================================================================
 // Environment Types
 // ============================================================================
 
@@ -17,6 +24,7 @@ interface Env {
   NOTION_TOKEN: string;
   INTERNAL_AUTH: string;
   WEBHOOK_SECRET?: string;
+  CF_DEPLOYMENT_ID?: string;
 }
 
 // ============================================================================
@@ -205,8 +213,14 @@ async function handleGetHealth(env: Env): Promise<Response> {
     // Check D1 connectivity
     const result = await env.DB_RUNS.prepare('SELECT COUNT(*) as count FROM runs').first() as { count: number } | null;
     
+    // Get deployment ID from CF environment (if available)
+    const deploymentId = env.CF_DEPLOYMENT_ID || 'unknown';
+    const deploymentIdShort = deploymentId.length >= 8 ? deploymentId.substring(0, 8) : deploymentId;
+    
     return json({
       ok: true,
+      version: `${SERVICE}@${VERSION}+${deploymentIdShort}`,
+      service: SERVICE,
       runs_count: result?.count || 0,
       timestamp: new Date().toISOString(),
     });
