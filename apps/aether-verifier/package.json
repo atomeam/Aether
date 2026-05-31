@@ -1,0 +1,19 @@
+{
+  "name": "@aether/aether-verifier",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@aether/kv-writers": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250525.0",
+    "typescript": "~5.8.2",
+    "wrangler": "^4.95.0"
+  }
+}
