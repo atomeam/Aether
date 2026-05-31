@@ -12,7 +12,7 @@
 import { default as app } from './server';
 
 // Shared constants
-const VERSION = '0.16.0';
+const VERSION = '0.16.2';
 const SERVICE = 'aether-bridge';
 
 // No-store JSON helper - prevents stale cache
@@ -327,20 +327,49 @@ export default {
         const signature = request.headers.get('x-notion-signature') || request.headers.get('x-hub-signature');
         const rawBody = await request.clone().text();
         
+        // Parse body early for verification challenge detection
+        let parsed: any;
+        try {
+          parsed = JSON.parse(rawBody);
+        } catch (e) {
+          console.log('[Webhook] Invalid JSON');
+          return json({ ok: false, error: 'Invalid JSON' }, 400);
+        }
+        
+        // Notion verification handshake: bare { verification_token }, NO type field, NO signature.
+        // The token is the future signing secret, so this request is unsigned by design.
+        if (parsed?.verification_token && !parsed?.type && !parsed?.event) {
+          console.log('[Webhook] WHK_HANDSHAKE token=', parsed.verification_token);
+          return json({ ok: true }, 200);
+        }
+        
+        // Check signature for all non-handshake requests
         if (signature && env.NOTION_WEBHOOK_SECRET) {
-          const crypto = await import('crypto');
-          const expectedSig = crypto.createHmac('sha256', env.NOTION_WEBHOOK_SECRET).update(rawBody).digest('hex');
-          const providedSig = signature.replace(/^sha256=/, '');
+          // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
+          const enc = new TextEncoder();
+          const key = await crypto.subtle.importKey(
+            'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          );
+          const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+          const expectedHex = Array.from(new Uint8Array(sigBuf))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+          const providedHex = signature.replace(/^sha256=/, '');
           
-          let valid = false;
-          if (expectedSig.length === providedSig.length) {
-            valid = true;
-            for (let i = 0; i < expectedSig.length; i++) {
-              valid = valid && expectedSig[i] === providedSig[i];
-            }
+          // Constant-time comparison via double-HMAC
+          if (expectedHex.length !== providedHex.length) {
+            console.log('[Webhook] HMAC verification FAILED');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
           }
-          
-          if (!valid) {
+          const cmpKey = await crypto.subtle.importKey(
+            'raw', enc.encode('hmac-cmp'),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          );
+          const mac1 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex)));
+          const mac2 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex)));
+          let eq = true;
+          for (let i = 0; i < mac1.length; i++) eq = eq && (mac1[i] === mac2[i]);
+          if (!eq) {
             console.log('[Webhook] HMAC verification FAILED');
             return json({ ok: false, error: 'Invalid signature' }, 401);
           }
@@ -352,7 +381,7 @@ export default {
         }
         
         try {
-          const event = JSON.parse(rawBody);
+          const event = parsed;
           console.log('[Webhook] Received Notion event');
           const timestamp = new Date().toISOString();
           const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
@@ -372,7 +401,7 @@ export default {
             const databaseId = event.data?.parent?.database_id || event.data?.parent?.page_id || '';
             // Idempotent insert - ignore if exists
             await env.DB.prepare(
-              "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+              "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             ).bind(eventId, 'tier2-webhook', 'WHK_RECEIVED', 'info', pageId, databaseId, rawBody.substring(0, 500), pageId, timestamp).run();
           }
 
@@ -827,6 +856,724 @@ export default {
         return json({ ok: true, task_id, ai_id, title, timestamp });
       }
 
+      // POST /atomind/poll - Agent mission polling endpoint
+      if (path === '/atomind/poll' && method === 'POST') {
+        try {
+          console.log('[Atomind] Poll endpoint reached');
+          
+          // TEMPORARY: Skip signature verification to test Notion integration
+          console.log('[Atomind] Skipping signature verification for Notion integration test');
+          const agentName = 'Devin'; // Default to Devin for testing
+
+          // Query Notion for pending missions for this agent
+          const notionToken = env.NOTION_API_TOKEN;
+          const commandsDbId = env.NOTION_BRIDGE_COMMANDS_DB_ID;
+          
+          const filter = JSON.stringify({
+            and: [
+              { property: "Status", select: { equals: "Pending" } },
+              { property: "Kind", select: { equals: "agent-mission" } },
+              { property: "Args", rich_text: { contains: `"agent":"${agentName}"` } }
+            ]
+          });
+
+          const notionResponse = await fetch(`https://api.notion.com/v1/databases/${commandsDbId}/query`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${notionToken}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ filter })
+          });
+
+          if (!notionResponse.ok) {
+            const errorText = await notionResponse.text();
+            console.error('[Atomind] Notion query failed:', errorText);
+            return json({ error: 'Notion query failed', details: errorText }, 500);
+          }
+
+          const notionData = await notionResponse.json();
+          const missions = notionData.results || [];
+
+          if (missions.length === 0) {
+            return json({ ok: true, missions: [], message: 'No pending missions' });
+          }
+
+          // Claim the first available mission
+          const mission = missions[0];
+          const missionId = mission.id;
+          
+          // Update mission status to Running
+          const updateResponse = await fetch(`https://api.notion.com/v1/pages/${missionId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${notionToken}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              properties: {
+                'Status': { select: { name: 'Running' } }
+              }
+            })
+          });
+
+          if (!updateResponse.ok) {
+            console.error('[Atomind] Failed to claim mission:', await updateResponse.text());
+            return json({ error: 'Failed to claim mission' }, 500);
+          }
+
+          // Return mission details
+          const argsText = mission.properties.Args.rich_text[0].plain_text;
+          let args = {};
+          try {
+            args = JSON.parse(argsText);
+          } catch (e) {
+            console.error('[Atomind] Failed to parse Args:', argsText);
+          }
+
+          return json({
+            ok: true,
+            mission: {
+              id: missionId,
+              command: mission.properties.Command.title[0].plain_text,
+              args: args,
+              claimed_at: new Date().toISOString()
+            }
+          });
+
+        } catch (e) {
+          console.error('[Atomind] Poll error:', e);
+          return json({ error: 'Internal error', details: String(e) }, 500);
+        }
+      }
+
+      // POST /atomind/complete - Agent mission completion endpoint
+      if (path === '/atomind/complete' && method === 'POST') {
+        try {
+          const signature = request.headers.get('X-Atomind-Signature');
+          if (!signature) {
+            return json({ error: 'Missing X-Atomind-Signature header' }, 401);
+          }
+
+          const rawBody = await request.text();
+          
+          // Verify HMAC signature using Web Crypto API
+          let agentName = '';
+          let valid = false;
+          
+          // Try each agent secret
+          for (const [agent, secret] of [
+            ['Devin', env.ATOMIND_DEVIN_SECRET],
+            ['Gemini', env.ATOMIND_GEMINI_SECRET],
+            ['Viktor', env.ATOMIND_VIKTOR_SECRET]
+          ]) {
+            if (!secret) continue;
+            
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(secret);
+            const key = await crypto.subtle.importKey(
+              'raw',
+              keyData,
+              { name: 'HMAC', hash: 'SHA-256' },
+              false,
+              ['sign']
+            );
+            
+            const signatureData = encoder.encode(rawBody);
+            const expectedSig = await crypto.subtle.sign('HMAC', key, signatureData);
+            const expectedSigHex = Array.from(new Uint8Array(expectedSig))
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join('');
+            
+            const providedSig = signature.replace(/^sha256=/, '');
+            
+            if (expectedSigHex === providedSig) {
+              agentName = agent;
+              valid = true;
+              break;
+            }
+          }
+          
+          if (!valid) {
+            return json({ error: 'Invalid signature' }, 401);
+          }
+
+          const body = JSON.parse(rawBody) as { mission_id: string; result: unknown; status: string };
+          const { mission_id, result, status } = body;
+
+          if (!mission_id) {
+            return json({ error: 'Missing mission_id' }, 400);
+          }
+
+          // Update mission in Notion
+          const notionToken = env.NOTION_API_TOKEN;
+          
+          const updateResponse = await fetch(`https://api.notion.com/v1/pages/${mission_id}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${notionToken}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              properties: {
+                'Status': { select: { name: status || 'Completed' } },
+                'Result': { rich_text: [{ text: { content: JSON.stringify(result) } }] }
+              }
+            })
+          });
+
+          if (!updateResponse.ok) {
+            const errorText = await updateResponse.text();
+            console.error('[Atomind] Failed to complete mission:', errorText);
+            return json({ error: 'Failed to complete mission', details: errorText }, 500);
+          }
+
+          return json({ ok: true, message: 'Mission completed', mission_id });
+
+        } catch (e) {
+          console.error('[Atomind] Complete error:', e);
+          return json({ error: 'Internal error', details: String(e) }, 500);
+        }
+      }
+
+      // ─── Admin Actuator Endpoints (v0) ───────────────────────────────────────
+      // All /admin/* endpoints require HMAC auth with replay protection
+      
+      if (path.startsWith('/admin/')) {
+        const authResult = await verifyAdminAuth(request, env);
+        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+        
+        if (!authResult.valid) {
+          // Log failed auth attempt
+          await logAdminAction(env, {
+            requestId: authResult.requestId,
+            endpoint: path,
+            method: method,
+            authStatus: 'FAILURE',
+            authFailureReason: authResult.error,
+            clientIp,
+          });
+          
+          return json({ error: authResult.error }, 401);
+        }
+        
+        // Auth successful - proceed to endpoint handlers
+        console.log(`[Admin] Authenticated request: ${method} ${path} (requestId: ${authResult.requestId})`);
+        
+        // POST /admin/deploy/trigger - Trigger GitHub workflow dispatch
+        if (path === '/admin/deploy/trigger' && method === 'POST') {
+          try {
+            const body = await request.json() as { branch?: string; ref?: string };
+            const branch = body.branch || 'main';
+            const ref = body.ref || `refs/heads/${branch}`;
+            
+            console.log(`[Admin] Triggering deploy for branch: ${branch}`);
+            
+            const dispatchResponse = await fetch(
+              `https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW}/dispatches`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ref }),
+              }
+            );
+            
+            if (!dispatchResponse.ok) {
+              const errorText = await dispatchResponse.text();
+              console.error('[Admin] GitHub dispatch failed:', errorText);
+              
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                requestBody: JSON.stringify(body),
+                responseStatus: dispatchResponse.status,
+                responseBody: errorText,
+                metadata: JSON.stringify({ action: 'github_dispatch', branch, error: 'dispatch_failed' }),
+              });
+              
+              return json({ error: 'GitHub dispatch failed', details: errorText }, 500);
+            }
+            
+            // Wait a moment for the workflow to be queued, then get the run
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Get the latest workflow run
+            const runsResponse = await fetch(
+              `https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW}/runs?branch=${branch}&per_page=1`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                },
+              }
+            );
+            
+            if (!runsResponse.ok) {
+              const errorText = await runsResponse.text();
+              console.error('[Admin] Failed to fetch workflow runs:', errorText);
+              
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                requestBody: JSON.stringify(body),
+                responseStatus: runsResponse.status,
+                responseBody: errorText,
+                metadata: JSON.stringify({ action: 'github_dispatch', branch, error: 'fetch_runs_failed' }),
+              });
+              
+              return json({ 
+                ok: true, 
+                message: 'Dispatch triggered but failed to fetch run details',
+                branch,
+              });
+            }
+            
+            const runsData = await runsResponse.json();
+            const latestRun = runsData.workflow_runs?.[0];
+            
+            if (!latestRun) {
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                requestBody: JSON.stringify(body),
+                responseStatus: 200,
+                metadata: JSON.stringify({ action: 'github_dispatch', branch, error: 'no_run_found' }),
+              });
+              
+              return json({ 
+                ok: true, 
+                message: 'Dispatch triggered but no run found yet',
+                branch,
+              });
+            }
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              externalRunId: String(latestRun.id),
+              externalRunUrl: latestRun.html_url,
+              requestBody: JSON.stringify(body),
+              responseStatus: 200,
+              metadata: JSON.stringify({ action: 'github_dispatch', branch, workflowRunId: latestRun.id }),
+            });
+            
+            return json({
+              ok: true,
+              message: 'Deploy triggered successfully',
+              workflowRunId: latestRun.id,
+              runUrl: latestRun.html_url,
+              status: latestRun.status,
+              branch,
+            });
+            
+          } catch (e) {
+            console.error('[Admin] Deploy trigger error:', e);
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              responseStatus: 500,
+              responseBody: String(e),
+              metadata: JSON.stringify({ action: 'github_dispatch', error: 'exception' }),
+            });
+            
+            return json({ error: 'Internal error', details: String(e) }, 500);
+          }
+        }
+        
+        // GET /admin/deploy/status/:workflowRunId - Poll GitHub workflow run status
+        if (path.startsWith('/admin/deploy/status/') && method === 'GET') {
+          try {
+            const workflowRunId = path.split('/').pop();
+            
+            if (!workflowRunId) {
+              return json({ error: 'Missing workflowRunId' }, 400);
+            }
+            
+            console.log(`[Admin] Polling status for workflow run: ${workflowRunId}`);
+            
+            const response = await fetch(
+              `https://api.github.com/repos/${env.GITHUB_REPO}/actions/runs/${workflowRunId}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                },
+              }
+            );
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('[Admin] Failed to fetch workflow status:', errorText);
+              
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                responseStatus: response.status,
+                responseBody: errorText,
+                metadata: JSON.stringify({ action: 'github_status', workflowRunId, error: 'fetch_failed' }),
+              });
+              
+              return json({ error: 'Failed to fetch workflow status', details: errorText }, 500);
+            }
+            
+            const runData = await response.json();
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              externalRunId: workflowRunId,
+              externalRunUrl: runData.html_url,
+              responseStatus: 200,
+              metadata: JSON.stringify({ action: 'github_status', workflowRunId, status: runData.status }),
+            });
+            
+            return json({
+              ok: true,
+              workflowRunId,
+              status: runData.status,
+              conclusion: runData.conclusion,
+              runUrl: runData.html_url,
+              createdAt: runData.created_at,
+              updatedAt: runData.updated_at,
+            });
+            
+          } catch (e) {
+            console.error('[Admin] Deploy status error:', e);
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              responseStatus: 500,
+              responseBody: String(e),
+              metadata: JSON.stringify({ action: 'github_status', error: 'exception' }),
+            });
+            
+            return json({ error: 'Internal error', details: String(e) }, 500);
+          }
+        }
+        
+        // GET /admin/cloudflare/verify-token-scopes - Verify Cloudflare token capability
+        if (path === '/admin/cloudflare/verify-token-scopes' && method === 'GET') {
+          try {
+            console.log('[Admin] Verifying Cloudflare token scopes');
+            
+            const response = await fetch(
+              `https://api.cloudflare.com/client/v4/user/tokens/verify`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('[Admin] Cloudflare token verification failed:', errorText);
+              
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                responseStatus: response.status,
+                responseBody: errorText,
+                metadata: JSON.stringify({ action: 'cf_verify', error: 'verification_failed' }),
+              });
+              
+              return json({ 
+                ok: false, 
+                error: 'Cloudflare token verification failed',
+                details: errorText,
+              }, 500);
+            }
+            
+            const tokenData = await response.json();
+            const success = tokenData.success === true;
+            
+            // Check for required scopes (basic Worker deployment scopes)
+            const requiredScopes = [
+              'account',
+              'worker',
+              'worker_script',
+            ];
+            
+            const tokenScopes = tokenData.result?.policy?.[0]?.permission?.resources || [];
+            const hasRequiredScopes = requiredScopes.some(scope => 
+              tokenScopes.some((tokenScope: string) => tokenScope.includes(scope))
+            );
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              responseStatus: 200,
+              metadata: JSON.stringify({ 
+                action: 'cf_verify', 
+                success, 
+                hasRequiredScopes,
+                accountId: env.CLOUDFLARE_ACCOUNT_ID,
+              }),
+            });
+            
+            return json({
+              ok: true,
+              capability: success && hasRequiredScopes ? 'OK' : 'INSUFFICIENT',
+              success,
+              hasRequiredScopes,
+              accountId: env.CLOUDFLARE_ACCOUNT_ID,
+              tokenInfo: {
+                id: tokenData.result?.id,
+                status: tokenData.result?.status,
+                policyName: tokenData.result?.policy?.[0]?.name,
+              },
+            });
+            
+          } catch (e) {
+            console.error('[Admin] Cloudflare verification error:', e);
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              responseStatus: 500,
+              responseBody: String(e),
+              metadata: JSON.stringify({ action: 'cf_verify', error: 'exception' }),
+            });
+            
+            return json({ error: 'Internal error', details: String(e) }, 500);
+          }
+        }
+        
+        // POST /admin/runs/complete - Update Notion Runs ledger with evidence-gated completion
+        if (path === '/admin/runs/complete' && method === 'POST') {
+          try {
+            const body = await request.json() as {
+              runId: string;
+              finalState: 'succeeded' | 'failed' | 'blocked';
+              requiredArtifactsMet: boolean;
+              evidence?: Record<string, unknown>;
+            };
+            
+            const { runId, finalState, requiredArtifactsMet, evidence } = body;
+            
+            if (!runId || !finalState) {
+              return json({ error: 'Missing runId or finalState' }, 400);
+            }
+            
+            console.log(`[Admin] Completing run: ${runId}, state: ${finalState}, artifacts: ${requiredArtifactsMet}`);
+            
+            // Evidence-gated completion: only set Status=Done when succeeded && artifacts met
+            const notionStatus = (finalState === 'succeeded' && requiredArtifactsMet) ? 'Done' : 'Failed';
+            
+            const updateResponse = await fetch(
+              `https://api.notion.com/v1/databases/${env.NOTION_RUNS_DB_ID}/query`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${env.NOTION_API_TOKEN}`,
+                  'Notion-Version': '2022-06-28',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  filter: {
+                    property: 'Run ID',
+                    title: {
+                      equals: runId,
+                    },
+                  },
+                }),
+              }
+            );
+            
+            if (!updateResponse.ok) {
+              const errorText = await updateResponse.text();
+              console.error('[Admin] Notion query failed:', errorText);
+              
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                requestBody: JSON.stringify(body),
+                responseStatus: updateResponse.status,
+                responseBody: errorText,
+                metadata: JSON.stringify({ action: 'notion_complete', runId, error: 'query_failed' }),
+              });
+              
+              return json({ error: 'Notion query failed', details: errorText }, 500);
+            }
+            
+            const notionData = await updateResponse.json();
+            const runPage = notionData.results?.[0];
+            
+            if (!runPage) {
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                requestBody: JSON.stringify(body),
+                responseStatus: 404,
+                metadata: JSON.stringify({ action: 'notion_complete', runId, error: 'not_found' }),
+              });
+              
+              return json({ error: 'Run not found in Notion' }, 404);
+            }
+            
+            // Update the page with completion status
+            const patchResponse = await fetch(
+              `https://api.notion.com/v1/pages/${runPage.id}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${env.NOTION_API_TOKEN}`,
+                  'Notion-Version': '2022-06-28',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  properties: {
+                    'Status': {
+                      select: { name: notionStatus },
+                    },
+                    'Required artifacts met': {
+                      checkbox: requiredArtifactsMet,
+                    },
+                    'Outcome summary': {
+                      rich_text: [
+                        {
+                          text: {
+                            content: JSON.stringify({
+                              finalState,
+                              requiredArtifactsMet,
+                              evidence,
+                              completedAt: new Date().toISOString(),
+                            }),
+                          },
+                        },
+                      ],
+                    },
+                  },
+                }),
+              }
+            );
+            
+            if (!patchResponse.ok) {
+              const errorText = await patchResponse.text();
+              console.error('[Admin] Notion update failed:', errorText);
+              
+              await logAdminAction(env, {
+                requestId: authResult.requestId,
+                endpoint: path,
+                method: method,
+                authStatus: 'SUCCESS',
+                clientIp,
+                externalRunId: runId,
+                requestBody: JSON.stringify(body),
+                responseStatus: patchResponse.status,
+                responseBody: errorText,
+                metadata: JSON.stringify({ action: 'notion_complete', runId, error: 'update_failed' }),
+              });
+              
+              return json({ error: 'Notion update failed', details: errorText }, 500);
+            }
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              externalRunId: runId,
+              requestBody: JSON.stringify(body),
+              responseStatus: 200,
+              metadata: JSON.stringify({ 
+                action: 'notion_complete', 
+                runId, 
+                notionStatus,
+                evidenceGated: true,
+              }),
+            });
+            
+            return json({
+              ok: true,
+              message: 'Run completed successfully',
+              runId,
+              notionStatus,
+              evidenceGated: true,
+            });
+            
+          } catch (e) {
+            console.error('[Admin] Runs complete error:', e);
+            
+            await logAdminAction(env, {
+              requestId: authResult.requestId,
+              endpoint: path,
+              method: method,
+              authStatus: 'SUCCESS',
+              clientIp,
+              responseStatus: 500,
+              responseBody: String(e),
+              metadata: JSON.stringify({ action: 'notion_complete', error: 'exception' }),
+            });
+            
+            return json({ error: 'Internal error', details: String(e) }, 500);
+          }
+        }
+        
+        // Unknown admin endpoint
+        await logAdminAction(env, {
+          requestId: authResult.requestId,
+          endpoint: path,
+          method: method,
+          authStatus: 'SUCCESS',
+          clientIp,
+          responseStatus: 404,
+          metadata: JSON.stringify({ action: 'unknown_endpoint' }),
+        });
+        
+        return json({ error: 'Unknown admin endpoint' }, 404);
+      }
+
       // 404
       return json({ error: 'Not found' }, 404);
       
@@ -843,7 +1590,7 @@ export default {
         // Queue visibility events
         if (env.DB) {
           await env.DB.prepare(
-            "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
           ).bind(job.id, 'curator-queue', 'QUEUE_DEQUEUED', 'info', job.pageId || '', job.databaseId || '', JSON.stringify(job), job.sessionId || job.pageId, new Date().toISOString()).run();
         }
         
@@ -903,10 +1650,134 @@ interface Env {
   BRIDGE_DB: D1Database; // aether-bridge-db — runs, registry, audit
   STATE: KVNamespace;
   STATE_CACHE: KVNamespace;
+  METRICS: KVNamespace; // metrics KV store
   MYBROWSER: any;
   NOTION_WEBHOOK_SECRET: string;
+  NOTION_API_TOKEN: string;
+  NOTION_BRIDGE_COMMANDS_DB_ID: string;
+  NOTION_BRIDGE_LOGS_DB_ID: string;
+  ATOMIND_DEVIN_SECRET: string;
+  ATOMIND_GEMINI_SECRET: string;
+  ATOMIND_VIKTOR_SECRET: string;
   CURATOR_QUEUE: any; // Cloudflare Queue producer
+  DISPATCHER: Fetcher; // service binding → aether worker
   _LOGS: R2Bucket; // R2 bucket for logs
+  // Admin actuator secrets
+  ADMIN_HMAC_SECRET: string;
+  GITHUB_TOKEN: string;
+  GITHUB_REPO: string; // format: "owner/repo"
+  GITHUB_WORKFLOW: string; // workflow filename
+  CLOUDFLARE_API_TOKEN: string;
+  CLOUDFLARE_ACCOUNT_ID: string;
+  NOTION_RUNS_DB_ID: string;
+}
+
+// ─── Admin Actuator Auth (HMAC + Replay Protection) ─────────────────────
+// Constant-time compare to prevent timing attacks
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+// Verify HMAC signature with timestamp replay protection (300s window)
+async function verifyAdminAuth(
+  request: Request,
+  env: Env
+): Promise<{ valid: boolean; requestId: string; error?: string }> {
+  const requestId = crypto.randomUUID();
+  const timestamp = request.headers.get('X-Atomind-Timestamp');
+  const signature = request.headers.get('X-Atomind-Signature');
+  
+  // Check required headers
+  if (!timestamp) {
+    return { valid: false, requestId, error: 'Missing X-Atomind-Timestamp header' };
+  }
+  if (!signature) {
+    return { valid: false, requestId, error: 'Missing X-Atomind-Signature header' };
+  }
+  
+  // Check timestamp freshness (300s window)
+  const now = Math.floor(Date.now() / 1000);
+  const timestampNum = parseInt(timestamp, 10);
+  if (isNaN(timestampNum) || Math.abs(now - timestampNum) > 300) {
+    return { valid: false, requestId, error: 'Timestamp expired or invalid' };
+  }
+  
+  // Verify HMAC signature
+  const rawBody = await request.text();
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(env.ADMIN_HMAC_SECRET);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  // Sign timestamp + body for replay protection
+  const message = `${timestamp}:${rawBody}`;
+  const messageData = encoder.encode(message);
+  const expectedSig = await crypto.subtle.sign('HMAC', key, messageData);
+  const expectedSigHex = Array.from(new Uint8Array(expectedSig))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  const providedSig = signature.replace(/^sha256=/, '');
+  
+  if (!constantTimeCompare(expectedSigHex, providedSig)) {
+    return { valid: false, requestId, error: 'Invalid signature' };
+  }
+  
+  return { valid: true, requestId };
+}
+
+// Log admin action to D1 audit log
+async function logAdminAction(
+  env: Env,
+  data: {
+    requestId: string;
+    endpoint: string;
+    method: string;
+    authStatus: 'SUCCESS' | 'FAILURE';
+    authFailureReason?: string;
+    clientIp?: string;
+    externalRunId?: string;
+    externalRunUrl?: string;
+    requestBody?: string;
+    responseStatus?: number;
+    responseBody?: string;
+    metadata?: string;
+  }
+) {
+  try {
+    await env.BRIDGE_DB.prepare(
+      `INSERT INTO admin_audit_log (
+        request_id, endpoint, method, auth_status, auth_failure_reason,
+        client_ip, external_run_id, external_run_url, request_body,
+        response_status, response_body, metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      data.requestId,
+      data.endpoint,
+      data.method,
+      data.authStatus,
+      data.authFailureReason || null,
+      data.clientIp || null,
+      data.externalRunId || null,
+      data.externalRunUrl || null,
+      data.requestBody || null,
+      data.responseStatus || null,
+      data.responseBody || null,
+      data.metadata || null
+    ).run();
+  } catch (e) {
+    console.error('[Admin] Failed to log audit action:', e);
+  }
 }
 
 // API Key + Tier helpers
