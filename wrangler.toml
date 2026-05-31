@@ -68,5 +68,4 @@ service = "aether"
 crons = ["*/15 * * * *", "0 * * * *"]
 
 routes = [
-  { pattern = "aether.a-to-mind.com", custom_domain = true }
-]
+
