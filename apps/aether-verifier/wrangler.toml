@@ -1,0 +1,33 @@
+name = "aether-verifier"
+main = "src/index.ts"
+compatibility_date = "2026-05-29"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+# D1 Database bindings
+[[d1_databases]]
+binding = "DB"
+database_name = "aether-bridge-db"
+database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "STATE"
+id = "7319ee9195df4ccf8f4b2c8449dd7930"
+
+[[kv_namespaces]]
+binding = "STATE_CACHE"
+id = "d22e703c3af9451a9942fa2a551a1aa8"
+
+[[kv_namespaces]]
+binding = "METRICS"
+id = "49202b2460a74d2dbd6d747d35dda5b7"
+
+# AI Binding for Workers AI
+[ai]
+binding = "AI"
+
+[vars]
+ENVIRONMENT = "production"
