@@ -345,19 +345,31 @@ export default {
         
         // Check signature for all non-handshake requests
         if (signature && env.NOTION_WEBHOOK_SECRET) {
-          const crypto = await import('crypto');
-          const expectedSig = crypto.createHmac('sha256', env.NOTION_WEBHOOK_SECRET).update(rawBody).digest('hex');
-          const providedSig = signature.replace(/^sha256=/, '');
+          // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
+          const enc = new TextEncoder();
+          const key = await crypto.subtle.importKey(
+            'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          );
+          const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+          const expectedHex = Array.from(new Uint8Array(sigBuf))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+          const providedHex = signature.replace(/^sha256=/, '');
           
-          let valid = false;
-          if (expectedSig.length === providedSig.length) {
-            valid = true;
-            for (let i = 0; i < expectedSig.length; i++) {
-              valid = valid && expectedSig[i] === providedSig[i];
-            }
+          // Constant-time comparison via double-HMAC
+          if (expectedHex.length !== providedHex.length) {
+            console.log('[Webhook] HMAC verification FAILED');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
           }
-          
-          if (!valid) {
+          const cmpKey = await crypto.subtle.importKey(
+            'raw', enc.encode('hmac-cmp'),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          );
+          const mac1 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex)));
+          const mac2 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex)));
+          let eq = true;
+          for (let i = 0; i < mac1.length; i++) eq = eq && (mac1[i] === mac2[i]);
+          if (!eq) {
             console.log('[Webhook] HMAC verification FAILED');
             return json({ ok: false, error: 'Invalid signature' }, 401);
           }
@@ -389,7 +401,7 @@ export default {
             const databaseId = event.data?.parent?.database_id || event.data?.parent?.page_id || '';
             // Idempotent insert - ignore if exists
             await env.DB.prepare(
-              "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+              "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
             ).bind(eventId, 'tier2-webhook', 'WHK_RECEIVED', 'info', pageId, databaseId, rawBody.substring(0, 500), pageId, timestamp).run();
           }
 
@@ -1578,7 +1590,7 @@ export default {
         // Queue visibility events
         if (env.DB) {
           await env.DB.prepare(
-            "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT OR IGNORE INTO events (event_id, source, kind, level, page_id, database_id, payload, session_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
           ).bind(job.id, 'curator-queue', 'QUEUE_DEQUEUED', 'info', job.pageId || '', job.databaseId || '', JSON.stringify(job), job.sessionId || job.pageId, new Date().toISOString()).run();
         }
         
