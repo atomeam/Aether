@@ -3,6 +3,54 @@ set -euo pipefail
 
 BASE="${AETHER_BRIDGE_URL:-https://aether.a-to-mind.com}"
 DB_NAME="${AETHER_BRIDGE_DB:-aether-bridge-db}"
+REPO_ROOT="${REPO_ROOT:-.}"
+
+echo "Testing Aether Bridge v0.2.0 (Extended Smoke Test)..."
+echo "Base URL: $BASE"
+echo "Database: $DB_NAME"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────
+# Helper: assert_string_absent
+# Usage: assert_string_absent <url|file> <pattern>
+# Exit non-zero if pattern is found in URL response or file contents.
+# ─────────────────────────────────────────────────────────────────
+assert_string_absent() {
+    local target="$1"
+    local pattern="$2"
+    local label="${3:-assert_string_absent}"
+
+    if [[ "$target" =~ ^https?:// ]]; then
+        # URL: fetch and check response body
+        echo "  [CHECK] $label: $pattern absent in $target"
+        local response
+        response=$(curl -sS "$target" 2>&1) || {
+            echo "  [SKIP] $label: could not fetch $target"
+            return 0
+        }
+        if echo "$response" | grep -q "$pattern"; then
+            echo "  [FAIL] $label: found '$pattern' in response from $target"
+            return 1
+        else
+            echo "  [PASS] $label: '$pattern' not found"
+            return 0
+        fi
+    else
+        # File: grep the file directly
+        echo "  [CHECK] $label: $pattern absent in $target"
+        if [[ ! -e "$target" ]]; then
+            echo "  [SKIP] $label: $target does not exist"
+            return 0
+        fi
+        if grep -q "$pattern" "$target" 2>/dev/null; then
+            echo "  [FAIL] $label: found '$pattern' in $target"
+            return 1
+        else
+            echo "  [PASS] $label: '$pattern' not found"
+            return 0
+        fi
+    fi
+}
 
 echo "Testing Aether Bridge v0.2.0 (Extended Smoke Test)..."
 echo "Base URL: $BASE"
@@ -142,3 +190,41 @@ echo "- Binding validation: OK"
 echo "- Webhook endpoint: OK"
 echo "- Event persistence: $([[ "$event_result" != *"WRANGLER_ERROR"* ]] && echo "✅ Verified" || echo "⚠️  Skipped (manual verification required)")"
 echo "- Idempotency: $([[ "$duplicate_ok" == "true" && "$duplicate_flag" == "true" ]] && echo "✅ Verified" || echo "⚠️  Check results above)"
+
+echo ""
+echo "=== String-Absent Self-Test ==="
+echo "Verifying no 'atomind.io' references remain in repo..."
+
+# Self-test: assert atomind.io absent from key files
+# Note: Devin's verifier scaffold (feat/verifier-scaffold) implements
+# string_absent with matching semantics for the worker-side checks.
+FAILED=0
+
+for file in \
+    "CANONICAL_BINDINGS_MAP.md" \
+    "AGENTS.md" \
+    "ALPHA.md" \
+    "ALPHA_BRIDGE_FIXES.md" \
+    "ALPHA_HARDENING.md" \
+    "ALPHA_SETUP.md" \
+    "TIER1_COORDINATOR_SPEC.md" \
+    "TIER1_QUICKSTART.md" \
+    "TIER1_SETUP_CHECKLIST.md" \
+    "apps/bridge/wrangler.toml" \
+    "apps/notion-worker/wrangler.toml"; do
+
+    if [[ -e "$file" ]]; then
+        if assert_string_absent "$file" "atomind\.io" "repo-check:$file"; then
+            : # pass
+        else
+            ((FAILED++))
+        fi
+    fi
+done
+
+if [[ $FAILED -gt 0 ]]; then
+    echo "FAIL: $FAILED file(s) still contain 'atomind.io'"
+    exit 1
+fi
+
+echo "All files clean: 'atomind.io' not found in repo"

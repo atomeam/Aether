@@ -14,6 +14,6 @@ database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
 [vars]
 ENVIRONMENT = "production"
 
-routes = [
-  { pattern = "notion.a-to-mind.com", custom_domain = true }
-]
+[[routes]]
+pattern = "notion.a-to-mind.com"
+custom_domain = true
