@@ -87,7 +87,7 @@ export function isPanicActive(): boolean {
 }
 
 // Get policy override during panic
-export function getPolicyOverride(): { default: string; tools: Record<string, string> {
+export function getPolicyOverride(): { default: string; tools: Record<string, string> } {
   const state = getPanicState();
   
   if (!state.active) {
