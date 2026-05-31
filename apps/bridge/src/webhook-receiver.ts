@@ -93,11 +93,27 @@ async function dispatchToCurator(payload: unknown): Promise<boolean> {
 /**
  * Webhook endpoint - verifies HMAC, then async-dispatches to Curator
  */
-app.post('/webhook', async (req, res) => {
+app.post('/webhooks/notion', async (req, res) => {
   const signature = req.get('X-Notion-Signature');
   const body = req.body as Buffer;
   
-  // Check for signature header
+  // Parse body early for verification challenge detection
+  let parsed: any;
+  try {
+    parsed = JSON.parse(body.toString());
+  } catch (e) {
+    console.error('[Webhook] Parse error:', e);
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
+  
+  // Notion verification handshake: bare { verification_token }, NO type field, NO signature.
+  // The token is the future signing secret, so this request is unsigned by design.
+  if (parsed?.verification_token && !parsed?.type && !parsed?.event) {
+    console.log('[Webhook] WHK_HANDSHAKE token=', parsed.verification_token);
+    return res.status(200).send('ok');
+  }
+  
+  // Check for signature header (required for all non-handshake requests)
   if (!signature) {
     console.warn('[Webhook] CUR_WEBHOOK_BAD_SIG: No signature header');
     return res.status(401).json({ error: 'Missing signature' });
@@ -109,14 +125,12 @@ app.post('/webhook', async (req, res) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
   
-  // Parse and dispatch to Curator (non-blocking)
+  // Dispatch to Curator (non-blocking)
   try {
-    const payload = JSON.parse(body.toString());
-    
     // Async dispatch - don't block the response
-    dispatchToCurator(payload).then(success => {
+    dispatchToCurator(parsed).then(success => {
       if (success) {
-        console.log('[Webhook] Dispatched to Curator:', payload?.id);
+        console.log('[Webhook] Dispatched to Curator:', parsed?.id);
       } else {
         console.error('[Webhook] Curator dispatch failed');
       }
@@ -124,8 +138,8 @@ app.post('/webhook', async (req, res) => {
     
     return res.status(200).json({ ok: true });
   } catch (e) {
-    console.error('[Webhook] Parse error:', e);
-    return res.status(400).json({ error: 'Invalid payload' });
+    console.error('[Webhook] Dispatch error:', e);
+    return res.status(500).json({ error: 'Dispatch failed' });
   }
 });
 

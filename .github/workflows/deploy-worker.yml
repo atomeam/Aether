@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'apps/bridge/src/worker.ts'
+      - 'apps/*/src/**'
+      - 'apps/*/wrangler.toml'
       - 'wrangler.toml'
 
 jobs:
@@ -22,11 +23,11 @@ jobs:
           
       - name: Install dependencies
         run: npm ci
-        working-directory: .
+        working-directory: apps/bridge
         
       - name: Deploy to Cloudflare
         run: npx wrangler deploy
-        working-directory: .
+        working-directory: apps/bridge
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
