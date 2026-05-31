@@ -1,0 +1,66 @@
+name: Slack RUN Report
+
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        required: true
+        type: string
+      task_id:
+        required: true
+        type: string
+      type:
+        required: true
+        type: string
+      repo:
+        required: true
+        type: string
+      actor:
+        required: true
+        type: string
+      commit_sha:
+        required: true
+        type: string
+      ci_run_url:
+        required: true
+        type: string
+      result:
+        required: false
+        type: string
+      state:
+        required: false
+        type: string
+        default: running
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  report:
+    name: Post RUN header to Slack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post RUN header
+        run: |
+          RUN_HEADER="RUN: ${{ inputs.run_id }}"
+TASK: ${{ inputs.task_id }}
+TYPE: ${{ inputs.type }}
+ACTOR: ${{ inputs.actor }}
+STATE: ${{ inputs.state }}
+STARTED: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ENDED: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+PR: ${{ github.server_url }}/${{ github.repository }}/pull/new/${{ inputs.run_id }}
+CI: ${{ inputs.ci_run_url }}
+EVIDENCE: See CI run"
+
+          if [ -n "${{ inputs.result }}" ]; then
+            RESULT="RESULT (${{ inputs.run_id }}): ${{ inputs.result }}"
+          fi
+
+          PAYLOAD="{
+            \"text\": \"${RUN_HEADER}\n${TASK}\n${TYPE}\n${ACTOR}\n${STATE}\n${STARTED}\n${ENDED}\n${PR}\n${CI}\n${EVIDENCE}\n${RESULT}\"
+          }"
+
+          curl -X POST "${SLACK_WEBHOOK_URL}" \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}"
