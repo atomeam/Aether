@@ -316,7 +316,7 @@ export default function SimpleDashboard() {
                   </div>
                   <div>
                     <div className="font-medium">Connect Your Accounts</div>
-                    <div className="text-sm text-white/60">Link your financial data sources securely</div>
+                    <div className="text-sm text-white/60">Link your financial data sources securely via Plaid</div>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -338,6 +338,13 @@ export default function SimpleDashboard() {
                   </div>
                 </div>
               </div>
+              
+              {isAuthenticated && (
+                <button className="w-full mt-6 bg-gradient-to-r from-[#c4a661] to-[#d4b671] text-black font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-[#c4a661]/30 transition-all flex items-center justify-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Connect Bank Account
+                </button>
+              )}
             </div>
           </div>
         )}
