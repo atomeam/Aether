@@ -7,23 +7,15 @@ import React, { useEffect } from 'react';
 import SimpleDashboard from './components/SimpleDashboard';
 import './index.css';
 
-// Hardcoded admin credentials for automatic access
-const ADMIN_TOKEN = 'admin_automatic_access_token_2026';
-const ADMIN_USER = {
-  id: 'admin',
-  email: 'admin@a-to-mind.com',
-  role: 'admin',
-  permissions: ['all'],
-  plan: 'enterprise'
-};
-
 export default function App() {
   useEffect(() => {
-    // Automatic admin authentication for owner
-    localStorage.setItem('token', ADMIN_TOKEN);
-    localStorage.setItem('aether_token', ADMIN_TOKEN);
-    localStorage.setItem('user', JSON.stringify(ADMIN_USER));
-    localStorage.setItem('hasSeenLanding', 'true');
+    // Remove automatic admin authentication - users should authenticate properly
+    // This was causing everyone to be in enterprise admin mode
+    localStorage.removeItem('token');
+    localStorage.removeItem('aether_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
   }, []);
 
   return <SimpleDashboard />;

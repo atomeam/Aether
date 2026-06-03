@@ -58,28 +58,15 @@ export default function SimpleDashboard() {
   const [showPaymentWall, setShowPaymentWall] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Auto-authenticate all users on mount
+  // Check for existing authentication session
   useEffect(() => {
-    // Auto-set owner mode for this Victus (Adam's machine)
-    localStorage.setItem('aether_owner_secret', 'ADAM_OWNER_2026_ATOMIC_MOONBEAM');
-    
-    // Check if user is enterprise (hardcoded for owner only)
-    // Only Adam can be owner - secret key required
-    const secretKey = localStorage.getItem('aether_owner_secret');
-    const isOwner = secretKey === 'ADAM_OWNER_2026_ATOMIC_MOONBEAM';
-    
+    // Remove any automatic owner/enterprise access
+    localStorage.removeItem('aether_owner_secret');
+
     const storedToken = localStorage.getItem('session_token');
     const storedName = localStorage.getItem('user_name');
-    
-    if (isOwner) {
-      // Owner gets enterprise access
-      setIsAuthenticated(true);
-      setIsEnterprise(true);
-      setUserName('Adam'); // Owner's actual name
-      localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
-      localStorage.setItem('admin_user', 'enterprise');
-      localStorage.setItem('user_name', 'Adam');
-    } else if (storedToken && storedName) {
+
+    if (storedToken && storedName) {
       // Returning user with real session - validate with API
       fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/user/dashboard', {
         headers: { 'Authorization': `Bearer ${storedToken}` }
