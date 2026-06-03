@@ -23,7 +23,7 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
-    // Automatic admin authentication
+    // Automatic admin authentication for owner
     const adminToken = 'admin_automatic_access_token_2026';
     localStorage.setItem('token', adminToken);
     localStorage.setItem('aether_token', adminToken); // For backwards compatibility
