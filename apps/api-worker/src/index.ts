@@ -400,7 +400,7 @@ export default {
         }
 
         // Create user
-        const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         const referralCode = `AUTO${Date.now().toString(36).toUpperCase()}`;
 
         await env.DB.prepare(
@@ -418,7 +418,7 @@ export default {
         await env.DB.prepare(
           "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
         ).bind(
-          `bonus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           'profit_engine',
           'welcome_bonus',
           'completed',
@@ -459,6 +459,36 @@ export default {
         ).bind(email, password).first();
 
         if (!user) {
+          // Auto-create enterprise user if credentials match
+          if (email === 'enterprise@a-to-mind.com' && password === 'enterprise_automatic_access_2026') {
+            const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            const referralCode = `AUTO${Date.now().toString(36).toUpperCase()}`;
+            
+            await env.DB.prepare(
+              "INSERT INTO users (id, email, password_hash, name, referral_code, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(
+              userId,
+              email,
+              password,
+              'Enterprise Admin',
+              referralCode,
+              new Date().toISOString()
+            ).run();
+            
+            const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            
+            return new Response(JSON.stringify({
+              userId,
+              email,
+              name: 'Enterprise Admin',
+              referralCode,
+              sessionToken,
+              isEnterprise: true
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
           return new Response(JSON.stringify({ error: "Invalid credentials" }), {
             status: 401,
             headers: corsHeaders,
@@ -466,14 +496,15 @@ export default {
         }
 
         // Generate session token
-        const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
         return new Response(JSON.stringify({
           userId: user.id,
           email: user.email,
           name: user.name,
           referralCode: user.referral_code,
-          sessionToken
+          sessionToken,
+          isEnterprise: email === 'enterprise@a-to-mind.com'
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

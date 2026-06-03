@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, Sparkles, Bell, Shield } from 'lucide-react';
+import { ArrowUpRight, Sparkles, Bell, Shield, Crown } from 'lucide-react';
 import ProfitEngine from './ProfitEngine';
 import StatsCard from './dashboard/StatsCard';
 import Leaderboard from './dashboard/Leaderboard';
@@ -7,7 +7,8 @@ import ReferralCard from './dashboard/ReferralCard';
 import ShareCard from './dashboard/ShareCard';
 import HowItWorks from './dashboard/HowItWorks';
 import AuthModal from './dashboard/AuthModal';
-import { TrendingUp, Users, Shield as ShieldIcon, Zap } from 'lucide-react';
+import PaymentWall from './dashboard/PaymentWall';
+import { TrendingUp, Users, Shield as ShieldIcon, Zap, Lock } from 'lucide-react';
 
 export default function SimpleDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'profit'>('overview');
@@ -18,10 +19,12 @@ export default function SimpleDashboard() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isEnterprise, setIsEnterprise] = useState(false);
   const [userName, setUserName] = useState('');
   const [showNotification, setShowNotification] = useState(false);
   const [notificationText, setNotificationText] = useState('');
   const [currentEarnings, setCurrentEarnings] = useState(1247.83);
+  const [showPaymentWall, setShowPaymentWall] = useState(false);
   const [leaderboard] = useState([
     { name: 'Sarah M.', earnings: 15847.23, badge: '👑' },
     { name: 'James K.', earnings: 12345.67, badge: '🔥' },
@@ -29,6 +32,33 @@ export default function SimpleDashboard() {
     { name: 'Michael T.', earnings: 8765.43, badge: '💎' },
     { name: 'Jessica L.', earnings: 7654.32, badge: '🌟' }
   ]);
+
+  // Auto-authenticate as enterprise on mount
+  useEffect(() => {
+    const autoAuth = async () => {
+      try {
+        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'enterprise@a-to-mind.com',
+            password: 'enterprise_automatic_access_2026'
+          })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          setIsAuthenticated(true);
+          setIsEnterprise(true);
+          setUserName(result.name || 'Enterprise Admin');
+          localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
+          localStorage.setItem('admin_user', 'enterprise');
+        }
+      } catch (e) {
+        console.error('Auto-auth error:', e);
+      }
+    };
+    autoAuth();
+  }, []);
 
   // Real-time earnings animation
   useEffect(() => {
@@ -81,16 +111,29 @@ export default function SimpleDashboard() {
       const result = await response.json();
       if (response.ok) {
         setIsAuthenticated(true);
+        setIsEnterprise(result.isEnterprise || false);
         setUserName(result.name || data.email.split('@')[0]);
         setShowAuthModal(false);
+        
         if (authMode === 'signup' && result.welcomeBonus) {
           setUserEarnings(prev => prev + result.welcomeBonus);
           setCurrentEarnings(prev => prev + result.welcomeBonus);
+        }
+        
+        // Show payment wall for non-enterprise users
+        if (!result.isEnterprise) {
+          setShowPaymentWall(true);
         }
       }
     } catch (e) {
       console.error('Auth error:', e);
     }
+  };
+
+  const handleSubscribe = (plan: 'starter' | 'pro' | 'enterprise') => {
+    console.log('Subscribed to:', plan);
+    setShowPaymentWall(false);
+    // In production, this would redirect to Stripe checkout
   };
 
   const connectBankAccount = () => {
@@ -116,6 +159,13 @@ export default function SimpleDashboard() {
         onSubmit={handleAuth}
         formData={formData}
         onFormDataChange={setFormData}
+      />
+
+      {/* Payment Wall */}
+      <PaymentWall
+        isOpen={showPaymentWall}
+        onClose={() => setShowPaymentWall(false)}
+        onSubscribe={handleSubscribe}
       />
 
       {/* Hero Header */}
@@ -144,9 +194,22 @@ export default function SimpleDashboard() {
                   <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </button>
               ) : (
-                <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-full px-6 py-3 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-emerald-400" />
-                  <span className="text-emerald-400 font-medium">Welcome, {userName}!</span>
+                <div className={`rounded-full px-6 py-3 flex items-center gap-2 ${
+                  isEnterprise 
+                    ? 'bg-[#c4a661]/20 border border-[#c4a661]/50' 
+                    : 'bg-emerald-500/20 border border-emerald-500/30'
+                }`}>
+                  {isEnterprise ? (
+                    <>
+                      <Crown className="w-5 h-5 text-[#c4a661]" />
+                      <span className="text-[#c4a661] font-medium">Enterprise Admin</span>
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5 text-emerald-400" />
+                      <span className="text-emerald-400 font-medium">Welcome, {userName}!</span>
+                    </>
+                  )}
                 </div>
               )}
               <button className="bg-white/5 border border-white/20 text-white font-medium px-8 py-4 rounded-full text-lg hover:bg-white/10 transition-all">
