@@ -35,5 +35,6 @@ crons = ["0 * * * *", "30 * * * *", "*/15 * * * *"]
 GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
 SENDGRID_API_KEY = "YOUR_SENDGRID_API_KEY"
 EMAIL_API_URL = "https://api.sendgrid.com/v3/mail/send"
-APP_URL = "https://a-to-mind.com"
+APP_URL = "https://your-app-url.com"
 STRIPE_PUBLIC_KEY = "YOUR_STRIPE_PUBLIC_KEY"
+GITHUB_TOKEN = "YOUR_GITHUB_TOKEN_FOR_SEO_AUTO_PUBLISH"

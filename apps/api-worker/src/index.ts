@@ -3875,6 +3875,130 @@ Requirements:
       }
     }
 
+    // S5 Programmatic SEO - GitHub API Integration
+    if (url.pathname === "/api/agents/s5/seo/publish" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const { content_id } = await request.json();
+
+        // Fetch content from KV
+        const contentData = await env.LOXA_DYNAMIC_CODE.get(`seo_content_${content_id}`);
+        if (!contentData) {
+          return new Response(JSON.stringify({ error: "Content not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const parsedContent = JSON.parse(contentData);
+
+        // GitHub API integration (requires GITHUB_TOKEN env var)
+        const githubToken = env.GITHUB_TOKEN;
+        if (!githubToken) {
+          console.log("S5 SEO: GitHub token not configured, skipping auto-publish");
+          return new Response(JSON.stringify({ 
+            success: false, 
+            message: "GitHub token not configured" 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Create branch and PR via GitHub API
+        const branchName = `seo-report-${Date.now()}`;
+        const repoOwner = "atomeam";
+        const repoName = "Aether";
+
+        // Create branch
+        const createBranchResponse = await fetch(
+          `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${githubToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              ref: `refs/heads/${branchName}`,
+              sha: "main" // This would need to get the latest commit SHA
+            })
+          }
+        );
+
+        // Create file
+        const createFileResponse = await fetch(
+          `https://api.github.com/repos/${repoOwner}/${repoName}/contents/engineering/${parsedContent.filename}`,
+          {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${githubToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message: `SEO: ${parsedContent.filename}`,
+              content: btoa(parsedContent.content),
+              branch: branchName
+            })
+          }
+        );
+
+        // Create PR
+        const createPRResponse = await fetch(
+          `https://api.github.com/repos/${repoOwner}/${repoName}/pulls`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${githubToken}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              title: `SEO: ${parsedContent.filename}`,
+              body: `Auto-generated engineering report by S5 Architect\n\nGenerated from action: ${parsedContent.action_id}`,
+              head: branchName,
+              base: "main"
+            })
+          }
+        );
+
+        if (createPRResponse.ok) {
+          const prData = await createPRResponse.json();
+          
+          // Update content status
+          await env.LOXA_DYNAMIC_CODE.put(
+            `seo_content_${content_id}`,
+            JSON.stringify({
+              ...parsedContent,
+              status: 'pr_opened',
+              pr_number: prData.number,
+              pr_url: prData.html_url
+            })
+          );
+
+          console.log(`S5 SEO: Created PR #${prData.number} for ${parsedContent.filename}`);
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: "SEO content published to GitHub"
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("S5 SEO publish error:", e);
+        return new Response(JSON.stringify({ error: "Publishing failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // S5 Architect - Self-evolving AI agent
     if (url.pathname === "/api/agents/s5/evolve" && request.method === "POST") {
       try {
@@ -4526,6 +4650,90 @@ Requirements:
           ).run();
         }
 
+        // 4. Programmatic SEO Loop - Technical Content Generation
+        const seoOneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        // Get top impactful actions from agent_actions
+        const impactfulActions = await env.DB.prepare(
+          "SELECT * FROM agent_actions WHERE timestamp >= ? AND status = 'completed' ORDER BY timestamp DESC LIMIT 3"
+        ).bind(seoOneDayAgo).all() as any[];
+
+        if (impactfulActions.results.length > 0) {
+          console.log(`S5 SEO: Found ${impactfulActions.results.length} impactful actions for content generation`);
+
+          for (const action of impactfulActions.results) {
+            try {
+              // Generate technical content using AI
+              const aiPrompt = `You are S5, an AI Technical Writer for Loxa. Generate a detailed engineering case study based on this autonomous infrastructure action.
+
+Action: ${action.action_taken}
+Agent: ${action.agent_id}
+Details: ${action.details}
+Timestamp: ${action.timestamp}
+
+Requirements:
+- Output ONLY raw Markdown (no markdown code blocks, just the content)
+- Title: Technical and descriptive (e.g., "How We Optimized D1 Latency at the Edge")
+- Include: Problem statement, technical approach, code examples, performance metrics (before/after)
+- Add SEO frontmatter at the top with title, description, and keywords
+- Make it valuable for developers searching for similar solutions
+- Include specific technical details, stack traces, and implementation notes
+- Length: 800-1200 words
+
+Format:
+---
+title: "Technical Title"
+description: "SEO description"
+keywords: ["keyword1", "keyword2", "keyword3"]
+---
+
+[Content starts here]`;
+
+              const aiResponse = await env.AI.run(aiPrompt, {
+                model: "@cf/meta/llama-3.8b-instruct"
+              });
+
+              if (aiResponse.success) {
+                const content = aiResponse.response;
+                const filename = `engineering-report-${Date.now()}.md`;
+                
+                // Store content in KV for GitHub API integration
+                await env.LOXA_DYNAMIC_CODE.put(
+                  `seo_content_${action.id}`,
+                  JSON.stringify({
+                    filename,
+                    content,
+                    action_id: action.id,
+                    generated_at: new Date().toISOString(),
+                    status: 'pending_pr'
+                  })
+                );
+
+                console.log(`S5 SEO: Generated content for action ${action.id}`);
+                
+                // Log SEO generation action
+                const seoActionId = `s5_seo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                await env.DB.prepare(
+                  "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+                ).bind(
+                  seoActionId,
+                  "s5",
+                  `Generated SEO content: ${filename}`,
+                  "completed",
+                  new Date().toISOString(),
+                  JSON.stringify({
+                    filename,
+                    action_id: action.id,
+                    content_preview: content.substring(0, 200) + "..."
+                  })
+                ).run();
+              }
+            } catch (e: any) {
+              console.error(`S5 SEO: Failed to generate content for action ${action.id}:`, e);
+            }
+          }
+        }
+
         // 2. Evaluate A/B test results from last hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         
@@ -4593,15 +4801,15 @@ Requirements:
         }
 
         // 3. Generate new variant B for testing
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const componentOneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
         const navigationLogs = await env.DB.prepare(
           "SELECT panel_id, action, COUNT(*) as visits FROM user_navigation_logs WHERE timestamp >= ? GROUP BY panel_id ORDER BY visits DESC LIMIT 5"
-        ).bind(oneDayAgo).all() as any[];
+        ).bind(componentOneDayAgo).all() as any[];
 
         const slowQueries = await env.DB.prepare(
           "SELECT table_name, duration_ms, query_text FROM slow_queries WHERE timestamp >= ? ORDER BY duration_ms DESC LIMIT 5"
-        ).bind(oneDayAgo).all() as any[];
+        ).bind(componentOneDayAgo).all() as any[];
 
         const telemetryContext = {
           top_panels: navigationLogs.results.map((log: any) => ({
