@@ -8,14 +8,25 @@ import LandingPage from './components/LandingPage';
 import SimpleDashboard from './components/SimpleDashboard';
 import './index.css';
 
+// Hardcoded admin credentials for automatic access
+const ADMIN_TOKEN = 'admin_automatic_access_token_2026';
+const ADMIN_USER = {
+  id: 'admin',
+  email: 'admin@a-to-mind.com',
+  role: 'admin',
+  permissions: ['all'],
+  plan: 'premium'
+};
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
+    // Automatic admin authentication
+    localStorage.setItem('token', ADMIN_TOKEN);
+    localStorage.setItem('user', JSON.stringify(ADMIN_USER));
+    setIsAuthenticated(true);
     
     // Check if user has seen landing page
     const hasSeenLanding = localStorage.getItem('hasSeenLanding');
@@ -31,9 +42,5 @@ export default function App() {
     return <LandingPage onEnterDashboard={handleEnterDashboard} />;
   }
 
-  if (isAuthenticated) {
-    return <SimpleDashboard />;
-  }
-
-  return <LandingPage onEnterDashboard={handleEnterDashboard} />;
+  return <SimpleDashboard />;
 }
