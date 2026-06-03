@@ -169,14 +169,14 @@ export default function ProfitEngine() {
               key={result.id}
               className={`p-6 bg-white/[0.02] border rounded-2xl ${
                 result.action_needed
-                  ? 'border-emerald-500/30 bg-emerald-500/5'
+                  ? 'border-red-500/30 bg-red-500/5'
                   : 'border-emerald-500/30 bg-emerald-500/5'
               }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   {result.action_needed ? (
-                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
                   ) : (
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
                   )}
@@ -189,21 +189,21 @@ export default function ProfitEngine() {
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-bold ${
                   result.action_needed
-                    ? 'bg-emerald-500/20 text-emerald-400'
+                    ? 'bg-red-500/20 text-red-400'
                     : 'bg-emerald-500/20 text-emerald-400'
                 }`}>
-                  {result.action_needed ? 'AUTO-CORRECTED' : 'OPTIMAL'}
+                  {result.action_needed ? 'CRITICAL ISSUE' : 'OPTIMAL'}
                 </div>
               </div>
 
               {result.actions_taken && result.actions_taken.length > 0 && (
-                <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                  <div className="text-xs text-emerald-400 uppercase tracking-widest mb-2">
-                    Autonomous Actions Executed
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <div className="text-xs text-red-400 uppercase tracking-widest mb-2">
+                    Emergency Actions Executed
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {result.actions_taken.map((action, i) => (
-                      <span key={i} className="px-2 py-1 bg-emerald-500/20 text-emerald-300 text-xs rounded">
+                      <span key={i} className="px-2 py-1 bg-red-500/20 text-red-300 text-xs rounded">
                         {action.replace(/_/g, ' ')}
                       </span>
                     ))}

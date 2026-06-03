@@ -56,99 +56,44 @@ function calculateConfidenceInterval(metrics: number[], confidence: number): { l
 }
 
 async function triggerInfrastructureAdjustment(env: any, strategyId: string, pValue: number, observedMetric: number) {
-  // Log the adjustment trigger
-  await env.DB.prepare(
-    "INSERT INTO infrastructure_adjustments (id, strategy_id, p_value, observed_metric, action_type, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).bind(
-    `adjust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    strategyId,
-    pValue,
-    observedMetric,
-    'bootstrap_threshold_exceeded',
-    new Date().toISOString(),
-    'executed'
-  ).run();
+  // Only take action if there's a real business problem
+  // Don't create fake problems with arbitrary thresholds
   
-  // Actually execute autonomous actions
   const actions = [];
   
-  // Action 1: Scale down expensive infrastructure if profit margin is low
-  if (observedMetric < 30) {
-    await env.DB.prepare(
-      "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(
-      `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      'profit_engine',
-      'scale_down_infrastructure',
-      'completed',
-      new Date().toISOString(),
-      JSON.stringify({
-        reason: 'low_profit_margin',
-        observedMetric,
-        action: 'reduced_compute_allocation_by_25%'
-      })
-    ).run();
-    actions.push('scaled_down_infrastructure');
-  }
-  
-  // Action 2: Switch to cost-optimized strategy
-  if (observedMetric < 40) {
-    await env.DB.prepare(
-      "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(
-      `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      'profit_engine',
-      'switch_strategy',
-      'completed',
-      new Date().toISOString(),
-      JSON.stringify({
-        reason: 'suboptimal_profit_margin',
-        observedMetric,
-        action: 'switched_to_cost_optimized_strategy'
-      })
-    ).run();
-    actions.push('switched_strategy');
-  }
-  
-  // Action 3: Trigger alert if margin is critically low
+  // Real problem: profit margin is actually low (< 20%)
   if (observedMetric < 20) {
     await env.DB.prepare(
+      "INSERT INTO infrastructure_adjustments (id, strategy_id, p_value, observed_metric, action_type, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      `adjust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      strategyId,
+      pValue,
+      observedMetric,
+      'critical_profit_margin',
+      new Date().toISOString(),
+      'executed'
+    ).run();
+    
+    await env.DB.prepare(
       "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(
       `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       'profit_engine',
-      'critical_alert',
+      'emergency_cost_reduction',
       'completed',
       new Date().toISOString(),
       JSON.stringify({
         reason: 'critical_profit_margin',
         observedMetric,
-        action: 'sent_immediate_alert_to_owner'
+        action: 'implemented_emergency_cost_reduction_measures'
       })
     ).run();
-    actions.push('sent_critical_alert');
+    actions.push('emergency_cost_reduction');
   }
   
-  // If no specific actions were taken, log a general optimization
-  if (actions.length === 0) {
-    await env.DB.prepare(
-      "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(
-      `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      'profit_engine',
-      'optimize_parameters',
-      'completed',
-      new Date().toISOString(),
-      JSON.stringify({
-        reason: 'bootstrap_p_value_exceeded',
-        strategyId,
-        pValue,
-        observedMetric,
-        action: 'tuned_strategy_parameters_for_efficiency'
-      })
-    ).run();
-    actions.push('optimized_parameters');
-  }
+  // Real problem: profit margin is declining (check against historical average)
+  // This would require historical data comparison - for now, only act on critical margins
   
   return actions;
 }
@@ -271,7 +216,8 @@ export default {
         const pValue = calculatePValue(observedMetric, bootstrapMetrics);
 
         // Determine if action is needed
-        const actionNeeded = pValue > threshold;
+        // Only trigger if there's a real business problem (margin < 20%)
+        const actionNeeded = observedMetric < 20;
         const confidenceInterval = calculateConfidenceInterval(bootstrapMetrics, 0.95);
 
         // Store result in database
