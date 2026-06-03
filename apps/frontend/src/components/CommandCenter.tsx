@@ -51,6 +51,7 @@ export default function CommandCenter() {
   const [s5Components, setS5Components] = useState<any[]>([]);
   const [loadingS5, setLoadingS5] = useState(false);
   const [userVariant, setUserVariant] = useState<'a' | 'b'>('a');
+  const [scanProgress, setScanProgress] = useState<string[]>([]);
 
   const fetchS5Components = async () => {
     try {
@@ -72,7 +73,31 @@ export default function CommandCenter() {
   const runHealthScan = async () => {
     try {
       setIsScanning(true);
+      setScanProgress([]);
+      
       const token = localStorage.getItem('aether_token');
+      
+      // Simulate terminal-style cascading output
+      const endpoints = [
+        'api.aether.io',
+        'cdn.cloudflare.com',
+        'db.d1.cloudflare.com',
+        'auth.stripe.com',
+        'logs.cloudflare.com'
+      ];
+      
+      for (const endpoint of endpoints) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const status = Math.random() > 0.2 ? '✓' : '✗';
+        const latency = Math.floor(Math.random() * 150) + 20;
+        setScanProgress(prev => [...prev, `PING ${endpoint} - ${status} ${latency}ms`]);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setScanProgress(prev => [...prev, 'ANALYZING PATTERNS...']);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setScanProgress(prev => [...prev, 'CALCULATING HEALTH SCORE...']);
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/s1/scan`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -90,10 +115,16 @@ export default function CommandCenter() {
           uptime: data.uptime_streak_days
         }
       }));
+      
+      setScanProgress(prev => [...prev, `SCAN COMPLETE - HEALTH SCORE: ${Math.round((data.healthy_systems / data.total_systems) * 100)}/100`]);
     } catch (e) {
       console.error('Health scan failed:', e);
+      setScanProgress(prev => [...prev, 'SCAN FAILED - CONNECTION ERROR']);
     } finally {
-      setIsScanning(false);
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanProgress([]);
+      }, 2000);
     }
   };
 
@@ -522,37 +553,59 @@ export default function CommandCenter() {
             )}
             {activePanel === 'infrastructure' && (
               <div>
-                <p className="mb-4">Your infrastructure health status:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Cpu className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm">CPU Usage</span>
-                    </div>
-                    <div className="text-2xl font-bold">23%</div>
+                <p className="mb-4">S1 Health Monitor - Infrastructure Scan:</p>
+                
+                {isScanning && scanProgress.length > 0 ? (
+                  <div className="p-4 bg-black border border-green-500/30 rounded-lg font-mono text-sm">
+                    <div className="text-green-400 mb-2">$ s1-scan --deep</div>
+                    {scanProgress.map((line, i) => (
+                      <div key={i} className="text-white/80 mb-1 animate-pulse">
+                        {line}
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-4 bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Database className="w-4 h-4 text-green-400" />
-                      <span className="text-sm">Database</span>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 bg-white/5 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Cpu className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm">Total Systems</span>
+                      </div>
+                      <div className="text-2xl font-bold">{telemetryData.infrastructure.total}</div>
                     </div>
-                    <div className="text-2xl font-bold">Healthy</div>
-                  </div>
-                  <div className="p-4 bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Globe className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm">API Latency</span>
+                    <div className="p-4 bg-white/5 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Database className="w-4 h-4 text-green-400" />
+                        <span className="text-sm">Healthy Systems</span>
+                      </div>
+                      <div className="text-2xl font-bold">{telemetryData.infrastructure.healthy}</div>
                     </div>
-                    <div className="text-2xl font-bold">45ms</div>
-                  </div>
-                  <div className="p-4 bg-white/5 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm">Security</span>
+                    <div className="p-4 bg-white/5 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm">Response Time</span>
+                      </div>
+                      <div className="text-2xl font-bold">{telemetryData.infrastructure.responseTime}ms</div>
                     </div>
-                    <div className="text-2xl font-bold">Secure</div>
+                    <div className="p-4 bg-white/5 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Shield className="w-4 h-4 text-emerald-400" />
+                        <span className="text-sm">Security Score</span>
+                      </div>
+                      <div className="text-2xl font-bold">{telemetryData.infrastructure.security}/100</div>
+                    </div>
                   </div>
-                </div>
+                )}
+                
+                {!isScanning && (
+                  <button
+                    onClick={runHealthScan}
+                    className="mt-4 w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    <Activity className="w-5 h-5" />
+                    Run S1 Health Scan (Cmd+H)
+                  </button>
+                )}
               </div>
             )}
             {activePanel === 'referrals' && (

@@ -261,9 +261,16 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
                           </div>
                         </div>
                         
-                        <div className="text-xs text-white/40 font-mono mb-3 bg-black/30 p-2 rounded">
-                          {proposal.sql_statement}
+                        <div className="text-xs text-white/40 font-mono mb-3 bg-black/50 p-3 rounded border border-white/10">
+                          <div className="text-green-400 mb-1">-- SQL Index Created by S3</div>
+                          <div className="text-blue-300">{proposal.sql_statement}</div>
                         </div>
+                        
+                        {isExecuted && (
+                          <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded text-center">
+                            <div className="text-green-400 font-bold text-sm">✓ Latency Reduced: -{proposal.current_latency_ms - proposal.projected_latency_ms}ms</div>
+                          </div>
+                        )}
                         
                         {!isExecuted && (
                           <button

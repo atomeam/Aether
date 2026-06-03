@@ -718,9 +718,9 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-8 animate-pulse">
                 <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">Request Received!</h3>
+                <h3 className="text-xl font-bold mb-2 text-green-300">Request Received!</h3>
                 <p className="text-white/60 mb-6">
                   We'll review your request and reach out within 24 hours to discuss your infrastructure needs.
                 </p>
@@ -731,7 +731,7 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
                     setEarlyAccessEmail('');
                     setEarlyAccessPain('');
                   }}
-                  className="px-6 py-2 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
+                  className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg hover:opacity-90 transition-opacity font-bold"
                 >
                   Close
                 </button>
