@@ -3147,6 +3147,42 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
         const avgResponseTime = totalSystems > 0 ? Math.round(totalResponseTime / totalSystems) : 0;
         const avgSecurityScore = totalSystems > 0 ? Math.round(totalSecurityScore / totalSystems) : 0;
         
+        // If unhealthy systems detected, trigger S2 Auto-Patcher
+        if (healthySystems < totalSystems) {
+          console.log(`S1: Detected ${totalSystems - healthySystems} issues, triggering S2 Auto-Patcher`);
+          
+          // Log anomalies for S2
+          const unhealthyKeys = [];
+          for (const key of infraKeys.keys) {
+            const value = await env.LOXA_INFRA_HEALTH.get(key.name);
+            if (value) {
+              const infraData = JSON.parse(value);
+              if (infraData.status !== 'healthy') {
+                unhealthyKeys.push(key);
+              }
+            }
+          }
+
+          for (const key of unhealthyKeys) {
+            const value = await env.LOXA_INFRA_HEALTH.get(key.name);
+            if (value) {
+              const infraData = JSON.parse(value);
+              const anomalyId = `anomaly_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              await env.DB.prepare(
+                "INSERT INTO system_anomalies (id, endpoint, error_type, stack_trace, request_payload, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+              ).bind(
+                anomalyId,
+                key.name,
+                infraData.error_type || 'Health check failed',
+                infraData.stack_trace || 'No stack trace available',
+                JSON.stringify(infraData),
+                new Date().toISOString(),
+                'pending'
+              ).run();
+            }
+          }
+        }
+        
         return new Response(JSON.stringify({
           total_systems: totalSystems,
           healthy_systems: healthySystems,
@@ -3496,7 +3532,7 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       }
     }
 
-    // Error logging endpoint for S5 blast shield
+    // S2 Auto-Patcher - Error telemetry intercept
     if (url.pathname === "/api/telemetry/errors" && request.method === "POST") {
       try {
         const authHeader = request.headers.get("Authorization");
@@ -3535,6 +3571,146 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       } catch (e: any) {
         console.error("Error logging failed:", e);
         return new Response(JSON.stringify({ error: "Failed to log error" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // S2 Auto-Patcher - System anomaly logging
+    if (url.pathname === "/api/telemetry/anomaly" && request.method === "POST") {
+      try {
+        const { endpoint, error_type, stack_trace, request_payload } = await request.json();
+
+        const anomalyId = `anomaly_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await env.DB.prepare(
+          "INSERT INTO system_anomalies (id, endpoint, error_type, stack_trace, request_payload, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).bind(
+          anomalyId,
+          endpoint,
+          error_type,
+          stack_trace,
+          request_payload,
+          new Date().toISOString(),
+          "pending"
+        ).run();
+
+        return new Response(JSON.stringify({ success: true, anomaly_id: anomalyId }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("Anomaly logging failed:", e);
+        return new Response(JSON.stringify({ error: "Failed to log anomaly" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // S2 Auto-Patcher - Heal endpoint
+    if (url.pathname === "/api/agents/s2/heal" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        // Fetch pending anomalies
+        const anomalies = await env.DB.prepare(
+          "SELECT * FROM system_anomalies WHERE status = 'pending' ORDER BY timestamp DESC LIMIT 5"
+        ).all() as any[];
+
+        if (anomalies.results.length === 0) {
+          return new Response(JSON.stringify({ success: true, message: "No pending anomalies" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Process each anomaly
+        for (const anomaly of anomalies.results) {
+          try {
+            // Use AI to generate patch
+            const aiPrompt = `You are S2, an autonomous site reliability engineer. Analyze this stack trace and error. Write the corrected TypeScript code to resolve this error.
+
+Error: ${anomaly.error_type}
+Stack Trace: ${anomaly.stack_trace}
+Endpoint: ${anomaly.endpoint}
+
+Requirements:
+- Output ONLY raw TypeScript code (no markdown, no explanations)
+- Include proper error handling
+- Make it production-ready
+- Return the complete code block as a single string`;
+
+            const aiResponse = await env.AI.run(aiPrompt, {
+              model: "@cf/meta/llama-3.8b-instruct"
+            });
+
+            const generatedPatch = aiResponse.success ? aiResponse.response : null;
+
+            if (generatedPatch) {
+              const patchId = `patch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              
+              // Store patch in KV
+              await env.LOXA_HOT_PATCHES.put(
+                patchId,
+                JSON.stringify({
+                  endpoint: anomaly.endpoint,
+                  patch_code: generatedPatch,
+                  anomaly_id: anomaly.id,
+                  timestamp: new Date().toISOString(),
+                  generated_by: "s2"
+                })
+              );
+
+              // Update anomaly status
+              await env.DB.prepare(
+                "UPDATE system_anomalies SET status = 'patched', patch_id = ? WHERE id = ?"
+              ).bind(patchId, anomaly.id).run();
+
+              // Log the auto-patch action
+              const actionId = `s2_action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              await env.DB.prepare(
+                "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+              ).bind(
+                actionId,
+                "s2",
+                `Auto-patched endpoint: ${anomaly.endpoint}`,
+                "completed",
+                new Date().toISOString(),
+                JSON.stringify({
+                  anomaly_id: anomaly.id,
+                  patch_id,
+                  endpoint: anomaly.endpoint
+                })
+              ).run();
+
+              console.log(`S2: Auto-patched ${anomaly.endpoint} with ${patchId}`);
+            }
+          } catch (e: any) {
+            console.error(`S2: Failed to patch anomaly ${anomaly.id}:`, e);
+            await env.DB.prepare(
+              "UPDATE system_anomalies SET status = 'failed' WHERE id = ?"
+            ).bind(anomaly.id).run();
+          }
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          processed: anomalies.results.length
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("S2 Heal error:", e);
+        return new Response(JSON.stringify({ error: "Healing failed" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -3937,7 +4113,91 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       }
     }
 
-    // S5 Architect - Hourly self-evolution with A/B testing
+    // S2 Auto-Patcher - Hourly self-healing (30 minutes past the hour)
+    if (cron === "30 * * * *") {
+      console.log("Running S2 Auto-Patcher self-healing...");
+      
+      try {
+        // Check for pending anomalies
+        const anomalies = await env.DB.prepare(
+          "SELECT * FROM system_anomalies WHERE status = 'pending' ORDER BY timestamp DESC LIMIT 5"
+        ).all() as any[];
+
+        if (anomalies.results.length > 0) {
+          console.log(`S2: Found ${anomalies.results.length} pending anomalies`);
+
+          for (const anomaly of anomalies.results) {
+            try {
+              const aiPrompt = `You are S2, an autonomous site reliability engineer. Analyze this stack trace and error. Write the corrected TypeScript code to resolve this error.
+
+Error: ${anomaly.error_type}
+Stack Trace: ${anomaly.stack_trace}
+Endpoint: ${anomaly.endpoint}
+
+Requirements:
+- Output ONLY raw TypeScript code (no markdown, no explanations)
+- Include proper error handling
+- Make it production-ready
+- Return the complete code block as a single string`;
+
+              const aiResponse = await env.AI.run(aiPrompt, {
+                model: "@cf/meta/llama-3.8b-instruct"
+              });
+
+              const generatedPatch = aiResponse.success ? aiResponse.response : null;
+
+              if (generatedPatch) {
+                const patchId = `patch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                await env.LOXA_HOT_PATCHES.put(
+                  patchId,
+                  JSON.stringify({
+                    endpoint: anomaly.endpoint,
+                    patch_code: generatedPatch,
+                    anomaly_id: anomaly.id,
+                    timestamp: new Date().toISOString(),
+                    generated_by: "s2"
+                  })
+                );
+
+                await env.DB.prepare(
+                  "UPDATE system_anomalies SET status = 'patched', patch_id = ? WHERE id = ?"
+                ).bind(patchId, anomaly.id).run();
+
+                const actionId = `s2_action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                await env.DB.prepare(
+                  "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+                ).bind(
+                  actionId,
+                  "s2",
+                  `Auto-patched endpoint: ${anomaly.endpoint}`,
+                  "completed",
+                  new Date().toISOString(),
+                  JSON.stringify({
+                    anomaly_id: anomaly.id,
+                    patch_id,
+                    endpoint: anomaly.endpoint
+                  })
+                ).run();
+
+                console.log(`S2: Auto-patched ${anomaly.endpoint} with ${patchId}`);
+              }
+            } catch (e: any) {
+              console.error(`S2: Failed to patch anomaly ${anomaly.id}:`, e);
+              await env.DB.prepare(
+                "UPDATE system_anomalies SET status = 'failed' WHERE id = ?"
+              ).bind(anomaly.id).run();
+            }
+          }
+        } else {
+          console.log("S2: No pending anomalies to heal");
+        }
+      } catch (e: any) {
+        console.error("S2 Self-healing error:", e);
+      }
+    }
+
+    // S5 Architect - Hourly self-evolution with A/B testing (top of the hour)
     if (cron === "0 * * * *") {
       console.log("Running S5 Architect hourly evolution...");
       

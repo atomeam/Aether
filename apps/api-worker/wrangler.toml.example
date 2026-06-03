@@ -21,11 +21,15 @@ id = "YOUR_INFRA_HEALTH_ID"
 binding = "LOXA_DYNAMIC_CODE"
 id = "YOUR_DYNAMIC_CODE_ID"
 
+[[kv_namespaces]]
+binding = "LOXA_HOT_PATCHES"
+id = "YOUR_HOT_PATCHES_ID"
+
 [ai]
 binding = "AI"
 
 [triggers]
-crons = ["0 * * * *", "*/15 * * * *"]
+crons = ["0 * * * *", "30 * * * *", "*/15 * * * *"]
 
 [vars]
 GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
