@@ -17,6 +17,13 @@ id = "YOUR_AGENT_STATE_ID"
 binding = "LOXA_INFRA_HEALTH"
 id = "YOUR_INFRA_HEALTH_ID"
 
+[[kv_namespaces]]
+binding = "LOXA_DYNAMIC_CODE"
+id = "YOUR_DYNAMIC_CODE_ID"
+
+[ai]
+binding = "AI"
+
 [triggers]
 crons = ["0 0 * * *", "*/15 * * * *"]
 

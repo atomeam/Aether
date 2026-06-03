@@ -47,6 +47,25 @@ export default function CommandCenter() {
     agents: { active: 0, latency: 0 },
     infrastructure: { total: 0, healthy: 0, responseTime: 0, security: 0, uptime: 0 }
   });
+  const [s5Components, setS5Components] = useState<any[]>([]);
+  const [loadingS5, setLoadingS5] = useState(false);
+
+  const fetchS5Components = async () => {
+    try {
+      setLoadingS5(true);
+      const token = localStorage.getItem('aether_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/s5/components`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setS5Components(data.components || []);
+    } catch (e) {
+      console.error('Failed to fetch S5 components:', e);
+    } finally {
+      setLoadingS5(false);
+    }
+  };
 
   const runHealthScan = async () => {
     try {
@@ -181,6 +200,7 @@ export default function CommandCenter() {
       setCurrentUser(JSON.parse(user));
     }
     fetchTelemetry();
+    fetchS5Components();
     setLoading(false);
     
     // Refresh telemetry every 30 seconds
@@ -190,11 +210,39 @@ export default function CommandCenter() {
     const handleOpenDatabaseInspector = () => setShowDatabaseInspector(true);
     window.addEventListener('open-database-inspector', handleOpenDatabaseInspector);
 
+    // Navigation tracking for S5 Architect
+    const trackNavigation = async (panelId: string, action: string) => {
+      try {
+        const token = localStorage.getItem('aether_token');
+        if (!token) return;
+        
+        await fetch(`${import.meta.env.VITE_API_URL}/api/telemetry/navigation`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            panel_id: panelId,
+            action: action,
+            page_url: window.location.pathname
+          })
+        });
+      } catch (e) {
+        console.error('Failed to track navigation:', e);
+      }
+    };
+
+    // Track panel interactions
+    if (activePanel) {
+      trackNavigation(activePanel, 'view');
+    }
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('open-database-inspector', handleOpenDatabaseInspector);
     };
-  }, []);
+  }, [activePanel]);
 
   const getTelemetryPanels = (): TelemetryPanel[] => {
     const usagePercent = telemetryData.usage.limit > 0 
@@ -273,6 +321,15 @@ export default function CommandCenter() {
         trend: 'P99: 120ms',
         status: telemetryData.infrastructure.responseTime < 100 ? 'good' : 'warning',
         proOnly: false
+      },
+      {
+        id: 's5_architect',
+        title: 'S5 Architect',
+        icon: Zap,
+        value: `${s5Components.length} Generated`,
+        trend: loadingS5 ? 'Loading...' : 'Auto-evolution active',
+        status: s5Components.length > 0 ? 'good' : 'warning',
+        proOnly: true
       }
     ];
   };
@@ -576,6 +633,60 @@ export default function CommandCenter() {
                     <div className="text-2xl font-bold">32ms</div>
                   </div>
                 </div>
+              </div>
+            )}
+            {activePanel === 's5_architect' && (
+              <div>
+                <p className="mb-4">S5 Architect - Self-evolving AI agent:</p>
+                {loadingS5 ? (
+                  <div className="p-4 bg-white/5 rounded-lg text-center">
+                    <RefreshCcw className="w-8 h-8 animate-spin mx-auto mb-2 text-purple-400" />
+                    <p className="text-white/60">Loading AI-generated components...</p>
+                  </div>
+                ) : s5Components.length === 0 ? (
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-purple-400 mb-2">
+                      <Zap className="w-5 h-5" />
+                      <span className="font-bold">No Components Generated Yet</span>
+                    </div>
+                    <p className="text-sm text-white/60 mb-4">S5 analyzes navigation patterns and slow queries to automatically generate new dashboard features. Check back tomorrow for the first evolution.</p>
+                    <div className="text-xs text-white/40">
+                      <div>Next evolution: Daily at midnight</div>
+                      <div>Telemetry: Navigation + Slow Queries</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {s5Components.map((component: any) => (
+                      <div key={component.id} className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="font-medium text-green-300 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              {component.id}
+                            </div>
+                            <div className="text-xs text-white/40 mt-1">
+                              {new Date(component.timestamp).toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-xs text-white/40">
+                            Generated by S5
+                          </div>
+                        </div>
+                        {component.telemetry_context && (
+                          <div className="text-xs text-white/60 mt-2 p-2 bg-black/30 rounded">
+                            <div className="font-medium mb-1">Telemetry Context:</div>
+                            <div>Top Panels: {component.telemetry_context.top_panels?.map((p: any) => `${p.panel} (${p.visits})`).join(', ')}</div>
+                            <div>Slowest Queries: {component.telemetry_context.slowest_queries?.map((q: any) => `${q.table} (${q.duration_ms}ms)`).join(', ')}</div>
+                          </div>
+                        )}
+                        <div className="mt-3 p-2 bg-black/30 rounded font-mono text-xs text-white/40 max-h-32 overflow-y-auto">
+                          {component.code?.substring(0, 500)}...
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

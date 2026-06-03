@@ -3496,6 +3496,215 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       }
     }
 
+    // Navigation logging endpoint for S5 Architect telemetry
+    if (url.pathname === "/api/telemetry/navigation" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        const { panel_id, action, duration_ms, page_url } = await request.json();
+
+        const logId = `nav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await env.DB.prepare(
+          "INSERT INTO user_navigation_logs (id, user_id, panel_id, action, duration_ms, timestamp, page_url) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).bind(
+          logId,
+          userId,
+          panel_id,
+          action,
+          duration_ms || null,
+          new Date().toISOString(),
+          page_url || null
+        ).run();
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("Navigation logging error:", e);
+        return new Response(JSON.stringify({ error: "Failed to log navigation" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // S5 Architect - Self-evolving AI agent
+    if (url.pathname === "/api/agents/s5/evolve" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        // Fetch last 24 hours of navigation logs
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const navigationLogs = await env.DB.prepare(
+          "SELECT panel_id, action, COUNT(*) as visits FROM user_navigation_logs WHERE timestamp >= ? GROUP BY panel_id ORDER BY visits DESC LIMIT 5"
+        ).bind(twentyFourHoursAgo).all() as any[];
+
+        // Fetch last 24 hours of slow queries
+        const slowQueries = await env.DB.prepare(
+          "SELECT table_name, duration_ms, query_text FROM slow_queries WHERE timestamp >= ? ORDER BY duration_ms DESC LIMIT 5"
+        ).bind(twentyFourHoursAgo).all() as any[];
+
+        // Build telemetry context for AI
+        const telemetryContext = {
+          top_panels: navigationLogs.results.map((log: any) => ({
+            panel: log.panel_id,
+            visits: log.visits
+          })),
+          slowest_queries: slowQueries.results.map((q: any) => ({
+            table: q.table_name,
+            duration_ms: q.duration_ms,
+            query_sample: q.query_text.substring(0, 200)
+          }))
+        };
+
+        // Use Cloudflare Workers AI to generate new component
+        const aiPrompt = `You are S5, an AI Architect for the Loxa infrastructure platform. Based on this telemetry data, generate a React/Tailwind component that either:
+1. Expands on the most-used feature (highest traffic panel)
+2. Solves the biggest performance bottleneck (slowest query)
+
+Telemetry Data:
+${JSON.stringify(telemetryContext, null, 2)}
+
+Requirements:
+- Output ONLY raw React/Tailwind code (no markdown, no explanations)
+- Component must be self-contained (no external imports beyond lucide-react)
+- Use the existing dark/purple neon design theme
+- Component should be a new dashboard panel or tool
+- Include proper TypeScript interfaces
+- Make it interactive and useful
+
+Return the complete component code as a single string.`;
+
+        const aiResponse = await env.AI.run(aiPrompt, {
+          model: "@cf/meta/llama-3.8b-instruct"
+        });
+
+        const generatedCode = aiResponse.success ? aiResponse.response : null;
+
+        if (!generatedCode) {
+          return new Response(JSON.stringify({ error: "AI generation failed" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Store generated code in KV
+        const componentId = `s5_component_${Date.now()}`;
+        await env.LOXA_DYNAMIC_CODE.put(
+          componentId,
+          JSON.stringify({
+            code: generatedCode,
+            telemetry_context: telemetryContext,
+            timestamp: new Date().toISOString(),
+            generated_by: "s5"
+          })
+        );
+
+        // Log the evolution action
+        const actionId = `s5_action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await env.DB.prepare(
+          "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          actionId,
+          "s5",
+          `Generated new component: ${componentId}`,
+          "completed",
+          new Date().toISOString(),
+          JSON.stringify({
+            telemetry_context,
+            component_id
+          })
+        ).run();
+
+        return new Response(JSON.stringify({
+          success: true,
+          component_id,
+          telemetry_context,
+          generated_code_preview: generatedCode.substring(0, 500) + "..."
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("S5 Evolution error:", e);
+        return new Response(JSON.stringify({ error: "Evolution failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // S5 Components endpoint - fetch AI-generated components
+    if (url.pathname === "/api/agents/s5/components" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        // Fetch last 7 days of generated components
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        
+        // List all keys in KV (this is a simplified approach - in production you'd maintain an index)
+        const components = [];
+        const keys = await env.LOXA_DYNAMIC_CODE.list();
+        
+        for (const key of keys.keys) {
+          if (key.name.startsWith("s5_component_")) {
+            const componentData = await env.LOXA_DYNAMIC_CODE.get(key.name);
+            if (componentData) {
+              const parsed = JSON.parse(componentData);
+              if (new Date(parsed.timestamp) >= new Date(sevenDaysAgo)) {
+                components.push({
+                  id: key.name,
+                  ...parsed
+                });
+              }
+            }
+          }
+        }
+
+        return new Response(JSON.stringify({
+          total_components: components.length,
+          components: components.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("S5 Components error:", e);
+        return new Response(JSON.stringify({ error: "Failed to fetch components" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // 404 for unknown routes
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
@@ -3676,6 +3885,96 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
         console.log("Proposal generation complete");
       } catch (e: any) {
         console.error("Proposal generation failed:", e);
+      }
+    }
+
+    // S5 Architect - Daily self-evolution (runs at midnight)
+    if (cron === "0 0 * * *") {
+      console.log("Running S5 Architect self-evolution...");
+      
+      try {
+        // Fetch telemetry for AI analysis
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        const navigationLogs = await env.DB.prepare(
+          "SELECT panel_id, action, COUNT(*) as visits FROM user_navigation_logs WHERE timestamp >= ? GROUP BY panel_id ORDER BY visits DESC LIMIT 5"
+        ).bind(twentyFourHoursAgo).all() as any[];
+
+        const slowQueries = await env.DB.prepare(
+          "SELECT table_name, duration_ms, query_text FROM slow_queries WHERE timestamp >= ? ORDER BY duration_ms DESC LIMIT 5"
+        ).bind(twentyFourHoursAgo).all() as any[];
+
+        const telemetryContext = {
+          top_panels: navigationLogs.results.map((log: any) => ({
+            panel: log.panel_id,
+            visits: log.visits
+          })),
+          slowest_queries: slowQueries.results.map((q: any) => ({
+            table: q.table_name,
+            duration_ms: q.duration_ms,
+            query_sample: q.query_text.substring(0, 200)
+          }))
+        };
+
+        console.log("S5 Telemetry context:", JSON.stringify(telemetryContext));
+
+        // Use Cloudflare Workers AI to generate new component
+        const aiPrompt = `You are S5, an AI Architect for the Loxa infrastructure platform. Based on this telemetry data, generate a React/Tailwind component that either:
+1. Expands on the most-used feature (highest traffic panel)
+2. Solves the biggest performance bottleneck (slowest query)
+
+Telemetry Data:
+${JSON.stringify(telemetryContext, null, 2)}
+
+Requirements:
+- Output ONLY raw React/Tailwind code (no markdown, no explanations)
+- Component must be self-contained (no external imports beyond lucide-react)
+- Use the existing dark/purple neon design theme
+- Component should be a new dashboard panel or tool
+- Include proper TypeScript interfaces
+- Make it interactive and useful
+
+Return the complete component code as a single string.`;
+
+        const aiResponse = await env.AI.run(aiPrompt, {
+          model: "@cf/meta/llama-3.8b-instruct"
+        });
+
+        const generatedCode = aiResponse.success ? aiResponse.response : null;
+
+        if (generatedCode) {
+          const componentId = `s5_component_${Date.now()}`;
+          await env.LOXA_DYNAMIC_CODE.put(
+            componentId,
+            JSON.stringify({
+              code: generatedCode,
+              telemetry_context: telemetryContext,
+              timestamp: new Date().toISOString(),
+              generated_by: "s5"
+            })
+          );
+
+          const actionId = `s5_action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          await env.DB.prepare(
+            "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+          ).bind(
+            actionId,
+            "s5",
+            `Auto-generated component: ${componentId}`,
+            "completed",
+            new Date().toISOString(),
+            JSON.stringify({
+              telemetry_context,
+              component_id
+            })
+          ).run();
+
+          console.log(`S5: Generated component ${componentId}`);
+        } else {
+          console.log("S5: AI generation failed, skipping evolution");
+        }
+      } catch (e: any) {
+        console.error("S5 Self-evolution error:", e);
       }
     }
   }
