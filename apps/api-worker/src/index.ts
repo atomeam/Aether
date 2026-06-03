@@ -3916,6 +3916,30 @@ Requirements:
         const repoOwner = "atomeam";
         const repoName = "Aether";
 
+        // Get latest commit SHA from main branch
+        const mainBranchResponse = await fetch(
+          `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/main`,
+          {
+            headers: {
+              "Authorization": `Bearer ${githubToken}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+        if (!mainBranchResponse.ok) {
+          console.log("S5 SEO: Failed to get main branch SHA");
+          return new Response(JSON.stringify({ 
+            success: false, 
+            message: "Failed to get main branch SHA" 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const mainBranchData = await mainBranchResponse.json();
+        const latestSha = mainBranchData.object.sha;
+
         // Create branch
         const createBranchResponse = await fetch(
           `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs`,
@@ -3927,7 +3951,7 @@ Requirements:
             },
             body: JSON.stringify({
               ref: `refs/heads/${branchName}`,
-              sha: "main" // This would need to get the latest commit SHA
+              sha: latestSha
             })
           }
         );

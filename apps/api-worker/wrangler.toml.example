@@ -38,3 +38,6 @@ EMAIL_API_URL = "https://api.sendgrid.com/v3/mail/send"
 APP_URL = "https://your-app-url.com"
 STRIPE_PUBLIC_KEY = "YOUR_STRIPE_PUBLIC_KEY"
 GITHUB_TOKEN = "YOUR_GITHUB_TOKEN_FOR_SEO_AUTO_PUBLISH"
+
+# Required secrets (configure via: npx wrangler secret put <SECRET_NAME>)
+# GITHUB_TOKEN - GitHub personal access token for SEO auto-publishing
