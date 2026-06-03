@@ -632,6 +632,7 @@ async function absorbProjectData(env: any): Promise<any> {
 async function executeAutonomousOutbound(env: any): Promise<any> {
   // Execute autonomous outbound: sense → reason → act → verify
   // Make results compound dramatically each cycle
+  // Add governance controls and audit trails
   const outboundActions = [];
   
   // Get previous cycle stats for compound growth
@@ -641,6 +642,41 @@ async function executeAutonomousOutbound(env: any): Promise<any> {
   
   const previousMeetings = previousOutbound?.details ? JSON.parse(previousOutbound.details).meetingsBooked || 0 : 0;
   const compoundGrowthRate = 1.15; // 15% compound growth per cycle
+  
+  // Governance: Check daily send limits
+  const today = new Date().toISOString().split('T')[0];
+  const todaySends = await env.DB.prepare(
+    "SELECT COUNT(*) as count FROM agent_actions WHERE action_taken = 'autonomous_outbound' AND timestamp LIKE ?"
+  ).bind(`${today}%`).first();
+  
+  const dailySendLimit = 500;
+  const sendsToday = todaySends?.count || 0;
+  
+  if (sendsToday >= dailySendLimit) {
+    // Log governance block
+    await env.DB.prepare(
+      "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(
+      `gov_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+      'governance',
+      'daily_limit_reached',
+      'blocked',
+      new Date().toISOString(),
+      JSON.stringify({
+        message: 'Daily send limit reached',
+        sendsToday,
+        dailySendLimit,
+        blocked: true
+      })
+    ).run();
+    
+    return {
+      message: 'Governance: Daily send limit reached',
+      blocked: true,
+      sendsToday,
+      dailySendLimit
+    };
+  }
   
   // 1. Sense: Identify high-priority leads (compound growth)
   const leadsToContact = Math.floor((Math.random() * 30 + 10) * Math.pow(compoundGrowthRate, previousOutbound ? 1 : 1));
@@ -668,6 +704,36 @@ async function executeAutonomousOutbound(env: any): Promise<any> {
   const avgDealSize = 15000;
   const pipelineCreated = meetingsBooked * avgDealSize;
   
+  // Create audit trail entry
+  const auditId = `audit_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  await env.DB.prepare(
+    "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(
+    auditId,
+    'audit_trail',
+    'outbound_execution',
+    'completed',
+    new Date().toISOString(),
+    JSON.stringify({
+      auditId,
+      leadsToContact,
+      qualifiedLeads,
+      emailsSent,
+      repliesReceived,
+      meetingsBooked,
+      pipelineCreated,
+      replyRate: (replyRate * 100).toFixed(1) + '%',
+      meetingConversionRate: (meetingConversionRate * 100).toFixed(1) + '%',
+      compoundGrowth: (compoundGrowthRate * 100 - 100).toFixed(1) + '%',
+      governance: {
+        dailySendLimit,
+        sendsToday,
+        remainingSends: dailySendLimit - sendsToday - emailsSent
+      },
+      outboundActions
+    })
+  ).run();
+  
   // Log autonomous outbound execution
   await env.DB.prepare(
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
@@ -688,6 +754,7 @@ async function executeAutonomousOutbound(env: any): Promise<any> {
       replyRate: (replyRate * 100).toFixed(1) + '%',
       meetingConversionRate: (meetingConversionRate * 100).toFixed(1) + '%',
       compoundGrowth: (compoundGrowthRate * 100 - 100).toFixed(1) + '%',
+      auditId,
       outboundActions
     })
   ).run();
@@ -703,6 +770,12 @@ async function executeAutonomousOutbound(env: any): Promise<any> {
     replyRate: (replyRate * 100).toFixed(1) + '%',
     meetingConversionRate: (meetingConversionRate * 100).toFixed(1) + '%',
     compoundGrowth: (compoundGrowthRate * 100 - 100).toFixed(1) + '%',
+    auditId,
+    governance: {
+      dailySendLimit,
+      sendsToday,
+      remainingSends: dailySendLimit - sendsToday - emailsSent
+    },
     outboundActions
   };
 }
