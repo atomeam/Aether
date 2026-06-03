@@ -1,3 +1,5 @@
+import { EmailMessage } from "cloudflare:email";
+
 // Bootstrap P-Value Calculation Functions
 function calculateProfitMargin(data: any[]): number {
   if (data.length === 0) return 0;
@@ -226,52 +228,26 @@ async function generateRealOptimizations(env: any, data: any[]): Promise<string[
 // 5-Minute Automation Functions
 async function assessPriorityTasks(env: any): Promise<string[]> {
   const tasks: string[] = [];
-  
-  // Always trigger frontend update every 5 minutes
+
+  // Every 5 minutes: compute REAL metrics from the database (no fake data)
+  tasks.push('compute_real_metrics');
+
+  // Every 5 minutes: run AI analysis on the REAL metrics to suggest improvements
+  tasks.push('ai_improvement_analysis');
+
+  // Always trigger frontend update so the dashboard reflects the latest real data
   tasks.push('trigger_frontend_update');
-  
-  // Always absorb lead data every 5 minutes (uses Google Search API - real)
-  tasks.push('absorb_lead_data');
-  
-  // Always execute autonomous outbound every 5 minutes (uses Cloudflare AI - real)
-  tasks.push('execute_autonomous_outbound');
-  
-  // Check if revenue data sync is needed (uses database - real)
-  const lastSync = await env.DB.prepare(
-    "SELECT MAX(timestamp) as last_sync FROM agent_actions WHERE action_taken = 'revenue_data_sync'"
+
+  // Send the owner a real email digest at most once every 24h (not spammy)
+  const lastEmail = await env.DB.prepare(
+    "SELECT MAX(timestamp) as last_email FROM agent_actions WHERE action_taken = 'owner_digest_email'"
   ).first();
-  
-  const lastSyncTime = lastSync?.last_sync ? new Date(lastSync.last_sync) : new Date(0);
-  const hoursSinceSync = (Date.now() - lastSyncTime.getTime()) / (1000 * 60 * 60);
-  
-  if (hoursSinceSync > 1) {
-    tasks.push('sync_revenue_data');
+  const lastEmailTime = lastEmail?.last_email ? new Date(lastEmail.last_email) : new Date(0);
+  const hoursSinceEmail = (Date.now() - lastEmailTime.getTime()) / (1000 * 60 * 60);
+  if (hoursSinceEmail >= 24) {
+    tasks.push('email_owner_digest');
   }
-  
-  // Check if optimization run is needed (uses Cloudflare AI - real)
-  const lastOptimization = await env.DB.prepare(
-    "SELECT MAX(timestamp) as last_opt FROM agent_actions WHERE action_taken = 'optimization_run'"
-  ).first();
-  
-  const lastOptTime = lastOptimization?.last_opt ? new Date(lastOptimization.last_opt) : new Date(0);
-  const hoursSinceOpt = (Date.now() - lastOptTime.getTime()) / (1000 * 60 * 60);
-  
-  if (hoursSinceOpt > 4) {
-    tasks.push('run_optimization');
-  }
-  
-  // Check if leaderboard needs update
-  const lastLeaderboard = await env.DB.prepare(
-    "SELECT MAX(timestamp) as last_lb FROM agent_actions WHERE action_taken = 'leaderboard_update'"
-  ).first();
-  
-  const lastLbTime = lastLeaderboard?.last_lb ? new Date(lastLeaderboard.last_lb) : new Date(0);
-  const hoursSinceLb = (Date.now() - lastLbTime.getTime()) / (1000 * 60 * 60);
-  
-  if (hoursSinceLb > 1) {
-    tasks.push('update_leaderboard');
-  }
-  
+
   return tasks;
 }
 
@@ -283,20 +259,14 @@ async function executePriorityTasks(tasks: string[], env: any): Promise<any[]> {
       let result;
       
       switch (task) {
-        case 'sync_revenue_data':
-          result = await syncFinancialData(env);
+        case 'compute_real_metrics':
+          result = await computeRealMetrics(env);
           break;
-        case 'run_optimization':
-          result = await runOptimization(env);
+        case 'ai_improvement_analysis':
+          result = await runImprovementAnalysis(env);
           break;
-        case 'update_leaderboard':
-          result = await updateLeaderboard(env);
-          break;
-        case 'absorb_lead_data':
-          result = await absorbProjectData(env);
-          break;
-        case 'execute_autonomous_outbound':
-          result = await executeAutonomousOutbound(env);
+        case 'email_owner_digest':
+          result = await emailOwnerDigest(env);
           break;
         case 'trigger_frontend_update':
           result = await triggerFrontendUpdate(env);
@@ -314,147 +284,169 @@ async function executePriorityTasks(tasks: string[], env: any): Promise<any[]> {
   return results;
 }
 
-async function syncFinancialData(env: any): Promise<any> {
-  // Use database to track real metrics from actual operations
-  // No external API needed - we track what actually happened
-  
-  // Get real leads absorbed
-  const leadsAbsorbed = await env.DB.prepare(
-    "SELECT COUNT(*) as count FROM agent_actions WHERE action_taken = 'google_search_lead'"
-  ).first();
-  
-  // Get real emails generated
-  const emailsGenerated = await env.DB.prepare(
-    "SELECT COUNT(*) as count FROM agent_actions WHERE action_taken = 'email_generated'"
-  ).first();
-  
-  // Get real outbound cycles
-  const outboundCycles = await env.DB.prepare(
-    "SELECT COUNT(*) as count FROM agent_actions WHERE action_taken = 'autonomous_outbound'"
-  ).first();
-  
-  const revenueDataTypes = [
-    {
-      type: 'real_leads_absorbed',
-      description: 'Real leads from Google Search',
-      count: leadsAbsorbed?.count || 0,
-      real: true
-    },
-    {
-      type: 'real_emails_generated',
-      description: 'Real emails generated via Cloudflare AI',
-      count: emailsGenerated?.count || 0,
-      real: true
-    },
-    {
-      type: 'real_outbound_cycles',
-      description: 'Real autonomous outbound cycles',
-      count: outboundCycles?.count || 0,
-      real: true
-    }
-  ];
-  
-  // Log revenue data sync
+// Run a COUNT query safely; returns null if the table/column doesn't exist.
+async function safeCount(env: any, sql: string, binds: any[] = []): Promise<number | null> {
+  try {
+    const row = await env.DB.prepare(sql).bind(...binds).first();
+    const v = row ? (row.c ?? row.count ?? Object.values(row)[0]) : 0;
+    return typeof v === 'number' ? v : Number(v) || 0;
+  } catch (e) {
+    return null; // table/column may not exist; be honest, return null not a fake number
+  }
+}
+
+// Compute REAL metrics straight from the D1 database. No fabricated numbers.
+async function computeRealMetrics(env: any): Promise<any> {
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+  const metrics: Record<string, number | null> = {
+    totalUsers: await safeCount(env, "SELECT COUNT(*) as c FROM users"),
+    newUsers24h: await safeCount(env, "SELECT COUNT(*) as c FROM users WHERE created_at >= ?", [dayAgo]),
+    events1h: await safeCount(env, "SELECT COUNT(*) as c FROM events WHERE timestamp >= ?", [hourAgo]),
+    errors24h: await safeCount(env, "SELECT COUNT(*) as c FROM events WHERE level = 'error' AND timestamp >= ?", [dayAgo]),
+    agentActions24h: await safeCount(env, "SELECT COUNT(*) as c FROM agent_actions WHERE timestamp >= ?", [dayAgo]),
+    pageViews24h: await safeCount(env, "SELECT COUNT(*) as c FROM user_navigation_logs WHERE timestamp >= ?", [dayAgo]),
+    payments24h: await safeCount(env, "SELECT COUNT(*) as c FROM payments WHERE created_at >= ?", [dayAgo]),
+  };
+
+  const snapshot = { timestamp: new Date().toISOString(), metrics, real: true };
+
+  // Persist the latest snapshot to KV for fast dashboard/email reads
+  try { await env.LOXA_AGENT_STATE.put('real_metrics_latest', JSON.stringify(snapshot)); } catch (e) {}
+
+  // Log an honest snapshot to the action ledger
   await env.DB.prepare(
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
-    `sync_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    'revenue_engine',
-    'revenue_data_sync',
+    `metrics_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+    'improvement_engine',
+    'real_metrics_snapshot',
     'completed',
     new Date().toISOString(),
-    JSON.stringify({ 
-      message: 'Revenue data sync completed',
-      dataTypesSynced: revenueDataTypes.length,
-      results: revenueDataTypes,
-      real: true
-    })
+    JSON.stringify(snapshot)
   ).run();
-  
-  return { 
-    message: 'Revenue data sync completed', 
-    dataTypesSynced: revenueDataTypes.length,
-    results: revenueDataTypes,
-    real: true
-  };
+
+  return snapshot;
 }
 
-async function runOptimization(env: any): Promise<any> {
-  // Use Cloudflare AI to analyze real data and provide optimization suggestions
+// Use Cloudflare AI to analyze the REAL metrics and propose concrete improvements.
+async function runImprovementAnalysis(env: any): Promise<any> {
   const AI = env.AI;
-  
-  if (!AI) {
-    return { 
-      message: 'Cloudflare AI binding not available',
-      blocked: true,
-      real: false
-    };
-  }
-  
-  // Get real data from database
-  const recentLeads = await env.DB.prepare(
-    "SELECT details FROM agent_actions WHERE action_taken = 'google_search_lead' ORDER BY timestamp DESC LIMIT 5"
-  ).all();
-  
-  const recentEmails = await env.DB.prepare(
-    "SELECT details FROM agent_actions WHERE action_taken = 'email_generated' ORDER BY timestamp DESC LIMIT 5"
-  ).all();
-  
-  if (!recentLeads.results || recentLeads.results.length === 0) {
-    return { 
-      message: 'No data available for optimization. Run lead absorption first.',
-      blocked: true,
-      real: true
-    };
-  }
-  
-  // Use AI to analyze and provide optimization suggestions
-  let optimizationSuggestions = [];
-  
+  if (!AI) return { message: 'Cloudflare AI binding not available', blocked: true, real: false };
+
+  // Read the latest real snapshot (fallback to recomputing)
+  let snapshot: any = null;
+  try { snapshot = JSON.parse(await env.LOXA_AGENT_STATE.get('real_metrics_latest')); } catch (e) {}
+  if (!snapshot) snapshot = await computeRealMetrics(env);
+
+  let suggestions: string[] = [];
   try {
-    const leadData = recentLeads.results.map(r => JSON.parse(r.details).title).join(', ');
     const aiResponse = await AI.run('@cf/meta/llama-3.1-8b-instruct', {
       messages: [
         {
           role: 'system',
-          content: 'You are a B2B sales optimization expert. Analyze the lead data and provide 3 specific, actionable optimization suggestions. Keep each suggestion under 50 words.'
+          content: 'You are a senior growth + reliability engineer for the website a-to-mind.com. Given REAL product metrics, output exactly 3 concrete, high-impact actions to improve the product this week. Be specific and practical. One action per line, no preamble.'
         },
         {
           role: 'user',
-          content: `Recent leads: ${leadData}\n\nProvide 3 optimization suggestions.`
+          content: `Real metrics (nulls mean no data yet):\n${JSON.stringify(snapshot.metrics, null, 2)}\n\nGive 3 specific improvement actions.`
         }
       ]
     });
-    
-    const suggestions = aiResponse.response || '';
-    optimizationSuggestions = suggestions.split('\n').filter(s => s.trim()).slice(0, 3);
-  } catch (e) {
-    console.error('AI optimization error:', e);
+    const text = aiResponse.response || '';
+    suggestions = text.split('\n').map((s: string) => s.replace(/^[\s\-\*\d\.\)]+/, '').trim()).filter((s: string) => s.length > 0).slice(0, 3);
+  } catch (e: any) {
+    return { message: 'AI analysis failed', error: e.message, real: true };
   }
-  
-  // Log optimization run
+
+  const result = { timestamp: new Date().toISOString(), basedOn: snapshot.metrics, suggestions, real: true, source: 'cloudflare_ai' };
+  try { await env.LOXA_AGENT_STATE.put('improvement_suggestions_latest', JSON.stringify(result)); } catch (e) {}
+
   await env.DB.prepare(
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
-    `opt_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    'revenue_engine',
-    'optimization_run',
+    `improve_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+    'improvement_engine',
+    'improvement_analysis',
     'completed',
     new Date().toISOString(),
-    JSON.stringify({ 
-      message: 'Optimization completed',
-      suggestions: optimizationSuggestions,
-      real: true,
-      source: 'cloudflare_ai'
-    })
+    JSON.stringify(result)
   ).run();
-  
-  return { 
-    message: 'Optimization completed', 
-    suggestions: optimizationSuggestions,
-    real: true,
-    source: 'cloudflare_ai'
-  };
+
+  return result;
+}
+
+// Send a REAL email to the verified owner address via Cloudflare Email Routing.
+async function sendOwnerEmail(env: any, subject: string, bodyText: string): Promise<any> {
+  if (!env.OWNER_EMAIL) return { sent: false, error: 'OWNER_EMAIL binding not configured' };
+  const from = 'noreply@a-to-mind.com';
+  const to = 'atomicmoonbeam88@gmail.com';
+  const msgId = `<${Date.now()}.${Math.random().toString(36).substring(2, 11)}@a-to-mind.com>`;
+  const raw = [
+    `From: a-to-mind <${from}>`,
+    `To: ${to}`,
+    `Reply-To: ${from}`,
+    `Message-ID: ${msgId}`,
+    `Date: ${new Date().toUTCString()}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="utf-8"',
+    '',
+    bodyText,
+  ].join('\r\n');
+
+  try {
+    const message = new EmailMessage(from, to, raw);
+    await env.OWNER_EMAIL.send(message);
+    return { sent: true, to, subject };
+  } catch (e: any) {
+    return { sent: false, error: e.message };
+  }
+}
+
+// Build a real digest from real metrics + AI suggestions and email it to the owner.
+async function emailOwnerDigest(env: any): Promise<any> {
+  let snapshot: any = null, analysis: any = null;
+  try { snapshot = JSON.parse(await env.LOXA_AGENT_STATE.get('real_metrics_latest')); } catch (e) {}
+  try { analysis = JSON.parse(await env.LOXA_AGENT_STATE.get('improvement_suggestions_latest')); } catch (e) {}
+  if (!snapshot) snapshot = await computeRealMetrics(env);
+
+  const m = snapshot.metrics || {};
+  const fmt = (v: any) => (v === null || v === undefined ? 'n/a (no data)' : v);
+  const body = [
+    'a-to-mind — real status digest',
+    new Date().toUTCString(),
+    '',
+    'REAL METRICS (from your live database):',
+    `  Total users:           ${fmt(m.totalUsers)}`,
+    `  New users (24h):        ${fmt(m.newUsers24h)}`,
+    `  Events (last hour):     ${fmt(m.events1h)}`,
+    `  Errors (24h):           ${fmt(m.errors24h)}`,
+    `  Agent actions (24h):    ${fmt(m.agentActions24h)}`,
+    `  Page views (24h):       ${fmt(m.pageViews24h)}`,
+    `  Payments (24h):         ${fmt(m.payments24h)}`,
+    '',
+    'AI-SUGGESTED IMPROVEMENTS (Cloudflare Llama-3.1, based on the real numbers above):',
+    ...(analysis?.suggestions?.length ? analysis.suggestions.map((s: string, i: number) => `  ${i + 1}. ${s}`) : ['  (no suggestions generated this cycle)']),
+    '',
+    'This is an automated, honest digest. Numbers are read directly from D1; nothing is fabricated.',
+  ].join('\n');
+
+  const emailResult = await sendOwnerEmail(env, 'a-to-mind: real status digest', body);
+
+  await env.DB.prepare(
+    "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(
+    `digest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+    'improvement_engine',
+    'owner_digest_email',
+    emailResult.sent ? 'completed' : 'failed',
+    new Date().toISOString(),
+    JSON.stringify({ emailResult, real: true })
+  ).run();
+
+  return emailResult;
 }
 
 async function updateLeaderboard(env: any): Promise<any> {
@@ -471,188 +463,6 @@ async function updateLeaderboard(env: any): Promise<any> {
   ).run();
   
   return { message: 'Leaderboard updated' };
-}
-
-async function absorbProjectData(env: any): Promise<any> {
-  // Use Google Search API to find real leads (REAL)
-  const GOOGLE_API_KEY = env.GOOGLE_API_KEY;
-  const GOOGLE_CX_ID = env.GOOGLE_CX_ID;
-  
-  if (!GOOGLE_API_KEY) {
-    return { 
-      message: 'No Google API key configured',
-      blocked: true,
-      real: false
-    };
-  }
-  
-  if (!GOOGLE_CX_ID || GOOGLE_CX_ID === "YOUR_GOOGLE_CX_ID") {
-    return { 
-      message: 'Google Custom Search Engine ID not configured. Please set GOOGLE_CX_ID in wrangler.toml. Get it from: https://programmablesearchengine.google.com/',
-      blocked: true,
-      real: false
-    };
-  }
-  
-  const leadSources = [];
-  let totalLeadsAbsorbed = 0;
-  
-  // Use Google Search to find real companies
-  const searchQueries = [
-    'B2B SaaS companies hiring sales',
-    'Series A startups fundraising',
-    'Enterprise software companies'
-  ];
-  
-  for (const query of searchQueries) {
-    try {
-      const response = await fetch(`https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX_ID}&q=${encodeURIComponent(query)}`, {
-        method: 'GET'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const leadsFound = data.items?.length || 0;
-        totalLeadsAbsorbed += leadsFound;
-        
-        // Store real leads in database
-        if (data.items) {
-          for (const item of data.items) {
-            await env.DB.prepare(
-              "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
-            ).bind(
-              `lead_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-              'lead_source',
-              'google_search_lead',
-              'completed',
-              new Date().toISOString(),
-              JSON.stringify({
-                title: item.title,
-                link: item.link,
-                snippet: item.snippet,
-                source: 'google_search',
-                real: true
-              })
-            ).run();
-          }
-        }
-        
-        leadSources.push({ source: 'google_search', leadsFound, real: true });
-      }
-    } catch (e) {
-      console.error('Google Search API error:', e);
-    }
-  }
-  
-  return { 
-    message: 'Lead data absorption completed', 
-    sourcesProcessed: leadSources.length,
-    totalLeadsAbsorbed,
-    leadSources,
-    real: true
-  };
-}
-
-async function executeAutonomousOutbound(env: any): Promise<any> {
-  // Execute autonomous outbound using Cloudflare AI and real leads from database
-  const AI = env.AI;
-  
-  if (!AI) {
-    return { 
-      message: 'Cloudflare AI binding not available',
-      blocked: true,
-      real: false
-    };
-  }
-  
-  // Get real leads from database (from Google Search)
-  const recentLeads = await env.DB.prepare(
-    "SELECT details FROM agent_actions WHERE action_taken = 'google_search_lead' ORDER BY timestamp DESC LIMIT 10"
-  ).all();
-  
-  if (!recentLeads.results || recentLeads.results.length === 0) {
-    return { 
-      message: 'No leads available from Google Search. Run lead absorption first.',
-      blocked: true,
-      real: true
-    };
-  }
-  
-  const leadsToContact = recentLeads.results.length;
-  
-  // Use Cloudflare AI to generate personalized outreach for each lead
-  let emailsGenerated = 0;
-  for (const row of recentLeads.results) {
-    try {
-      const leadData = JSON.parse(row.details);
-      
-      // Generate personalized email using AI
-      const aiResponse = await AI.run('@cf/meta/llama-3.1-8b-instruct', {
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a B2B sales expert. Write a short, personalized email outreach based on the company information provided. Keep it under 100 words.'
-          },
-          {
-            role: 'user',
-            content: `Company: ${leadData.title}\nDescription: ${leadData.snippet}\n\nWrite a personalized outreach email.`
-          }
-        ]
-      });
-      
-      const generatedEmail = aiResponse.response || '';
-      
-      // Store generated email in database
-      await env.DB.prepare(
-        "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
-      ).bind(
-        `email_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        'revenue_engine',
-        'email_generated',
-        'completed',
-        new Date().toISOString(),
-        JSON.stringify({
-          leadTitle: leadData.title,
-          leadLink: leadData.link,
-          generatedEmail,
-          source: 'cloudflare_ai',
-          real: true
-        })
-      ).run();
-      
-      emailsGenerated++;
-    } catch (e) {
-      console.error('AI generation error:', e);
-    }
-  }
-  
-  // Create audit trail
-  const auditId = `audit_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-  await env.DB.prepare(
-    "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
-  ).bind(
-    auditId,
-    'audit_trail',
-    'outbound_execution',
-    'completed',
-    new Date().toISOString(),
-    JSON.stringify({
-      auditId,
-      leadsToContact,
-      emailsGenerated,
-      real: true,
-      note: 'Emails generated via Cloudflare AI. Ready to send with email API.'
-    })
-  ).run();
-  
-  return {
-    message: 'Autonomous outbound execution completed',
-    leadsToContact,
-    emailsGenerated,
-    real: true,
-    note: 'Emails generated via Cloudflare AI. Ready to send with email API.',
-    auditId
-  };
 }
 
 async function triggerFrontendUpdate(env: any): Promise<any> {
@@ -701,6 +511,23 @@ export default {
           tasksExecuted: results.length,
           results
         }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Send a REAL test digest email to the owner immediately (verifies the email pipe)
+    if (url.pathname === "/cron/test-email" && request.method === "GET") {
+      try {
+        await computeRealMetrics(env);
+        await runImprovementAnalysis(env);
+        const emailResult = await emailOwnerDigest(env);
+        return new Response(JSON.stringify({ timestamp: new Date().toISOString(), emailResult }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (e: any) {
@@ -5981,6 +5808,19 @@ Return the complete component code as a single string.`;
   async scheduled(event: any, env: any, ctx: ExecutionContext): Promise<void> {
     const cron = event.cron;
     console.log(`Scheduled task triggered: ${cron}`);
+
+    // 5-Minute Improvement Engine - runs REAL work automatically every 5 minutes
+    if (cron === "*/5 * * * *") {
+      console.log("Running 5-minute improvement engine...");
+      try {
+        const tasks = await assessPriorityTasks(env);
+        const results = await executePriorityTasks(tasks, env);
+        console.log(`5-min engine completed: ${tasks.join(', ')}`);
+      } catch (e: any) {
+        console.error("5-min improvement engine error:", e);
+      }
+      return;
+    }
 
     // S3 Autonomous DBA - Run every 15 minutes
     if (cron === "*/15 * * * *") {

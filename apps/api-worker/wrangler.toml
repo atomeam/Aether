@@ -28,6 +28,11 @@ id = "7db266a3b0ee4646a0627bc200773ec9"
 [ai]
 binding = "AI"
 
+# Real email sending to verified owner address via Cloudflare Email Routing
+[[send_email]]
+name = "OWNER_EMAIL"
+destination_address = "atomicmoonbeam88@gmail.com"
+
 [triggers]
 crons = ["0 * * * *", "30 * * * *", "*/15 * * * *", "*/5 * * * *"]
 
