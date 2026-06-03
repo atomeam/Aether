@@ -121,14 +121,13 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <span className="text-sm font-medium text-purple-300">AI-Powered Infrastructure Autonomy</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight">
-              Stop Playing
+              Real Automation.
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-                {' '}Infrastructure Whack-a-Mole
+                {' '}The Infrastructure That Evolves Itself.
               </span>
             </h1>
             <p className="text-xl text-white/60 max-w-2xl mx-auto mb-8">
-              Solo developers deserve enterprise-grade infrastructure monitoring without the enterprise cost. 
-              AI-powered monitoring that catches issues before your users do.
+              Static dashboards are dead. Loxa is an edge-native orchestration engine that monitors your stack, optimizes your databases, and autonomously writes its own code to adapt to your live telemetry.
             </p>
             
             {/* Social Proof - Trust Badges */}
@@ -286,11 +285,11 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
           <div className="p-6 bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-yellow-500/20 rounded-xl">
-                <Shield className="w-6 h-6 text-yellow-400" />
+                <Zap className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-xl font-bold">You Approve</h3>
+              <h3 className="text-xl font-bold">The S5 Continuous Evolution Engine</h3>
             </div>
-            <p className="text-white/60">Human-gated actuation ensures safe, controlled improvements with full oversight.</p>
+            <p className="text-white/60">Analyzes your daily traffic and slow queries to dynamically generate, A/B test, and deploy new dashboard features and performance patches directly to the edge.</p>
           </div>
         </div>
       </div>
