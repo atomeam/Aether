@@ -72,7 +72,7 @@ async function triggerInfrastructureAdjustment(env: any, strategyId: string, pVa
   // Could trigger actual infrastructure changes here
   // For now, just log to agent_actions
   await env.DB.prepare(
-    "INSERT INTO agent_actions (id, agent_id, action_type, status, timestamp, payload) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
     `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     'profit_engine',
@@ -178,10 +178,12 @@ export default {
         const { strategyId, threshold = 0.05, bootstrapSamples = 1000 } = body;
 
         // Fetch historical performance data for the strategy
-        const performanceData = await queryAllWithTelemetry(
+        const performanceDataResult = await queryAllWithTelemetry(
           "SELECT timestamp, revenue, cost, conversions FROM agent_actions WHERE strategy_id = ? ORDER BY timestamp DESC LIMIT 100",
           [strategyId]
         );
+
+        const performanceData = performanceDataResult.results || performanceDataResult || [];
 
         if (performanceData.length < 10) {
           return new Response(JSON.stringify({ error: "Insufficient data for bootstrap analysis" }), { 
@@ -261,9 +263,10 @@ export default {
           params = [strategyId, limit];
         }
 
-        const results = await queryAllWithTelemetry(query, params);
+        const resultsResult = await queryAllWithTelemetry(query, params);
+        const results = resultsResult.results || resultsResult || [];
 
-        return new Response(JSON.stringify(results), { headers: corsHeaders });
+        return new Response(JSON.stringify({ results }), { headers: corsHeaders });
       } catch (e: any) {
         return new Response(JSON.stringify({ error: e.message }), { 
           status: 500, 

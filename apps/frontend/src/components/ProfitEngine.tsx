@@ -32,7 +32,7 @@ export default function ProfitEngine() {
       const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/api/profit/bootstrap/history?limit=20`);
       if (response.ok) {
         const data = await response.json();
-        setResults(data.results || data);
+        setResults(data.results || []);
       }
     } catch (e) {
       console.error('Failed to fetch bootstrap results:', e);

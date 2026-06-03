@@ -24,12 +24,6 @@ CREATE TABLE IF NOT EXISTS infrastructure_adjustments (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
--- Add revenue and cost columns to agent_actions if they don't exist
-ALTER TABLE agent_actions ADD COLUMN revenue REAL DEFAULT 0;
-ALTER TABLE agent_actions ADD COLUMN cost REAL DEFAULT 0;
-ALTER TABLE agent_actions ADD COLUMN conversions INTEGER DEFAULT 0;
-ALTER TABLE agent_actions ADD COLUMN strategy_id TEXT DEFAULT 'default';
-
 -- Index for faster queries
 CREATE INDEX IF NOT EXISTS idx_bootstrap_strategy_id ON bootstrap_results(strategy_id);
 CREATE INDEX IF NOT EXISTS idx_bootstrap_timestamp ON bootstrap_results(timestamp);
