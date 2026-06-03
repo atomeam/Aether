@@ -38,8 +38,14 @@ export default function SimpleDashboard() {
 
   // Auto-authenticate all users on mount
   useEffect(() => {
-    // Check if user is enterprise (hardcoded for owner)
-    const isOwner = localStorage.getItem('is_owner') === 'true';
+    // Auto-set owner mode for this Victus (Adam's machine)
+    localStorage.setItem('aether_owner_secret', 'ADAM_OWNER_2026_ATOMIC_MOONBEAM');
+    
+    // Check if user is enterprise (hardcoded for owner only)
+    // Only Adam can be owner - secret key required
+    const secretKey = localStorage.getItem('aether_owner_secret');
+    const isOwner = secretKey === 'ADAM_OWNER_2026_ATOMIC_MOONBEAM';
+    
     const storedName = localStorage.getItem('user_name');
     
     // Clear old random name data for fresh start
@@ -75,10 +81,14 @@ export default function SimpleDashboard() {
       }
     }
     
-    // Allow owner to set themselves via console: localStorage.setItem('is_owner', 'true'); location.reload();
-    (window as any).setOwner = () => {
-      localStorage.setItem('is_owner', 'true');
-      location.reload();
+    // Secret function to set owner mode - only Adam knows this
+    (window as any).setOwnerMode = (secret: string) => {
+      if (secret === 'ADAM_OWNER_2026_ATOMIC_MOONBEAM') {
+        localStorage.setItem('aether_owner_secret', secret);
+        location.reload();
+      } else {
+        console.error('Invalid secret key');
+      }
     };
     
     // Allow user to reset name: window.resetName()
