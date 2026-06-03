@@ -4,6 +4,7 @@ import GamifiedReferralProgram from './GamifiedReferralProgram';
 import DevOpsToolkit from './DevOpsToolkit';
 import CommandPalette from './CommandPalette';
 import DatabaseInspector from './DatabaseInspector';
+import S5ErrorBoundary from './S5ErrorBoundary';
 
 interface UsageData {
   plan: string;
@@ -49,6 +50,7 @@ export default function CommandCenter() {
   });
   const [s5Components, setS5Components] = useState<any[]>([]);
   const [loadingS5, setLoadingS5] = useState(false);
+  const [userVariant, setUserVariant] = useState<'a' | 'b'>('a');
 
   const fetchS5Components = async () => {
     try {
@@ -199,6 +201,17 @@ export default function CommandCenter() {
     if (user) {
       setCurrentUser(JSON.parse(user));
     }
+    
+    // Assign user to A/B test variant (50/50 split)
+    const storedVariant = localStorage.getItem('s5_variant');
+    if (storedVariant) {
+      setUserVariant(storedVariant as 'a' | 'b');
+    } else {
+      const newVariant = Math.random() < 0.5 ? 'a' : 'b';
+      setUserVariant(newVariant);
+      localStorage.setItem('s5_variant', newVariant);
+    }
+    
     fetchTelemetry();
     fetchS5Components();
     setLoading(false);
@@ -225,7 +238,8 @@ export default function CommandCenter() {
           body: JSON.stringify({
             panel_id: panelId,
             action: action,
-            page_url: window.location.pathname
+            page_url: window.location.pathname,
+            variant: userVariant
           })
         });
       } catch (e) {
@@ -637,7 +651,15 @@ export default function CommandCenter() {
             )}
             {activePanel === 's5_architect' && (
               <div>
-                <p className="mb-4">S5 Architect - Self-evolving AI agent:</p>
+                <p className="mb-4">S5 Architect - Continuous Evolution Engine:</p>
+                <div className="mb-4 p-2 bg-purple-500/10 border border-purple-500/30 rounded text-xs">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                    <span className="text-purple-300">Your Variant: {userVariant.toUpperCase()}</span>
+                    <span className="text-white/40">|</span>
+                    <span className="text-white/60">Evolution Cycle: Hourly</span>
+                  </div>
+                </div>
                 {loadingS5 ? (
                   <div className="p-4 bg-white/5 rounded-lg text-center">
                     <RefreshCcw className="w-8 h-8 animate-spin mx-auto mb-2 text-purple-400" />
@@ -649,43 +671,59 @@ export default function CommandCenter() {
                       <Zap className="w-5 h-5" />
                       <span className="font-bold">No Components Generated Yet</span>
                     </div>
-                    <p className="text-sm text-white/60 mb-4">S5 analyzes navigation patterns and slow queries to automatically generate new dashboard features. Check back tomorrow for the first evolution.</p>
+                    <p className="text-sm text-white/60 mb-4">S5 analyzes navigation patterns and slow queries to automatically generate new dashboard features. Check back in 1 hour for the first evolution.</p>
                     <div className="text-xs text-white/40">
-                      <div>Next evolution: Daily at midnight</div>
+                      <div>Next evolution: Every hour</div>
                       <div>Telemetry: Navigation + Slow Queries</div>
+                      <div>A/B Testing: 50/50 split</div>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {s5Components.map((component: any) => (
-                      <div key={component.id} className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="font-medium text-green-300 flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4" />
-                              {component.id}
+                  <S5ErrorBoundary>
+                    <div className="space-y-4">
+                      {s5Components.map((component: any) => (
+                        <div key={component.id} className={`p-4 border rounded-lg ${
+                          component.variant === 'b' 
+                            ? 'border-blue-500/30 bg-blue-500/10' 
+                            : 'border-green-500/30 bg-green-500/10'
+                        }`}>
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="font-medium flex items-center gap-2">
+                                {component.variant === 'b' ? (
+                                  <Zap className="w-4 h-4 text-blue-400" />
+                                ) : (
+                                  <CheckCircle className="w-4 h-4 text-green-400" />
+                                )}
+                                <span className={component.variant === 'b' ? 'text-blue-300' : 'text-green-300'}>
+                                  {component.id}
+                                </span>
+                                <span className="text-xs px-2 py-1 rounded bg-white/10">
+                                  {component.variant.toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="text-xs text-white/40 mt-1">
+                                {new Date(component.timestamp).toLocaleString()}
+                              </div>
                             </div>
-                            <div className="text-xs text-white/40 mt-1">
-                              {new Date(component.timestamp).toLocaleString()}
+                            <div className="text-xs text-white/40">
+                              {component.status}
                             </div>
                           </div>
-                          <div className="text-xs text-white/40">
-                            Generated by S5
+                          {component.telemetry_context && (
+                            <div className="text-xs text-white/60 mt-2 p-2 bg-black/30 rounded">
+                              <div className="font-medium mb-1">Telemetry Context:</div>
+                              <div>Top Panels: {component.telemetry_context.top_panels?.map((p: any) => `${p.panel} (${p.visits})`).join(', ')}</div>
+                              <div>Slowest Queries: {component.telemetry_context.slowest_queries?.map((q: any) => `${q.table} (${q.duration_ms}ms)`).join(', ')}</div>
+                            </div>
+                          )}
+                          <div className="mt-3 p-2 bg-black/30 rounded font-mono text-xs text-white/40 max-h-32 overflow-y-auto">
+                            {component.code?.substring(0, 500)}...
                           </div>
                         </div>
-                        {component.telemetry_context && (
-                          <div className="text-xs text-white/60 mt-2 p-2 bg-black/30 rounded">
-                            <div className="font-medium mb-1">Telemetry Context:</div>
-                            <div>Top Panels: {component.telemetry_context.top_panels?.map((p: any) => `${p.panel} (${p.visits})`).join(', ')}</div>
-                            <div>Slowest Queries: {component.telemetry_context.slowest_queries?.map((q: any) => `${q.table} (${q.duration_ms}ms)`).join(', ')}</div>
-                          </div>
-                        )}
-                        <div className="mt-3 p-2 bg-black/30 rounded font-mono text-xs text-white/40 max-h-32 overflow-y-auto">
-                          {component.code?.substring(0, 500)}...
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </S5ErrorBoundary>
                 )}
               </div>
             )}

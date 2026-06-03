@@ -25,7 +25,7 @@ id = "YOUR_DYNAMIC_CODE_ID"
 binding = "AI"
 
 [triggers]
-crons = ["0 0 * * *", "*/15 * * * *"]
+crons = ["0 * * * *", "*/15 * * * *"]
 
 [vars]
 GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"

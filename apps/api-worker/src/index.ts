@@ -3496,6 +3496,51 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       }
     }
 
+    // Error logging endpoint for S5 blast shield
+    if (url.pathname === "/api/telemetry/errors" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        const { error_message, error_stack, component_stack } = await request.json();
+
+        const errorId = `s5_error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await env.DB.prepare(
+          "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          errorId,
+          "s5",
+          `Component error: ${error_message}`,
+          "failed",
+          new Date().toISOString(),
+          JSON.stringify({
+            error_message,
+            error_stack,
+            component_stack
+          })
+        ).run();
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("Error logging failed:", e);
+        return new Response(JSON.stringify({ error: "Failed to log error" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Navigation logging endpoint for S5 Architect telemetry
     if (url.pathname === "/api/telemetry/navigation" && request.method === "POST") {
       try {
@@ -3511,7 +3556,7 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
         const decoded = atob(token);
         const userId = decoded.split(":")[0];
 
-        const { panel_id, action, duration_ms, page_url } = await request.json();
+        const { panel_id, action, duration_ms, page_url, variant } = await request.json();
 
         const logId = `nav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await env.DB.prepare(
@@ -3608,7 +3653,7 @@ Return the complete component code as a single string.`;
           });
         }
 
-        // Store generated code in KV
+        // Store as variant B (new candidate)
         const componentId = `s5_component_${Date.now()}`;
         await env.LOXA_DYNAMIC_CODE.put(
           componentId,
@@ -3616,7 +3661,9 @@ Return the complete component code as a single string.`;
             code: generatedCode,
             telemetry_context: telemetryContext,
             timestamp: new Date().toISOString(),
-            generated_by: "s5"
+            generated_by: "s5",
+            variant: "b", // This is the new candidate
+            status: "testing" // A/B testing phase
           })
         );
 
@@ -3627,18 +3674,20 @@ Return the complete component code as a single string.`;
         ).bind(
           actionId,
           "s5",
-          `Generated new component: ${componentId}`,
+          `Generated variant B: ${componentId}`,
           "completed",
           new Date().toISOString(),
           JSON.stringify({
             telemetry_context,
-            component_id
+            component_id,
+            variant: "b"
           })
         ).run();
 
         return new Response(JSON.stringify({
           success: true,
           component_id,
+          variant: "b",
           telemetry_context,
           generated_code_preview: generatedCode.substring(0, 500) + "..."
         }), {
@@ -3888,12 +3937,78 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       }
     }
 
-    // S5 Architect - Daily self-evolution (runs at midnight)
-    if (cron === "0 0 * * *") {
-      console.log("Running S5 Architect self-evolution...");
+    // S5 Architect - Hourly self-evolution with A/B testing
+    if (cron === "0 * * * *") {
+      console.log("Running S5 Architect hourly evolution...");
       
       try {
-        // Fetch telemetry for AI analysis
+        // 1. Evaluate A/B test results from last hour
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        
+        // Get variant A vs B performance
+        const variantMetrics = await env.DB.prepare(
+          "SELECT variant, COUNT(*) as interactions, AVG(duration_ms) as avg_duration FROM user_navigation_logs WHERE timestamp >= ? AND variant IS NOT NULL GROUP BY variant"
+        ).bind(oneHourAgo).all() as any[];
+
+        // Check for failed deployments (errors)
+        const failedDeployments = await env.DB.prepare(
+          "SELECT COUNT(*) as failures FROM agent_actions WHERE agent_id = 's5' AND status = 'failed' AND timestamp >= ?"
+        ).bind(oneHourAgo).first() as any;
+
+        console.log("S5 A/B Test Results:", JSON.stringify(variantMetrics.results));
+        console.log("S5 Failed Deployments:", failedDeployments.failures);
+
+        // 2. Evaluate and promote/rollback variants
+        if (variantMetrics.results.length >= 2) {
+          const variantA = variantMetrics.results.find((v: any) => v.variant === 'a');
+          const variantB = variantMetrics.results.find((v: any) => v.variant === 'b');
+
+          if (variantA && variantB) {
+            // If B has higher engagement and no failures, promote to baseline
+            if (variantB.interactions > variantA.interactions && failedDeployments.failures === 0) {
+              console.log("S5: Promoting variant B to baseline (higher engagement)");
+              
+              // Update variant B to status "baseline"
+              const keys = await env.LOXA_DYNAMIC_CODE.list();
+              for (const key of keys.keys) {
+                if (key.name.startsWith("s5_component_")) {
+                  const componentData = await env.LOXA_DYNAMIC_CODE.get(key.name);
+                  if (componentData) {
+                    const parsed = JSON.parse(componentData);
+                    if (parsed.variant === 'b') {
+                      await env.LOXA_DYNAMIC_CODE.put(
+                        key.name,
+                        JSON.stringify({
+                          ...parsed,
+                          variant: "a",
+                          status: "baseline"
+                        })
+                      );
+                    }
+                  }
+                }
+              }
+            } else if (failedDeployments.failures > 0) {
+              console.log("S5: Rolling back variant B (errors detected)");
+              
+              // Delete failed variant B
+              const keys = await env.LOXA_DYNAMIC_CODE.list();
+              for (const key of keys.keys) {
+                if (key.name.startsWith("s5_component_")) {
+                  const componentData = await env.LOXA_DYNAMIC_CODE.get(key.name);
+                  if (componentData) {
+                    const parsed = JSON.parse(componentData);
+                    if (parsed.variant === 'b' && parsed.status === 'testing') {
+                      await env.LOXA_DYNAMIC_CODE.delete(key.name);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 3. Generate new variant B for testing
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
         const navigationLogs = await env.DB.prepare(
@@ -3918,7 +4033,6 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
 
         console.log("S5 Telemetry context:", JSON.stringify(telemetryContext));
 
-        // Use Cloudflare Workers AI to generate new component
         const aiPrompt = `You are S5, an AI Architect for the Loxa infrastructure platform. Based on this telemetry data, generate a React/Tailwind component that either:
 1. Expands on the most-used feature (highest traffic panel)
 2. Solves the biggest performance bottleneck (slowest query)
@@ -3950,7 +4064,9 @@ Return the complete component code as a single string.`;
               code: generatedCode,
               telemetry_context: telemetryContext,
               timestamp: new Date().toISOString(),
-              generated_by: "s5"
+              generated_by: "s5",
+              variant: "b",
+              status: "testing"
             })
           );
 
@@ -3960,12 +4076,13 @@ Return the complete component code as a single string.`;
           ).bind(
             actionId,
             "s5",
-            `Auto-generated component: ${componentId}`,
+            `Generated variant B: ${componentId}`,
             "completed",
             new Date().toISOString(),
             JSON.stringify({
               telemetry_context,
-              component_id
+              component_id,
+              variant: "b"
             })
           ).run();
 
