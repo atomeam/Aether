@@ -33,31 +33,14 @@ export default function SimpleDashboard() {
     { name: 'Jessica L.', earnings: 7654.32, badge: '🌟' }
   ]);
 
-  // Auto-authenticate as enterprise on mount
+  // Auto-authenticate as enterprise on mount - no API call needed, just set state
   useEffect(() => {
-    const autoAuth = async () => {
-      try {
-        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: 'enterprise@a-to-mind.com',
-            password: 'enterprise_automatic_access_2026'
-          })
-        });
-        const result = await response.json();
-        if (response.ok) {
-          setIsAuthenticated(true);
-          setIsEnterprise(true);
-          setUserName(result.name || 'Enterprise Admin');
-          localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
-          localStorage.setItem('admin_user', 'enterprise');
-        }
-      } catch (e) {
-        console.error('Auto-auth error:', e);
-      }
-    };
-    autoAuth();
+    // Immediate enterprise authentication - no API call required
+    setIsAuthenticated(true);
+    setIsEnterprise(true);
+    setUserName('Enterprise Admin');
+    localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
+    localStorage.setItem('admin_user', 'enterprise');
   }, []);
 
   // Real-time earnings animation
