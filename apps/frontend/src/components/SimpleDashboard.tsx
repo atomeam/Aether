@@ -26,8 +26,6 @@ export default function SimpleDashboard() {
   const [notificationText, setNotificationText] = useState('');
   const [currentEarnings, setCurrentEarnings] = useState(1247.83);
   const [showPaymentWall, setShowPaymentWall] = useState(false);
-  const [showNameInput, setShowNameInput] = useState(false);
-  const [inputName, setInputName] = useState('');
   const [leaderboard] = useState([
     { name: 'Sarah M.', earnings: 45847.23, badge: '👑', joined: 'Jan 2024' },
     { name: 'James K.', earnings: 32345.67, badge: '🔥', joined: 'Feb 2024' },
@@ -46,13 +44,8 @@ export default function SimpleDashboard() {
     const secretKey = localStorage.getItem('aether_owner_secret');
     const isOwner = secretKey === 'ADAM_OWNER_2026_ATOMIC_MOONBEAM';
     
+    const storedToken = localStorage.getItem('session_token');
     const storedName = localStorage.getItem('user_name');
-    
-    // Clear old random name data for fresh start
-    if (storedName && ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Jamie', 'Quinn'].includes(storedName)) {
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('user_id');
-    }
     
     if (isOwner) {
       // Owner gets enterprise access
@@ -62,23 +55,31 @@ export default function SimpleDashboard() {
       localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
       localStorage.setItem('admin_user', 'enterprise');
       localStorage.setItem('user_name', 'Adam');
+    } else if (storedToken && storedName) {
+      // Returning user with real session - validate with API
+      fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/user/dashboard', {
+        headers: { 'Authorization': `Bearer ${storedToken}` }
+      })
+        .then(res => {
+          if (res.ok) {
+            setIsAuthenticated(true);
+            setIsEnterprise(false);
+            setUserName(storedName);
+          } else {
+            // Invalid token, clear and show auth modal
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_id');
+            setShowAuthModal(true);
+          }
+        })
+        .catch(() => {
+          // API error, show auth modal
+          setShowAuthModal(true);
+        });
     } else {
-      const existingUserId = localStorage.getItem('user_id');
-      const currentStoredName = localStorage.getItem('user_name');
-      
-      if (currentStoredName && existingUserId) {
-        // Returning user with stored name
-        setIsAuthenticated(true);
-        setIsEnterprise(false);
-        setUserName(currentStoredName);
-      } else {
-        // New user - will show name input modal
-        const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        localStorage.setItem('user_id', newUserId);
-        setIsAuthenticated(true);
-        setIsEnterprise(false);
-        setShowNameInput(true);
-      }
+      // New user - show auth modal
+      setShowAuthModal(true);
     }
     
     // Secret function to set owner mode - only Adam knows this
@@ -91,10 +92,12 @@ export default function SimpleDashboard() {
       }
     };
     
-    // Allow user to reset name: window.resetName()
-    (window as any).resetName = () => {
+    // Allow user to logout: window.logout()
+    (window as any).logout = () => {
+      localStorage.removeItem('session_token');
       localStorage.removeItem('user_name');
       localStorage.removeItem('user_id');
+      localStorage.removeItem('aether_owner_secret');
       location.reload();
     };
   }, []);
@@ -151,8 +154,15 @@ export default function SimpleDashboard() {
       if (response.ok) {
         setIsAuthenticated(true);
         setIsEnterprise(result.isEnterprise || false);
-        setUserName(result.name || data.email.split('@')[0]);
+        setUserName(result.name || data.name || data.email.split('@')[0]);
         setShowAuthModal(false);
+        
+        // Store real session token
+        if (result.sessionToken) {
+          localStorage.setItem('session_token', result.sessionToken);
+        }
+        localStorage.setItem('user_name', result.name || data.name || data.email.split('@')[0]);
+        localStorage.setItem('user_id', result.userId);
         
         if (authMode === 'signup' && result.welcomeBonus) {
           setUserEarnings(prev => prev + result.welcomeBonus);
@@ -161,11 +171,16 @@ export default function SimpleDashboard() {
         
         // Show payment wall for non-enterprise users
         if (!result.isEnterprise) {
-          setShowPaymentWall(true);
+          setTimeout(() => {
+            setShowPaymentWall(true);
+          }, 3000);
         }
+      } else {
+        alert(result.error || 'Authentication failed');
       }
     } catch (e) {
       console.error('Auth error:', e);
+      alert('Connection error. Please try again.');
     }
   };
 
@@ -179,59 +194,8 @@ export default function SimpleDashboard() {
     console.log('Connect bank account clicked');
   };
 
-  const handleNameSubmit = () => {
-    if (inputName.trim()) {
-      localStorage.setItem('user_name', inputName.trim());
-      setUserName(inputName.trim());
-      setShowNameInput(false);
-      
-      // Show payment wall after 3 seconds for regular users
-      setTimeout(() => {
-        setShowPaymentWall(true);
-      }, 3000);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#0f0f0f] text-white">
-      {/* Name Input Modal */}
-      {showNameInput && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Welcome to a-to-mind</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-white/60 mb-2 block">What should we call you?</label>
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  value={inputName}
-                  onChange={(e) => setInputName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#c4a661]"
-                  autoFocus
-                />
-              </div>
-              
-              <button
-                onClick={handleNameSubmit}
-                disabled={!inputName.trim()}
-                className="w-full bg-gradient-to-r from-[#c4a661] to-[#d4b671] text-black font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-[#c4a661]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Get Started
-              </button>
-              
-              <p className="text-center text-sm text-white/40">
-                Your name will be used to personalize your experience
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Social Proof Notification */}
       {showNotification && (
         <div className="fixed top-4 right-4 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-xl rounded-xl p-4 flex items-center gap-3 z-50 animate-in slide-in-from-right">
