@@ -187,6 +187,37 @@ export default function SimpleDashboard() {
     }
   }, [isAuthenticated]);
 
+  // Check for frontend update signals every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/frontend/update-check')
+        .then(res => res.json())
+        .then(data => {
+          if (data.needsUpdate) {
+            // Refresh all data when update signal detected
+            fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/stats/users')
+              .then(res => res.json())
+              .then(userData => {
+                if (userData.count !== undefined) {
+                  setTotalUsers(userData.count);
+                }
+              });
+            
+            fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/leaderboard')
+              .then(res => res.json())
+              .then(lbData => {
+                if (lbData.leaderboard) {
+                  setLeaderboard(lbData.leaderboard);
+                }
+              });
+          }
+        })
+        .catch(err => console.error('Failed to check for updates:', err));
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   const copyReferralLink = () => {
     navigator.clipboard.writeText('https://a-to-mind.com/ref/AUTO2026');
     setCopied(true);
