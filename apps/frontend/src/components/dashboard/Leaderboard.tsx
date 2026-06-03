@@ -6,6 +6,7 @@ interface LeaderboardEntry {
   earnings: number;
   badge: string;
   streak?: number;
+  joined?: string;
 }
 
 interface LeaderboardProps {
@@ -39,7 +40,10 @@ export default function Leaderboard({ entries, userEntry }: LeaderboardProps) {
               <div className="text-2xl">{user.badge}</div>
               <div>
                 <div className="font-medium">{user.name}</div>
-                <div className="text-sm text-white/60">{getStatusText(index)}</div>
+                <div className="text-sm text-white/60">
+                  {getStatusText(index)}
+                  {user.joined && `Joined ${user.joined}`}
+                </div>
               </div>
             </div>
             <div className="text-lg font-bold text-emerald-400">

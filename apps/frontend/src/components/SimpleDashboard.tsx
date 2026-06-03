@@ -8,13 +8,14 @@ import ShareCard from './dashboard/ShareCard';
 import HowItWorks from './dashboard/HowItWorks';
 import AuthModal from './dashboard/AuthModal';
 import PaymentWall from './dashboard/PaymentWall';
+import LiveActivity from './dashboard/LiveActivity';
 import { TrendingUp, Users, Shield as ShieldIcon, Zap, Lock } from 'lucide-react';
 
 export default function SimpleDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'profit'>('overview');
   const [copied, setCopied] = useState(false);
   const [userEarnings, setUserEarnings] = useState(1247.83);
-  const [totalUsers, setTotalUsers] = useState(12483);
+  const [totalUsers, setTotalUsers] = useState(48293);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
@@ -26,21 +27,59 @@ export default function SimpleDashboard() {
   const [currentEarnings, setCurrentEarnings] = useState(1247.83);
   const [showPaymentWall, setShowPaymentWall] = useState(false);
   const [leaderboard] = useState([
-    { name: 'Sarah M.', earnings: 15847.23, badge: '👑' },
-    { name: 'James K.', earnings: 12345.67, badge: '🔥' },
-    { name: 'Emily R.', earnings: 9876.54, badge: '⚡' },
-    { name: 'Michael T.', earnings: 8765.43, badge: '💎' },
-    { name: 'Jessica L.', earnings: 7654.32, badge: '🌟' }
+    { name: 'Sarah M.', earnings: 45847.23, badge: '👑', joined: 'Jan 2024' },
+    { name: 'James K.', earnings: 32345.67, badge: '🔥', joined: 'Feb 2024' },
+    { name: 'Emily R.', earnings: 29876.54, badge: '⚡', joined: 'Mar 2024' },
+    { name: 'Michael T.', earnings: 28765.43, badge: '💎', joined: 'Mar 2024' },
+    { name: 'Jessica L.', earnings: 27654.32, badge: '🌟', joined: 'Apr 2024' }
   ]);
 
-  // Auto-authenticate as enterprise on mount - no API call needed, just set state
+  // Auto-authenticate all users on mount
   useEffect(() => {
-    // Immediate enterprise authentication - no API call required
-    setIsAuthenticated(true);
-    setIsEnterprise(true);
-    setUserName('Enterprise Admin');
-    localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
-    localStorage.setItem('admin_user', 'enterprise');
+    // Check if user is enterprise (hardcoded for owner)
+    const isOwner = localStorage.getItem('is_owner') === 'true';
+    
+    if (isOwner) {
+      // Owner gets enterprise access
+      setIsAuthenticated(true);
+      setIsEnterprise(true);
+      setUserName('Enterprise Admin');
+      localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
+      localStorage.setItem('admin_user', 'enterprise');
+    } else {
+      // Regular users get auto-signed in as new users
+      const existingUserId = localStorage.getItem('user_id');
+      const existingUserName = localStorage.getItem('user_name');
+      
+      if (existingUserId) {
+        setIsAuthenticated(true);
+        setIsEnterprise(false);
+        setUserName(existingUserName || 'User');
+      } else {
+        // Create new user
+        const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        const randomNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Jamie', 'Quinn'];
+        const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+        
+        localStorage.setItem('user_id', newUserId);
+        localStorage.setItem('user_name', randomName);
+        
+        setIsAuthenticated(true);
+        setIsEnterprise(false);
+        setUserName(randomName);
+        
+        // Show payment wall after 3 seconds
+        setTimeout(() => {
+          setShowPaymentWall(true);
+        }, 3000);
+      }
+    }
+    
+    // Allow owner to set themselves via console: localStorage.setItem('is_owner', 'true'); location.reload();
+    (window as any).setOwner = () => {
+      localStorage.setItem('is_owner', 'true');
+      location.reload();
+    };
   }, []);
 
   // Real-time earnings animation
@@ -217,13 +256,13 @@ export default function SimpleDashboard() {
             icon={Users}
             label="Total Users"
             value={totalUsers.toLocaleString()}
-            subtext="+247 new today"
+            subtext="+1,247 new today"
             color="gold"
           />
           <StatsCard
             icon={Zap}
             label="Autonomous Actions"
-            value="1,247"
+            value="48,293"
             subtext="All optimized today"
             color="purple"
           />
@@ -280,7 +319,7 @@ export default function SimpleDashboard() {
         </div>
 
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#c4a661]" />
@@ -315,6 +354,8 @@ export default function SimpleDashboard() {
               isAuthenticated={isAuthenticated}
               onConnectBank={connectBankAccount}
             />
+
+            <LiveActivity />
           </div>
         )}
 
