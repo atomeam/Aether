@@ -305,6 +305,151 @@ export default {
       return result;
     }
 
+    // Plaid Link Token Generation (for connecting bank accounts)
+    if (url.pathname === "/api/plaid/link-token" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { userId } = body;
+
+        // In production, this would call Plaid API to create a link token
+        // For now, return a mock link token
+        const linkToken = `link-sandbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        return new Response(JSON.stringify({
+          linkToken,
+          expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Plaid Public Token Exchange (for completing bank connection)
+    if (url.pathname === "/api/plaid/exchange-token" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { publicToken, userId } = body;
+
+        // In production, this would exchange public token for access token via Plaid API
+        // For now, return a mock access token
+        const accessToken = `access-sandbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const itemId = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Store the connection in database
+        await env.DB.prepare(
+          "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `plaid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          'profit_engine',
+          'bank_account_connected',
+          'completed',
+          new Date().toISOString(),
+          JSON.stringify({
+            userId,
+            itemId,
+            timestamp: new Date().toISOString()
+          })
+        ).run();
+
+        return new Response(JSON.stringify({
+          accessToken,
+          itemId,
+          status: 'connected'
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Get User Financial Summary
+    if (url.pathname === "/api/financial/summary" && request.method === "GET") {
+      try {
+        // In production, this would fetch real data from Plaid
+        // For now, return mock data showing autonomous optimization
+        const summary = {
+          totalBalance: 124783.45,
+          monthlyIncome: 8234.56,
+          monthlyExpenses: 4123.78,
+          autonomousSavings: 1247.83,
+          optimizationActions: [
+            {
+              type: 'cost_optimization',
+              amount: 312.45,
+              description: 'Reduced subscription costs by 23%'
+            },
+            {
+              type: 'revenue_optimization',
+              amount: 891.23,
+              description: 'Identified high-yield savings opportunity'
+            },
+            {
+              type: 'conversion_optimization',
+              amount: 44.15,
+              description: 'Optimized cash back rewards'
+            }
+          ],
+          projectedMonthlyGrowth: 15.7
+        };
+
+        return new Response(JSON.stringify(summary), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Referral Program - Create Referral Code
+    if (url.pathname === "/api/referral/create" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { userId } = body;
+
+        const referralCode = `AUTO${Date.now().toString(36).toUpperCase()}`;
+        
+        await env.DB.prepare(
+          "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `referral_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          'profit_engine',
+          'referral_code_created',
+          'completed',
+          new Date().toISOString(),
+          JSON.stringify({
+            userId,
+            referralCode,
+            bonusAmount: 50
+          })
+        ).run();
+
+        return new Response(JSON.stringify({
+          referralCode,
+          referralLink: `https://a-to-mind.com/ref/${referralCode}`,
+          bonusAmount: 50
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
     // Bootstrap P-Value Compute Layer
     if (url.pathname === "/api/profit/bootstrap") {
       try {
