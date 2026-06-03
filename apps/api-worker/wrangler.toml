@@ -33,6 +33,7 @@ crons = ["0 * * * *", "30 * * * *", "*/15 * * * *", "*/5 * * * *"]
 
 [vars]
 GOOGLE_API_KEY = "AIzaSyB_Kbolhnrk1j87vmkra9eReciLAflMpKg"
+GOOGLE_CX_ID = "YOUR_GOOGLE_CX_ID"
 APP_URL = "https://a-to-mind.com"
 STRIPE_PUBLIC_KEY = "pk_test_51TRrzj3vI7ykonb0raH1DGZmbEle9Sutb6nO3kWMKPBUmv5XVv0y7A0SinTGxw33XzGVnww3awSwHC1BZkAUJCH00nq4cDzMi"
 STRIPE_SECRET_KEY = "sk_test_YOUR_STRIPE_SECRET_KEY"

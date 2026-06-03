@@ -476,10 +476,19 @@ async function updateLeaderboard(env: any): Promise<any> {
 async function absorbProjectData(env: any): Promise<any> {
   // Use Google Search API to find real leads (REAL)
   const GOOGLE_API_KEY = env.GOOGLE_API_KEY;
+  const GOOGLE_CX_ID = env.GOOGLE_CX_ID;
   
   if (!GOOGLE_API_KEY) {
     return { 
       message: 'No Google API key configured',
+      blocked: true,
+      real: false
+    };
+  }
+  
+  if (!GOOGLE_CX_ID || GOOGLE_CX_ID === "YOUR_GOOGLE_CX_ID") {
+    return { 
+      message: 'Google Custom Search Engine ID not configured. Please set GOOGLE_CX_ID in wrangler.toml. Get it from: https://programmablesearchengine.google.com/',
       blocked: true,
       real: false
     };
@@ -497,7 +506,7 @@ async function absorbProjectData(env: any): Promise<any> {
   
   for (const query of searchQueries) {
     try {
-      const response = await fetch(`https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=017576662512468239146:omuauf_lfve&q=${encodeURIComponent(query)}`, {
+      const response = await fetch(`https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX_ID}&q=${encodeURIComponent(query)}`, {
         method: 'GET'
       });
       
