@@ -175,56 +175,8 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
         </div>
       </div>
 
-      {/* Testimonials Section */}
-      <div className="max-w-7xl mx-auto px-4 py-20 bg-gradient-to-b from-transparent to-purple-500/5">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">What Teams Say</h2>
-          <p className="text-white/60 max-w-2xl mx-auto">
-            Real feedback from founders who accelerated their growth with autonomous operations.
-          </p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center text-sm font-bold">JD</div>
-              <div>
-                <div className="font-bold">John D.</div>
-                <div className="text-sm text-white/40">Startup Founder</div>
-              </div>
-            </div>
-            <p className="text-white/60">"Scaled from 100 to 10,000 users without hiring a DevOps team. The autonomous engine handles it all."</p>
-            <div className="flex gap-1 mt-4">
-              <span className="text-yellow-400">★★★★★</span>
-            </div>
-          </div>
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-500/30 flex items-center justify-center text-sm font-bold">AK</div>
-              <div>
-                <div className="font-bold">Alex K.</div>
-                <div className="text-sm text-white/40">Creator</div>
-              </div>
-            </div>
-            <p className="text-white/60">"Cut infrastructure costs by 40% while scaling revenue. The autonomous optimization is game-changing."</p>
-            <div className="flex gap-1 mt-4">
-              <span className="text-yellow-400">★★★★★</span>
-            </div>
-          </div>
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center text-sm font-bold">MR</div>
-              <div>
-                <div className="font-bold">Maria R.</div>
-                <div className="text-sm text-white/40">Team Lead</div>
-              </div>
-            </div>
-            <p className="text-white/60">"Finally, enterprise-grade autonomous operations for growing teams. No manual oversight required."</p>
-            <div className="flex gap-1 mt-4">
-              <span className="text-yellow-400">★★★★★</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* DISABLED - 0 Lies Mode: removed fake testimonials */}
+      {/* Testimonials section removed - contained fabricated testimonials without real customers */}
 
       {/* Solution Section */}
       <div id="features" className="max-w-7xl mx-auto px-4 py-20">
@@ -274,71 +226,8 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
         </div>
       </div>
 
-      {/* Testimonials Section */}
-      <div className="max-w-7xl mx-auto px-4 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Trusted by Teams</h2>
-          <p className="text-white/60 max-w-2xl mx-auto">
-            See what founders and creators are saying about a-to-mind.com
-          </p>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-purple-500/30 flex items-center justify-center text-lg font-bold">JD</div>
-              <div>
-                <div className="font-bold">John Doe</div>
-                <div className="text-sm text-white/40">Startup Founder</div>
-              </div>
-            </div>
-            <p className="text-white/60">
-              "Finally, enterprise-grade autonomous operations that don't break the bank. The revenue optimization has been game-changing."
-            </p>
-            <div className="flex gap-1 mt-4">
-              {[1,2,3,4,5].map(star => (
-                <div key={star} className="w-4 h-4 text-yellow-400">★</div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-blue-500/30 flex items-center justify-center text-lg font-bold">AK</div>
-              <div>
-                <div className="font-bold">Alex Kim</div>
-                <div className="text-sm text-white/40">Creator</div>
-              </div>
-            </div>
-            <p className="text-white/60">
-              "The autonomous business engine is like having a CFO and CTO on my team. My revenue has never grown faster."
-            </p>
-            <div className="flex gap-1 mt-4">
-              {[1,2,3,4,5].map(star => (
-                <div key={star} className="w-4 h-4 text-yellow-400">★</div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/30 flex items-center justify-center text-lg font-bold">MR</div>
-              <div>
-                <div className="font-bold">Maria Rodriguez</div>
-                <div className="text-sm text-white/40">Team Lead</div>
-              </div>
-            </div>
-            <p className="text-white/60">
-              "We scaled from 100 to 10,000 users without hiring a DevOps team. a-to-mind.com handles operations automatically."
-            </p>
-            <div className="flex gap-1 mt-4">
-              {[1,2,3,4,5].map(star => (
-                <div key={star} className="w-4 h-4 text-yellow-400">★</div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* DISABLED - 0 Lies Mode: removed fake testimonials */}
+      {/* "Trusted by Teams" section removed - contained fabricated testimonials without real customers */}
 
       {/* Pricing Section */}
       <div id="pricing" className="max-w-7xl mx-auto px-4 py-20">

@@ -8,25 +8,40 @@ import ShareCard from './dashboard/ShareCard';
 import HowItWorks from './dashboard/HowItWorks';
 import AuthModal from './dashboard/AuthModal';
 import PaymentWall from './dashboard/PaymentWall';
-import LiveActivity from './dashboard/LiveActivity';
+import CouncilTelemetry from './dashboard/CouncilTelemetry';
+import SystemStatus from './dashboard/SystemStatus';
+import PipelineVisibility from './dashboard/PipelineVisibility';
+import DemoBanner from './ui/DemoBanner';
+import PaymentCalculationPanel from './admin/PaymentCalculationPanel';
 import { TrendingUp, Users, Shield as ShieldIcon, Zap, Lock } from 'lucide-react';
+import { createVerifiedData, createUnverifiedData, VerifiedData } from '../types/verifiedData';
 
 export default function SimpleDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'profit'>('overview');
   const [copied, setCopied] = useState(false);
-  const [userEarnings, setUserEarnings] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [autonomousActions, setAutonomousActions] = useState(0);
+  const [userEarnings, setUserEarnings] = useState<VerifiedData<number>>(createUnverifiedData(0, 'Stripe: payments table'));
+  const [totalUsers, setTotalUsers] = useState<VerifiedData<number>>(createUnverifiedData(0, 'D1: users table'));
+  const [autonomousActions, setAutonomousActions] = useState<VerifiedData<number>>(createUnverifiedData(0, 'D1: agent_actions table'));
   const [recentActions, setRecentActions] = useState<any[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [showUsersPanel, setShowUsersPanel] = useState(false);
-  const [optimizationResults, setOptimizationResults] = useState<any[]>([]);
-  const [financialData, setFinancialData] = useState<any[]>([]);
-  const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
-  const [showFinancialPanel, setShowFinancialPanel] = useState(false);
-  const [revenueSummary, setRevenueSummary] = useState<any>(null);
-  const [showRevenuePanel, setShowRevenuePanel] = useState(false);
+  const [showDemoBanner, setShowDemoBanner] = useState(false);
+  const [showPaymentCalculationPanel, setShowPaymentCalculationPanel] = useState(false);
+
+  // Check if any data is in demo mode
+  useEffect(() => {
+    const hasDemoData = totalUsers.is_demo || autonomousActions.is_demo;
+    setShowDemoBanner(hasDemoData);
+  }, [totalUsers, autonomousActions]);
+  // const [optimizationResults, setOptimizationResults] = useState<any[]>([]);
+  // DISABLED - compliance fix: removed fake financial data
+  // const [financialData, setFinancialData] = useState<any[]>([]);
+  // const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
+  // const [showFinancialPanel, setShowFinancialPanel] = useState(false);
+  // DISABLED - compliance fix: removed fake revenue summary
+  // const [revenueSummary, setRevenueSummary] = useState<any>(null);
+  // const [showRevenuePanel, setShowRevenuePanel] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
@@ -134,76 +149,76 @@ export default function SimpleDashboard() {
         alert('Error loading users: ' + e);
       }
     };
-    
-    // Allow owner to view optimization results: window.viewOptimizations()
-    (window as any).viewOptimizations = async () => {
-      console.log('Loading optimizations...');
-      try {
-        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/optimization/results', {
-          headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-          setOptimizationResults(data.optimizations);
-          setShowOptimizationPanel(true);
-          console.log('Optimizations loaded:', data.optimizations.length);
-        } else {
-          console.error('Failed to load optimizations:', data.error);
-          alert('Failed to load optimizations: ' + data.error);
-        }
-      } catch (e) {
-        console.error('Error loading optimizations:', e);
-        alert('Error loading optimizations: ' + e);
-      }
-    };
-    
-    // Allow owner to view financial data: window.viewFinancialData()
-    (window as any).viewFinancialData = async () => {
-      console.log('Loading financial data...');
-      try {
-        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/financial/summary', {
-          headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-          setFinancialData(data.financialData);
-          setShowFinancialPanel(true);
-          console.log('Financial data loaded:', data.financialData.length, 'data types');
-        } else {
-          console.error('Failed to load financial data:', data.error);
-          alert('Failed to load financial data: ' + data.error);
-        }
-      } catch (e) {
-        console.error('Error loading financial data:', e);
-        alert('Error loading financial data: ' + e);
-      }
-    };
-    
-    // Allow owner to view revenue summary: window.viewRevenueSummary()
-    (window as any).viewRevenueSummary = async () => {
-      console.log('Loading revenue summary...');
-      try {
-        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/revenue/summary', {
-          headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-          setRevenueSummary(data);
-          setShowRevenuePanel(true);
-          console.log('Revenue summary loaded:', data);
-        } else {
-          console.error('Failed to load revenue summary:', data.error);
-          alert('Failed to load revenue summary: ' + data.error);
-        }
-      } catch (e) {
-        console.error('Error loading revenue summary:', e);
-        alert('Error loading revenue summary: ' + e);
-      }
-    };
-    
+
+    // DISABLED - compliance fix: removed fake optimization results
+    // (window as any).viewOptimizations = async () => {
+    //   console.log('Loading optimizations...');
+    //   try {
+    //     const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/optimization/results', {
+    //       headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
+    //     });
+    //     const data = await response.json();
+
+    //     if (response.ok) {
+    //       setOptimizationResults(data.optimizations);
+    //       setShowOptimizationPanel(true);
+    //       console.log('Optimizations loaded:', data.optimizations.length);
+    //     } else {
+    //       console.error('Failed to load optimizations:', data.error);
+    //       alert('Failed to load optimizations: ' + data.error);
+    //     }
+    //   } catch (e) {
+    //     console.error('Error loading optimizations:', e);
+    //     alert('Error loading optimizations: ' + e);
+    //   }
+    // };
+
+    // DISABLED - compliance fix: removed fake financial data
+    // (window as any).viewFinancialData = async () => {
+    //   console.log('Loading financial data...');
+    //   try {
+    //     const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/financial/summary', {
+    //       headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
+    //     });
+    //     const data = await response.json();
+
+    //     if (response.ok) {
+    //       setFinancialData(data.financialData);
+    //       setShowFinancialPanel(true);
+    //       console.log('Financial data loaded:', data.financialData.length, 'data types');
+    //     } else {
+    //       console.error('Failed to load financial data:', data.error);
+    //       alert('Failed to load financial data: ' + data.error);
+    //     }
+    //   } catch (e) {
+    //     console.error('Error loading financial data:', e);
+    //     alert('Error loading financial data: ' + e);
+    //   }
+    // };
+
+    // DISABLED - compliance fix: removed fake revenue summary
+    // (window as any).viewRevenueSummary = async () => {
+    //   console.log('Loading revenue summary...');
+    //   try {
+    //     const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/revenue/summary', {
+    //       headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
+    //     });
+    //     const data = await response.json();
+
+    //     if (response.ok) {
+    //       setRevenueSummary(data);
+    //       setShowRevenuePanel(true);
+    //       console.log('Revenue summary loaded:', data);
+    //     } else {
+    //       console.error('Failed to load revenue summary:', data.error);
+    //       alert('Failed to load revenue summary: ' + data.error);
+    //     }
+    //   } catch (e) {
+    //     console.error('Error loading revenue summary:', e);
+    //     alert('Error loading revenue summary: ' + e);
+    //   }
+    // };
+
     // Allow owner to trigger manual optimization: window.runOptimization()
     (window as any).runOptimization = async () => {
       if (optimizingRef.current) {
@@ -223,8 +238,8 @@ export default function SimpleDashboard() {
         
         if (response.ok) {
           showToastMessage(`Optimization complete! ${data.tasksExecuted} tasks executed`, 'success');
-          // Refresh optimization results
-          setTimeout(() => (window as any).viewOptimizations(), 1000);
+          // DISABLED - compliance fix: removed fake optimization results refresh
+          // setTimeout(() => (window as any).viewOptimizations(), 1000);
         } else {
           showToastMessage('Optimization failed: ' + data.error, 'error');
         }
@@ -237,24 +252,24 @@ export default function SimpleDashboard() {
     };
   }, []);
 
-  // Real-time earnings animation (disabled for real earnings)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isAuthenticated && isEnterprise) {
-        // Only show fake notifications for owner mode
-        if (Math.random() > 0.95) {
-          const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley'];
-          const amounts = [23, 45, 67, 89, 112, 156];
-          const randomName = names[Math.floor(Math.random() * names.length)];
-          const randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
-          setNotificationText(`${randomName} just earned $${randomAmount}!`);
-          setShowNotification(true);
-          setTimeout(() => setShowNotification(false), 3000);
-        }
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, isEnterprise]);
+  // Real-time earnings animation (DISABLED - compliance fix: no fake data)
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     if (isAuthenticated && isEnterprise) {
+  //       // Only show fake notifications for owner mode
+  //       if (Math.random() > 0.95) {
+  //         const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley'];
+  //         const amounts = [23, 45, 67, 89, 112, 156];
+  //         const randomName = names[Math.floor(Math.random() * names.length)];
+  //         const randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
+  //         setNotificationText(`${randomName} just earned $${randomAmount}!`);
+  //         setShowNotification(true);
+  //         setTimeout(() => setShowNotification(false), 3000);
+  //       }
+  //     }
+  //   }, 2000);
+  //   return () => clearInterval(interval);
+  // }, [isAuthenticated, isEnterprise]);
 
   // Fetch real user count
   useEffect(() => {
@@ -262,13 +277,13 @@ export default function SimpleDashboard() {
       .then(res => res.json())
       .then(data => {
         if (data.count !== undefined) {
-          setTotalUsers(data.count);
+          setTotalUsers(createVerifiedData(data.count, 'D1: users table'));
         }
       })
       .catch(err => console.error('Failed to fetch user count:', err));
   }, []);
 
-  // Fetch real user earnings
+  // Fetch real user earnings (Net cash received from Stripe)
   useEffect(() => {
     const token = localStorage.getItem('session_token');
     if (token && isAuthenticated && !isEnterprise) {
@@ -278,13 +293,34 @@ export default function SimpleDashboard() {
         .then(res => res.json())
         .then(data => {
           if (data.earnings !== undefined) {
-            setUserEarnings(data.earnings);
-            setCurrentEarnings(data.earnings);
+            // Use VerifiedData with definition for real money
+            setUserEarnings(createVerifiedData(
+              data.earnings,
+              'Stripe: payments table',
+              {
+                definition: 'Net cash received = Stripe payments captured - refunds - fees'
+              }
+            ));
           }
         })
-        .catch(err => console.error('Failed to fetch earnings:', err));
+        .catch(err => {
+          console.error('Failed to fetch earnings:', err);
+          // Keep unverified state on error
+        });
     }
   }, [isAuthenticated, isEnterprise]);
+
+  // Fetch real autonomous actions
+  useEffect(() => {
+    fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/activity/recent')
+      .then(res => res.json())
+      .then(data => {
+        if (data.actions && data.actions.length > 0) {
+          setAutonomousActions(createVerifiedData(data.actions.length, 'D1: agent_actions table'));
+        }
+      })
+      .catch(err => console.error('Failed to fetch autonomous actions:', err));
+  }, []);
 
   // Fetch real leaderboard
   useEffect(() => {
@@ -387,7 +423,7 @@ export default function SimpleDashboard() {
   };
 
   const shareEarnings = () => {
-    const text = `I've earned $${userEarnings.toFixed(2)} with a-to-mind's autonomous AI! Start growing your wealth: https://a-to-mind.com/ref/AUTO2026`;
+    const text = `I've earned $${userEarnings.toFixed(2)} with Loxa's autonomous AI! Start growing your wealth: https://a-to-mind.com/ref/AUTO2026`;
     if (navigator.share) {
       navigator.share({ text });
       showToastMessage('Shared successfully!', 'success');
@@ -473,6 +509,9 @@ export default function SimpleDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#0f0f0f] text-white">
+      {/* Demo Banner - 0 Lies Mode */}
+      {showDemoBanner && <DemoBanner />}
+
       {/* Social Proof Notification */}
       {showNotification && (
         <div className="fixed top-4 right-4 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-xl rounded-xl p-4 flex items-center gap-3 z-50 animate-in slide-in-from-right">
@@ -492,128 +531,10 @@ export default function SimpleDashboard() {
         onFormDataChange={setFormData}
       />
 
-      {/* Optimization Results Panel (Owner Only) */}
-      {showOptimizationPanel && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Optimization Results ({optimizationResults.length})</h2>
-              <button
-                onClick={() => setShowOptimizationPanel(false)}
-                className="text-white/60 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {optimizationResults.map((opt, index) => (
-                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium">{opt.strategy}</div>
-                    <div className="text-emerald-400 font-bold">+${opt.actualSavings}</div>
-                  </div>
-                  <div className="text-sm text-white/60">
-                    {opt.opportunitiesFound} opportunities found • {opt.confidence}% confidence • {opt.priority} priority
-                  </div>
-                  <div className="text-xs text-white/40 mt-1">
-                    {new Date(opt.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Revenue Summary Panel (Owner Only) */}
-      {showRevenuePanel && revenueSummary && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Revenue Summary (All Time)</h2>
-              <button
-                onClick={() => setShowRevenuePanel(false)}
-                className="text-white/60 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
-                <div className="text-sm text-emerald-400">Total Leads Absorbed</div>
-                <div className="text-2xl font-bold">{revenueSummary.totalLeadsAbsorbed.toLocaleString()}</div>
-              </div>
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <div className="text-sm text-blue-400">Total Leads Contacted</div>
-                <div className="text-2xl font-bold">{revenueSummary.totalLeadsContacted.toLocaleString()}</div>
-              </div>
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                <div className="text-sm text-purple-400">Total Qualified Leads</div>
-                <div className="text-2xl font-bold">{revenueSummary.totalQualifiedLeads.toLocaleString()}</div>
-              </div>
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                <div className="text-sm text-yellow-400">Total Emails Sent</div>
-                <div className="text-2xl font-bold">{revenueSummary.totalEmailsSent.toLocaleString()}</div>
-              </div>
-              <div className="bg-pink-500/10 border border-pink-500/30 rounded-lg p-4">
-                <div className="text-sm text-pink-400">Total Replies Received</div>
-                <div className="text-2xl font-bold">{revenueSummary.totalRepliesReceived.toLocaleString()}</div>
-              </div>
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                <div className="text-sm text-green-400">Total Meetings Booked</div>
-                <div className="text-2xl font-bold">{revenueSummary.totalMeetingsBooked.toLocaleString()}</div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-emerald-500/20 to-blue-500/20 border border-white/10 rounded-lg p-6 mb-6">
-              <div className="text-sm text-white/60 mb-2">Total Pipeline Created</div>
-              <div className="text-4xl font-bold text-emerald-400">${revenueSummary.totalPipelineCreated.toLocaleString()}</div>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4 text-sm text-white/60">
-              <div>Outbound Cycles: {revenueSummary.outboundCycles}</div>
-              <div>Absorption Cycles: {revenueSummary.absorptionCycles}</div>
-              <div>Optimization Cycles: {revenueSummary.optimizationCycles}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Financial Data Panel (Owner Only) */}
-      {showFinancialPanel && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Financial Data Summary</h2>
-              <button
-                onClick={() => setShowFinancialPanel(false)}
-                className="text-white/60 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {financialData.map((data, index) => (
-                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium capitalize">{data.type.replace('_', ' ')}</div>
-                    <div className="text-emerald-400 font-bold">${data.totalBalance.toLocaleString()}</div>
-                  </div>
-                  <div className="text-sm text-white/60">
-                    {data.accounts} accounts • {data.transactions} transactions
-                  </div>
-                  <div className="text-xs text-white/40 mt-1">
-                    Last sync: {new Date(data.lastSync).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* DISABLED - compliance fix: removed fake panels */}
+      {/* - Optimization Results panel (fake metrics) */}
+      {/* - Revenue Summary panel (fake metrics) */}
+      {/* - Financial Data panel (fake metrics) */}
 
       {/* Users Panel (Owner Only) */}
       {showUsersPanel && (
@@ -693,35 +614,38 @@ export default function SimpleDashboard() {
                   >
                     👥
                   </button>
-                  <button
+                  {/* DISABLED - compliance fix: removed fake optimization results button */}
+                  {/* <button
                     onClick={() => (window as any).viewOptimizations()}
                     className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
                     title="View optimization results (Owner only)"
                   >
                     ⚡
-                  </button>
-                  <button
+                  </button> */}
+                  {/* DISABLED - compliance fix: removed fake financial data button */}
+                  {/* <button
                     onClick={() => (window as any).viewFinancialData()}
                     className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
                     title="View financial data (Owner only)"
                   >
                     💰
-                  </button>
-                  <button
+                  </button> */}
+                  {/* DISABLED - compliance fix: removed fake revenue summary button */}
+                  {/* <button
                     onClick={() => (window as any).viewRevenueSummary()}
                     className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
                     title="View revenue summary (Owner only)"
                   >
                     📊
-                  </button>
+                  </button> */}
                 </>
               )}
             </div>
             <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-white via-[#c4a661] to-emerald-400 bg-clip-text text-transparent">
-              a-to-mind
+              Loxa
             </h1>
             <p className="text-xl md:text-2xl text-white/70 mb-8 max-w-2xl mx-auto">
-              Your autonomous outbound rep. We turn your HubSpot list into qualified meetings on autopilot.
+              The World's First Autonomous Business Engine. Aether's S1-S5 agent council builds infrastructure, scales revenue, and optimizes growth while you focus on what matters.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -764,27 +688,37 @@ export default function SimpleDashboard() {
       <div className="max-w-7xl mx-auto px-8 -mt-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard
-            icon={TrendingUp}
-            label="Leads Absorbed (Real)"
-            value={totalUsers.toLocaleString()}
-            subtext="From Google Search API"
+            icon={Users}
+            label="Total Users"
+            data={totalUsers}
             color="emerald"
           />
           <StatsCard
-            icon={Users}
-            label="Emails Generated (Real)"
-            value={autonomousActions.toLocaleString()}
-            subtext="Via Cloudflare AI"
+            icon={Zap}
+            label="Autonomous Actions"
+            data={autonomousActions}
             color="gold"
           />
           <StatsCard
-            icon={Zap}
-            label="Outbound Cycles (Real)"
-            value={userEarnings.toLocaleString()}
-            subtext="Autonomous operations"
+            icon={TrendingUp}
+            label="Your Earnings"
+            data={userEarnings}
             color="purple"
+            showDefinition={true}
+            showRawLink={userEarnings.verified}
+            onViewCalculation={() => setShowPaymentCalculationPanel(true)}
           />
         </div>
+      </div>
+
+      {/* System Status */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <SystemStatus />
+      </div>
+
+      {/* Pipeline Visibility */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <PipelineVisibility />
       </div>
 
       {/* Share Earnings CTA */}
@@ -869,12 +803,19 @@ export default function SimpleDashboard() {
               onConnectBank={connectBankAccount}
             />
 
-            <LiveActivity />
+            <CouncilTelemetry />
           </div>
         )}
 
         {activeTab === 'profit' && <ProfitEngine />}
       </div>
+
+      {/* Payment Calculation Panel (Admin) */}
+      <PaymentCalculationPanel
+        isOpen={showPaymentCalculationPanel}
+        onClose={() => setShowPaymentCalculationPanel(false)}
+        calculation={null}
+      />
     </div>
   );
 }
