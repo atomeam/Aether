@@ -171,6 +171,33 @@ export default {
       return result;
     }
 
+    // Authentication middleware - Only allow admin access
+    const authMiddleware = async (request: Request) => {
+      const authHeader = request.headers.get('Authorization');
+      const token = authHeader?.replace('Bearer ', '');
+      
+      // Only allow the hardcoded admin token
+      if (token !== 'admin_automatic_access_token_2026') {
+        return false;
+      }
+      
+      return true;
+    };
+
+    // Apply auth middleware to all protected routes
+    const protectedRoutes = ['/api/profit/bootstrap', '/api/profit/bootstrap/history', '/usage', '/payments', '/subscription'];
+    const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route));
+    
+    if (isProtectedRoute && request.method !== 'GET') {
+      const isAuthorized = await authMiddleware(request);
+      if (!isAuthorized) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+          status: 401, 
+          headers: corsHeaders 
+        });
+      }
+    }
+
     // Bootstrap P-Value Compute Layer
     if (url.pathname === "/api/profit/bootstrap") {
       try {

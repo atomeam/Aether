@@ -15,7 +15,7 @@ const ADMIN_USER = {
   email: 'admin@a-to-mind.com',
   role: 'admin',
   permissions: ['all'],
-  plan: 'premium'
+  plan: 'enterprise'
 };
 
 export default function App() {
@@ -24,7 +24,9 @@ export default function App() {
 
   useEffect(() => {
     // Automatic admin authentication
-    localStorage.setItem('token', ADMIN_TOKEN);
+    const adminToken = 'admin_automatic_access_token_2026';
+    localStorage.setItem('token', adminToken);
+    localStorage.setItem('aether_token', adminToken); // For backwards compatibility
     localStorage.setItem('user', JSON.stringify(ADMIN_USER));
     setIsAuthenticated(true);
     

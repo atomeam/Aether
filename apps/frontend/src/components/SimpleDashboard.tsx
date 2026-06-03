@@ -8,6 +8,7 @@ import UserOnboarding from './UserOnboarding';
 import ReferralProgram from './ReferralProgram';
 import FeedbackSystem from './FeedbackSystem';
 import ProfitEngine from './ProfitEngine';
+import { authenticatedFetch } from '../lib/api';
 
 interface UsageData {
   plan: string;
@@ -42,12 +43,7 @@ export default function SimpleDashboard() {
 
   const fetchCsrfToken = async () => {
     try {
-      const token = localStorage.getItem('aether_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/csrf-token`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/auth/csrf-token`);
       const data = await response.json();
       if (data.csrf_token) {
         setCsrfToken(data.csrf_token);
@@ -60,12 +56,7 @@ export default function SimpleDashboard() {
   const fetchUsage = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('aether_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/usage`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/usage`);
       const data = await response.json();
       setUsage(data);
     } catch (e: any) {
@@ -78,15 +69,10 @@ export default function SimpleDashboard() {
   const changePlan = async (newPlan: string) => {
     try {
       setChangingPlan(true);
-      const token = localStorage.getItem('aether_token');
       
       // Create Stripe checkout session
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/payments/stripe/create-checkout`, {
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/payments/stripe/create-checkout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ plan: newPlan })
       });
       const data = await response.json();
@@ -120,13 +106,8 @@ export default function SimpleDashboard() {
   const cancelSubscription = async () => {
     try {
       setChangingPlan(true);
-      const token = localStorage.getItem('aether_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/subscription/cancel`, {
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/subscription/cancel`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ csrf_token })
       });
       const data = await response.json();

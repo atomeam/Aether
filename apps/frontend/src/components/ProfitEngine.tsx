@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Activity, AlertTriangle, CheckCircle, RefreshCcw, BarChart3 } from 'lucide-react';
+import { authenticatedFetch } from '../lib/api';
 
 interface BootstrapResult {
   id: string;
@@ -28,7 +29,7 @@ export default function ProfitEngine() {
   const fetchResults = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profit/bootstrap/history?limit=20`);
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/api/profit/bootstrap/history?limit=20`);
       if (response.ok) {
         const data = await response.json();
         setResults(data.results || data);
@@ -43,9 +44,8 @@ export default function ProfitEngine() {
   const runBootstrapAnalysis = async () => {
     try {
       setAnalyzing(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profit/bootstrap`, {
+      const response = await authenticatedFetch(`${import.meta.env.VITE_API_URL}/api/profit/bootstrap`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           strategyId: selectedStrategy,
           threshold,
