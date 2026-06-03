@@ -52,6 +52,7 @@ export default function CommandCenter() {
   const [loadingS5, setLoadingS5] = useState(false);
   const [userVariant, setUserVariant] = useState<'a' | 'b'>('a');
   const [scanProgress, setScanProgress] = useState<string[]>([]);
+  const [activeRegion, setActiveRegion] = useState<{ country: string; colo: string }>({ country: 'US', colo: 'IAD' });
 
   const fetchS5Components = async () => {
     try {
@@ -242,6 +243,16 @@ export default function CommandCenter() {
       setUserVariant(newVariant);
       localStorage.setItem('s5_variant', newVariant);
     }
+    
+    // Capture geographic telemetry
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        setActiveRegion({ country: data.country_code || 'US', colo: data.region || 'IAD' });
+      })
+      .catch(() => {
+        // Fallback to default
+      });
     
     fetchTelemetry();
     fetchS5Components();
@@ -563,6 +574,16 @@ export default function CommandCenter() {
             {activePanel === 'infrastructure' && (
               <div>
                 <p className="mb-4">S1 Health Monitor - Infrastructure Scan:</p>
+                
+                <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Globe className="w-4 h-4" />
+                    <span className="font-bold">Active Region: {activeRegion.country} ({activeRegion.colo})</span>
+                  </div>
+                  <div className="text-xs text-white/60 mt-1">
+                    S5 Geographic Edge-Shifting: Monitoring traffic distribution
+                  </div>
+                </div>
                 
                 {isScanning && scanProgress.length > 0 ? (
                   <div className="p-4 bg-black border border-green-500/30 rounded-lg font-mono text-sm">

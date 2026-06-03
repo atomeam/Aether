@@ -3734,9 +3734,13 @@ Requirements:
 
         const { panel_id, action, duration_ms, page_url, variant } = await request.json();
 
+        // Capture geographic telemetry from Cloudflare headers
+        const country = request.cf?.country || null;
+        const colo = request.cf?.colo || null;
+
         const logId = `nav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await env.DB.prepare(
-          "INSERT INTO user_navigation_logs (id, user_id, panel_id, action, duration_ms, timestamp, page_url) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO user_navigation_logs (id, user_id, panel_id, action, duration_ms, timestamp, page_url, variant, country, colo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ).bind(
           logId,
           userId,
@@ -3744,7 +3748,10 @@ Requirements:
           action,
           duration_ms || null,
           new Date().toISOString(),
-          page_url || null
+          page_url || null,
+          variant || null,
+          country,
+          colo
         ).run();
 
         return new Response(JSON.stringify({ success: true }), {
@@ -4202,6 +4209,46 @@ Requirements:
       console.log("Running S5 Architect hourly evolution...");
       
       try {
+        // 0. Geographic Edge-Shifting Analysis
+        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+        
+        const geoDistribution = await env.DB.prepare(
+          "SELECT country, colo, COUNT(*) as visits FROM user_navigation_logs WHERE timestamp >= ? GROUP BY country, colo ORDER BY visits DESC"
+        ).bind(threeHoursAgo).all() as any[];
+
+        if (geoDistribution.results.length > 0) {
+          const totalVisits = geoDistribution.results.reduce((sum: number, row: any) => sum + row.visits, 0);
+          const topRegion = geoDistribution.results[0];
+          const topRegionPercentage = (topRegion.visits / totalVisits) * 100;
+
+          console.log(`S5 Geographic Analysis: ${topRegion.country} (${topRegion.colo}) = ${topRegionPercentage.toFixed(1)}%`);
+
+          // Trigger edge-shifting if >80% traffic in a different region
+          if (topRegionPercentage > 80) {
+            const actionId = `s5_geo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Log the geographic shift decision
+            await env.DB.prepare(
+              "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(
+              actionId,
+              "s5",
+              `Geographic edge-shift detected: ${topRegion.country} (${topRegion.colo}) at ${topRegionPercentage.toFixed(1)}%`,
+              "completed",
+              new Date().toISOString(),
+              JSON.stringify({
+                country: topRegion.country,
+                colo: topRegion.colo,
+                percentage: topRegionPercentage,
+                total_visits: totalVisits,
+                recommendation: "Provision D1 read-replica in target region"
+              })
+            ).run();
+
+            console.log(`S5: Geographic shift logged - ${topRegion.country} at ${topRegionPercentage.toFixed(1)}%`);
+          }
+        }
+
         // 1. Evaluate A/B test results from last hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         
