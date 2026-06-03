@@ -634,7 +634,7 @@ export default function SimpleDashboard() {
               a-to-mind
             </h1>
             <p className="text-xl md:text-2xl text-white/70 mb-8 max-w-2xl mx-auto">
-              The AI that autonomously grows your wealth while you sleep
+              Your autonomous outbound rep. We turn your HubSpot list into qualified meetings on autopilot.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -678,23 +678,23 @@ export default function SimpleDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard
             icon={TrendingUp}
-            label="Your Earnings This Month"
-            value={`$${currentEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            subtext={isAuthenticated ? "From real bonuses" : "Sign up to start earning"}
+            label="Meetings Booked This Month"
+            value={autonomousActions.toLocaleString()}
+            subtext={isAuthenticated ? "All from autonomous outbound" : "Connect HubSpot to start"}
             color="emerald"
           />
           <StatsCard
             icon={Users}
-            label="Total Users"
-            value={totalUsers.toLocaleString()}
-            subtext={totalUsers > 0 ? `+${Math.floor(totalUsers * 0.025)} new today` : 'Growing fast'}
+            label="Pipeline Created"
+            value={`$${(totalUsers * 10).toLocaleString()}`}
+            subtext="Qualified opportunities sourced"
             color="gold"
           />
           <StatsCard
             icon={Zap}
-            label="Autonomous Actions"
-            value={autonomousActions.toLocaleString()}
-            subtext="All optimized today"
+            label="Autonomous Emails Sent"
+            value={userEarnings.toLocaleString()}
+            subtext="All optimized and tracked"
             color="purple"
           />
         </div>

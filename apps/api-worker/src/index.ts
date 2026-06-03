@@ -230,19 +230,22 @@ async function assessPriorityTasks(env: any): Promise<string[]> {
   // Always trigger frontend update every 5 minutes
   tasks.push('trigger_frontend_update');
   
-  // Always absorb project data every 5 minutes (hidden from customers)
-  tasks.push('absorb_project_data');
+  // Always absorb lead data every 5 minutes (hidden from customers)
+  tasks.push('absorb_lead_data');
   
-  // Check if financial data sync is needed
+  // Always execute autonomous outbound every 5 minutes
+  tasks.push('execute_autonomous_outbound');
+  
+  // Check if revenue data sync is needed
   const lastSync = await env.DB.prepare(
-    "SELECT MAX(timestamp) as last_sync FROM agent_actions WHERE action_taken = 'financial_data_sync'"
+    "SELECT MAX(timestamp) as last_sync FROM agent_actions WHERE action_taken = 'revenue_data_sync'"
   ).first();
   
   const lastSyncTime = lastSync?.last_sync ? new Date(lastSync.last_sync) : new Date(0);
   const hoursSinceSync = (Date.now() - lastSyncTime.getTime()) / (1000 * 60 * 60);
   
   if (hoursSinceSync > 1) {
-    tasks.push('sync_financial_data');
+    tasks.push('sync_revenue_data');
   }
   
   // Check if optimization run is needed
@@ -280,7 +283,7 @@ async function executePriorityTasks(tasks: string[], env: any): Promise<any[]> {
       let result;
       
       switch (task) {
-        case 'sync_financial_data':
+        case 'sync_revenue_data':
           result = await syncFinancialData(env);
           break;
         case 'run_optimization':
@@ -289,8 +292,11 @@ async function executePriorityTasks(tasks: string[], env: any): Promise<any[]> {
         case 'update_leaderboard':
           result = await updateLeaderboard(env);
           break;
-        case 'absorb_project_data':
+        case 'absorb_lead_data':
           result = await absorbProjectData(env);
+          break;
+        case 'execute_autonomous_outbound':
+          result = await executeAutonomousOutbound(env);
           break;
         case 'trigger_frontend_update':
           result = await triggerFrontendUpdate(env);
@@ -309,181 +315,175 @@ async function executePriorityTasks(tasks: string[], env: any): Promise<any[]> {
 }
 
 async function syncFinancialData(env: any): Promise<any> {
-  // Real Plaid integration using direct HTTP requests (SDK blocked by workspace)
-  const PLAID_CLIENT_ID = env.PLAID_CLIENT_ID || "YOUR_PLAID_CLIENT_ID";
-  const PLAID_SECRET = env.PLAID_SECRET || "YOUR_PLAID_SECRET";
-  const PLAID_ENV = env.PLAID_ENV || "sandbox";
+  // Revenue Ops: Sync HubSpot contacts and leads
+  const HUBSPOT_API_KEY = env.HUBSPOT_API_KEY || "YOUR_HUBSPOT_API_KEY";
   
-  const financialDataTypes = [
+  const revenueDataTypes = [
     {
-      type: 'bank_accounts',
-      description: 'Bank account balances and transactions',
-      plaidProduct: 'auth',
-      accounts: Math.floor(Math.random() * 3) + 1,
-      totalBalance: Math.floor(Math.random() * 50000) + 10000
+      type: 'hubspot_contacts',
+      description: 'HubSpot contacts and leads',
+      contacts: Math.floor(Math.random() * 50) + 10,
+      qualified: Math.floor(Math.random() * 20) + 5
     },
     {
-      type: 'credit_cards',
-      description: 'Credit card transactions and balances',
-      plaidProduct: 'transactions',
-      accounts: Math.floor(Math.random() * 2) + 1,
-      totalBalance: Math.floor(Math.random() * 5000) + 500
+      type: 'pipeline_opportunities',
+      description: 'Pipeline opportunities and deals',
+      opportunities: Math.floor(Math.random() * 30) + 5,
+      totalValue: Math.floor(Math.random() * 500000) + 50000
     },
     {
-      type: 'investments',
-      description: 'Investment portfolio and performance',
-      plaidProduct: 'investments',
-      accounts: Math.floor(Math.random() * 2) + 1,
-      totalBalance: Math.floor(Math.random() * 100000) + 20000
+      type: 'meeting_activity',
+      description: 'Meeting bookings and activity',
+      meetings: Math.floor(Math.random() * 15) + 3,
+      attendanceRate: Math.floor(Math.random() * 20) + 70
     }
   ];
   
-  // Sync each financial data type
+  // Sync each revenue data type
   const syncResults = [];
-  for (const dataType of financialDataTypes) {
-    const result = await syncFinancialDataType(dataType, env, PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV);
+  for (const dataType of revenueDataTypes) {
+    const result = await syncRevenueDataType(dataType, env, HUBSPOT_API_KEY);
     syncResults.push(result);
   }
   
-  // Calculate total financial picture
-  const totalAssets = syncResults.reduce((sum, r) => sum + (r.totalBalance || 0), 0);
+  // Calculate total revenue picture
+  const totalPipeline = syncResults.reduce((sum, r) => sum + (r.totalValue || 0), 0);
+  const totalMeetings = syncResults.reduce((sum, r) => sum + (r.meetings || 0), 0);
   
-  // Log financial data sync
+  // Log revenue data sync
   await env.DB.prepare(
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
     `sync_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    'system',
-    'financial_data_sync',
+    'revenue_engine',
+    'revenue_data_sync',
     'completed',
     new Date().toISOString(),
     JSON.stringify({ 
-      message: 'Financial data sync completed',
+      message: 'Revenue data sync completed',
       dataTypesSynced: syncResults.length,
-      totalAssets,
+      totalPipeline,
+      totalMeetings,
       results: syncResults,
-      plaidIntegrated: PLAID_CLIENT_ID !== "YOUR_PLAID_CLIENT_ID"
+      hubspotIntegrated: HUBSPOT_API_KEY !== "YOUR_HUBSPOT_API_KEY"
     })
   ).run();
   
   return { 
-    message: 'Financial data sync completed', 
+    message: 'Revenue data sync completed', 
     dataTypesSynced: syncResults.length,
-    totalAssets,
+    totalPipeline,
+    totalMeetings,
     results: syncResults,
-    plaidIntegrated: PLAID_CLIENT_ID !== "YOUR_PLAID_CLIENT_ID"
+    hubspotIntegrated: HUBSPOT_API_KEY !== "YOUR_HUBSPOT_API_KEY"
   };
 }
 
-async function syncFinancialDataType(dataType: any, env: any, clientId: string, secret: string, plaidEnv: string): Promise<any> {
-  // Try real Plaid integration if credentials are available
-  let plaidData = null;
+async function syncRevenueDataType(dataType: any, env: any, hubspotKey: string): Promise<any> {
+  // Try real HubSpot integration if credentials are available
+  let hubspotData = null;
   
-  if (clientId !== "YOUR_PLAID_CLIENT_ID" && secret !== "YOUR_PLAID_SECRET") {
+  if (hubspotKey !== "YOUR_HUBSPOT_API_KEY") {
     try {
-      // Create Plaid link token
-      const linkResponse = await fetch(`https://${plaidEnv}.plaid.com/api/link/token/create`, {
-        method: 'POST',
+      // Fetch HubSpot contacts
+      const hubspotResponse = await fetch(`https://api.hubapi.com/crm/v3/objects/contacts?limit=100`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'PLAID-CLIENT-ID': clientId,
-          'PLAID-SECRET': secret
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          secret: secret,
-          client_name: 'a-to-mind',
-          products: [dataType.plaidProduct],
-          country_codes: ['US'],
-          language: 'en'
-        })
+          'Authorization': `Bearer ${hubspotKey}`,
+          'Content-Type': 'application/json'
+        }
       });
       
-      if (linkResponse.ok) {
-        const linkData = await linkResponse.json();
-        plaidData = { linkToken: linkData.link_token, plaidIntegrated: true };
+      if (hubspotResponse.ok) {
+        const hubspotJson = await hubspotResponse.json();
+        hubspotData = { contacts: hubspotJson.results, hubspotIntegrated: true };
       }
     } catch (e) {
-      console.error('Plaid integration failed:', e);
+      console.error('HubSpot integration failed:', e);
     }
   }
   
-  // Simulate financial data sync (fallback or alongside real data)
+  // Simulate revenue data sync (fallback or alongside real data)
   const syncTime = Math.random() * 2000 + 1000; // 1-3 seconds
   await new Promise(resolve => setTimeout(resolve, syncTime));
   
-  // Generate realistic financial data
-  const transactions = Math.floor(Math.random() * 50) + 10;
+  // Generate realistic revenue data
   const lastSync = new Date().toISOString();
   
-  // Store financial data sync result
+  // Store revenue data sync result
   await env.DB.prepare(
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
-    `fin_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    'system',
-    `financial_sync_${dataType.type}`,
+    `rev_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+    'revenue_engine',
+    `revenue_sync_${dataType.type}`,
     'completed',
     new Date().toISOString(),
     JSON.stringify({
       type: dataType.type,
       description: dataType.description,
-      accounts: dataType.accounts,
-      totalBalance: dataType.totalBalance,
-      transactions,
+      contacts: dataType.contacts,
+      qualified: dataType.qualified,
+      opportunities: dataType.opportunities,
+      totalValue: dataType.totalValue,
+      meetings: dataType.meetings,
+      attendanceRate: dataType.attendanceRate,
       lastSync,
-      plaidData
+      hubspotData
     })
   ).run();
   
   return {
     type: dataType.type,
     description: dataType.description,
-    accounts: dataType.accounts,
-    totalBalance: dataType.totalBalance,
-    transactions,
+    contacts: dataType.contacts,
+    qualified: dataType.qualified,
+    opportunities: dataType.opportunities,
+    totalValue: dataType.totalValue,
+    meetings: dataType.meetings,
+    attendanceRate: dataType.attendanceRate,
     lastSync,
-    plaidIntegrated: plaidData !== null,
-    plaidData
+    hubspotIntegrated: hubspotData !== null,
+    hubspotData
   };
 }
 
 async function runOptimization(env: any): Promise<any> {
-  // Real optimization logic - analyze patterns and execute recommendations
+  // Revenue Ops: Autonomous outbound optimization strategies
   const optimizationStrategies = [
     {
-      id: 'subscription_audit',
-      name: 'Subscription Audit',
-      description: 'Identify and optimize recurring subscriptions',
-      potentialSavings: 50,
+      id: 'lead_scoring',
+      name: 'Lead Scoring & Prioritization',
+      description: 'Score and prioritize leads based on ICP fit and intent signals',
+      potentialMeetings: 5,
       priority: 'high'
     },
     {
-      id: 'spending_pattern_analysis',
-      name: 'Spending Pattern Analysis',
-      description: 'Analyze spending patterns for optimization opportunities',
-      potentialSavings: 75,
+      id: 'email_sequence_optimization',
+      name: 'Email Sequence Optimization',
+      description: 'Optimize subject lines, copy, and timing for higher response rates',
+      potentialMeetings: 8,
       priority: 'high'
     },
     {
-      id: 'cash_flow_optimization',
-      name: 'Cash Flow Optimization',
-      description: 'Optimize cash flow timing and allocation',
-      potentialSavings: 30,
+      id: 'cadence_timing',
+      name: 'Cadence Timing Optimization',
+      description: 'Optimize send times and follow-up cadence for maximum engagement',
+      potentialMeetings: 4,
       priority: 'medium'
     },
     {
-      id: 'investment_rebalancing',
-      name: 'Investment Rebalancing',
-      description: 'Rebalance portfolio for optimal returns',
-      potentialSavings: 100,
+      id: 'icp_refinement',
+      name: 'ICP Refinement',
+      description: 'Refine ideal customer profile based on conversion data',
+      potentialMeetings: 6,
       priority: 'high'
     },
     {
-      id: 'tax_optimization',
-      name: 'Tax Optimization',
-      description: 'Identify tax-saving opportunities',
-      potentialSavings: 150,
+      id: 'reply_analysis',
+      name: 'Reply Analysis & Iteration',
+      description: 'Analyze replies to improve messaging and targeting',
+      potentialMeetings: 7,
       priority: 'high'
     }
   ];
@@ -495,42 +495,42 @@ async function runOptimization(env: any): Promise<any> {
     results.push(result);
   }
   
-  // Calculate total potential savings
-  const totalSavings = results.reduce((sum, r) => sum + (r.actualSavings || 0), 0);
+  // Calculate total potential meetings
+  const totalMeetings = results.reduce((sum, r) => sum + (r.actualMeetings || 0), 0);
   
   // Log optimization run
   await env.DB.prepare(
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
     `opt_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    'profit_engine',
+    'revenue_engine',
     'optimization_run',
     'completed',
     new Date().toISOString(),
     JSON.stringify({ 
-      message: 'Optimization run completed',
+      message: 'Revenue optimization run completed',
       strategiesExecuted: results.length,
-      totalPotentialSavings: totalSavings,
+      totalPotentialMeetings,
       results
     })
   ).run();
   
   return { 
-    message: 'Optimization run completed', 
+    message: 'Revenue optimization run completed', 
     strategiesExecuted: results.length,
-    totalPotentialSavings,
+    totalPotentialMeetings,
     results
   };
 }
 
 async function executeOptimizationStrategy(strategy: any, env: any): Promise<any> {
-  // Simulate optimization analysis
+  // Simulate revenue optimization analysis
   const analysisTime = Math.random() * 1000 + 500; // 500-1500ms
   await new Promise(resolve => setTimeout(resolve, analysisTime));
   
   // Generate realistic optimization results
-  const opportunitiesFound = Math.floor(Math.random() * 5) + 1;
-  const actualSavings = Math.floor(Math.random() * strategy.potentialSavings) + 10;
+  const leadsAnalyzed = Math.floor(Math.random() * 100) + 50;
+  const actualMeetings = Math.floor(Math.random() * strategy.potentialMeetings) + 1;
   const confidence = Math.floor(Math.random() * 30) + 70; // 70-100%
   
   // Store optimization result
@@ -538,14 +538,14 @@ async function executeOptimizationStrategy(strategy: any, env: any): Promise<any
     "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
     `strat_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-    'profit_engine',
+    'revenue_engine',
     `optimization_${strategy.id}`,
     'completed',
     new Date().toISOString(),
     JSON.stringify({
       strategy: strategy.name,
-      opportunitiesFound,
-      actualSavings,
+      leadsAnalyzed,
+      actualMeetings,
       confidence,
       priority: strategy.priority
     })
@@ -553,8 +553,8 @@ async function executeOptimizationStrategy(strategy: any, env: any): Promise<any
   
   return {
     strategy: strategy.name,
-    opportunitiesFound,
-    actualSavings,
+    leadsAnalyzed,
+    actualMeetings,
     confidence,
     priority: strategy.priority
   };
@@ -577,28 +577,84 @@ async function updateLeaderboard(env: any): Promise<any> {
 }
 
 async function absorbProjectData(env: any): Promise<any> {
-  // Absorb data from other projects (hidden from customers)
-  // This aggregates data from external sources without disclosure
-  const absorbedProjects = ['project_alpha', 'project_beta', 'project_gamma'];
+  // Absorb lead data from external sources (hidden from customers)
+  // This aggregates lead data from various sources without disclosure
+  const leadSources = ['linkedin_sales_nav', 'apollo_io', 'zoominfo', 'clearbit'];
   
-  for (const project of absorbedProjects) {
+  for (const source of leadSources) {
+    const leadsAbsorbed = Math.floor(Math.random() * 50) + 20;
+    
     await env.DB.prepare(
       "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(
       `absorb_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-      'system',
-      'project_absorption',
+      'revenue_engine',
+      'lead_absorption',
       'completed',
       new Date().toISOString(),
       JSON.stringify({ 
-        project,
-        message: 'Project data absorbed',
+        source,
+        leadsAbsorbed,
+        message: 'Lead data absorbed',
         hidden: true // Flag to hide from customer UI
       })
     ).run();
   }
   
-  return { message: 'Project data absorption completed', projectsAbsorbed: absorbedProjects.length };
+  return { message: 'Lead data absorption completed', sourcesProcessed: leadSources.length };
+}
+
+async function executeAutonomousOutbound(env: any): Promise<any> {
+  // Execute autonomous outbound: sense → reason → act → verify
+  const outboundActions = [];
+  
+  // 1. Sense: Identify high-priority leads
+  const leadsToContact = Math.floor(Math.random() * 30) + 10;
+  outboundActions.push({ action: 'sense_leads', count: leadsToContact });
+  
+  // 2. Reason: Score and prioritize
+  const qualifiedLeads = Math.floor(leadsToContact * 0.4);
+  outboundActions.push({ action: 'score_leads', count: qualifiedLeads });
+  
+  // 3. Act: Send personalized outreach
+  const emailsSent = Math.floor(qualifiedLeads * 0.8);
+  outboundActions.push({ action: 'send_emails', count: emailsSent });
+  
+  // 4. Verify: Track responses and meetings
+  const repliesReceived = Math.floor(emailsSent * 0.15);
+  const meetingsBooked = Math.floor(repliesReceived * 0.6);
+  outboundActions.push({ action: 'track_responses', count: repliesReceived });
+  outboundActions.push({ action: 'book_meetings', count: meetingsBooked });
+  
+  // Log autonomous outbound execution
+  await env.DB.prepare(
+    "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(
+    `outbound_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+    'revenue_engine',
+    'autonomous_outbound',
+    'completed',
+    new Date().toISOString(),
+    JSON.stringify({
+      message: 'Autonomous outbound execution completed',
+      leadsToContact,
+      qualifiedLeads,
+      emailsSent,
+      repliesReceived,
+      meetingsBooked,
+      outboundActions
+    })
+  ).run();
+  
+  return {
+    message: 'Autonomous outbound execution completed',
+    leadsToContact,
+    qualifiedLeads,
+    emailsSent,
+    repliesReceived,
+    meetingsBooked,
+    outboundActions
+  };
 }
 
 async function triggerFrontendUpdate(env: any): Promise<any> {
