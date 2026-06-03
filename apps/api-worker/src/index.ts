@@ -1,3 +1,94 @@
+// Bootstrap P-Value Calculation Functions
+function calculateProfitMargin(data: any[]): number {
+  if (data.length === 0) return 0;
+  
+  let totalRevenue = 0;
+  let totalCost = 0;
+  
+  for (const row of data) {
+    totalRevenue += row.revenue || 0;
+    totalCost += row.cost || 0;
+  }
+  
+  const profit = totalRevenue - totalCost;
+  const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+  
+  return profitMargin;
+}
+
+function resampleWithReplacement(data: any[]): any[] {
+  const resampled: any[] = [];
+  const n = data.length;
+  
+  for (let i = 0; i < n; i++) {
+    const randomIndex = Math.floor(Math.random() * n);
+    resampled.push(data[randomIndex]);
+  }
+  
+  return resampled;
+}
+
+function calculatePValue(observedMetric: number, bootstrapMetrics: number[]): number {
+  const n = bootstrapMetrics.length;
+  let extremeCount = 0;
+  
+  for (const metric of bootstrapMetrics) {
+    if (metric >= observedMetric) {
+      extremeCount++;
+    }
+  }
+  
+  return extremeCount / n;
+}
+
+function calculateConfidenceInterval(metrics: number[], confidence: number): { lower: number, upper: number } {
+  const sorted = [...metrics].sort((a, b) => a - b);
+  const n = sorted.length;
+  
+  const alpha = 1 - confidence;
+  const lowerIndex = Math.floor((alpha / 2) * n);
+  const upperIndex = Math.ceil((1 - alpha / 2) * n) - 1;
+  
+  return {
+    lower: sorted[lowerIndex],
+    upper: sorted[upperIndex]
+  };
+}
+
+async function triggerInfrastructureAdjustment(env: any, strategyId: string, pValue: number, observedMetric: number) {
+  // Log the adjustment trigger
+  await env.DB.prepare(
+    "INSERT INTO infrastructure_adjustments (id, strategy_id, p_value, observed_metric, action_type, timestamp, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).bind(
+    `adjust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    strategyId,
+    pValue,
+    observedMetric,
+    'bootstrap_threshold_exceeded',
+    new Date().toISOString(),
+    'triggered'
+  ).run();
+  
+  // Could trigger actual infrastructure changes here
+  // For now, just log to agent_actions
+  await env.DB.prepare(
+    "INSERT INTO agent_actions (id, agent_id, action_type, status, timestamp, payload) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(
+    `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    'profit_engine',
+    'infrastructure_adjustment',
+    'pending',
+    new Date().toISOString(),
+    JSON.stringify({
+      reason: 'bootstrap_p_value_exceeded',
+      strategyId,
+      pValue,
+      observedMetric,
+      recommendedAction: 'review_strategy_parameters'
+    })
+  ).run();
+}
+
 export default {
   async fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -78,6 +169,107 @@ export default {
       await trackQuery(query, duration, userId);
       
       return result;
+    }
+
+    // Bootstrap P-Value Compute Layer
+    if (url.pathname === "/api/profit/bootstrap") {
+      try {
+        const body = await request.json();
+        const { strategyId, threshold = 0.05, bootstrapSamples = 1000 } = body;
+
+        // Fetch historical performance data for the strategy
+        const performanceData = await queryAllWithTelemetry(
+          "SELECT timestamp, revenue, cost, conversions FROM agent_actions WHERE strategy_id = ? ORDER BY timestamp DESC LIMIT 100",
+          [strategyId]
+        );
+
+        if (performanceData.length < 10) {
+          return new Response(JSON.stringify({ error: "Insufficient data for bootstrap analysis" }), { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Calculate observed metric (e.g., profit margin)
+        const observedMetric = calculateProfitMargin(performanceData);
+
+        // Bootstrap resampling
+        const bootstrapMetrics = [];
+        for (let i = 0; i < bootstrapSamples; i++) {
+          const resampledData = resampleWithReplacement(performanceData);
+          const bootstrapMetric = calculateProfitMargin(resampledData);
+          bootstrapMetrics.push(bootstrapMetric);
+        }
+
+        // Calculate p-value
+        const pValue = calculatePValue(observedMetric, bootstrapMetrics);
+
+        // Determine if action is needed
+        const actionNeeded = pValue > threshold;
+        const confidenceInterval = calculateConfidenceInterval(bootstrapMetrics, 0.95);
+
+        // Store result in database
+        await env.DB.prepare(
+          "INSERT INTO bootstrap_results (id, strategy_id, observed_metric, p_value, confidence_interval_lower, confidence_interval_upper, threshold, action_needed, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `bootstrap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          strategyId,
+          observedMetric,
+          pValue,
+          confidenceInterval.lower,
+          confidenceInterval.upper,
+          threshold,
+          actionNeeded ? 1 : 0,
+          new Date().toISOString()
+        ).run();
+
+        // If action needed, trigger infrastructure adjustment
+        if (actionNeeded) {
+          await triggerInfrastructureAdjustment(env, strategyId, pValue, observedMetric);
+        }
+
+        return new Response(JSON.stringify({
+          strategyId,
+          observedMetric,
+          pValue,
+          threshold,
+          actionNeeded,
+          confidenceInterval,
+          bootstrapSamples,
+          timestamp: new Date().toISOString()
+        }), { headers: corsHeaders });
+
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), { 
+          status: 500, 
+          headers: corsHeaders 
+        });
+      }
+    }
+
+    // Get bootstrap results history
+    if (url.pathname === "/api/profit/bootstrap/history") {
+      try {
+        const strategyId = url.searchParams.get('strategyId');
+        const limit = parseInt(url.searchParams.get('limit') || '50');
+
+        let query = "SELECT * FROM bootstrap_results ORDER BY timestamp DESC LIMIT ?";
+        let params = [limit];
+
+        if (strategyId) {
+          query = "SELECT * FROM bootstrap_results WHERE strategy_id = ? ORDER BY timestamp DESC LIMIT ?";
+          params = [strategyId, limit];
+        }
+
+        const results = await queryAllWithTelemetry(query, params);
+
+        return new Response(JSON.stringify(results), { headers: corsHeaders });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), { 
+          status: 500, 
+          headers: corsHeaders 
+        });
+      }
     }
 
     // Health endpoint
