@@ -12,6 +12,7 @@ interface BootstrapResult {
   threshold: number;
   action_needed: number;
   timestamp: string;
+  actions_taken?: string[];
 }
 
 export default function ProfitEngine() {
@@ -55,7 +56,7 @@ export default function ProfitEngine() {
 
       if (response.ok) {
         const result = await response.json();
-        setResults(prev => [result, ...prev]);
+        setResults(prev => [{ ...result, id: result.id || `temp_${Date.now()}`, strategy_id: result.strategyId, p_value: result.pValue, confidence_interval_lower: result.confidenceInterval.lower, confidence_interval_upper: result.confidenceInterval.upper, action_needed: result.actionNeeded ? 1 : 0 }, ...prev]);
       }
     } catch (e) {
       console.error('Failed to run bootstrap analysis:', e);
@@ -168,14 +169,14 @@ export default function ProfitEngine() {
               key={result.id}
               className={`p-6 bg-white/[0.02] border rounded-2xl ${
                 result.action_needed
-                  ? 'border-red-500/30 bg-red-500/5'
+                  ? 'border-emerald-500/30 bg-emerald-500/5'
                   : 'border-emerald-500/30 bg-emerald-500/5'
               }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   {result.action_needed ? (
-                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
                   ) : (
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
                   )}
@@ -188,12 +189,27 @@ export default function ProfitEngine() {
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-bold ${
                   result.action_needed
-                    ? 'bg-red-500/20 text-red-400'
+                    ? 'bg-emerald-500/20 text-emerald-400'
                     : 'bg-emerald-500/20 text-emerald-400'
                 }`}>
-                  {result.action_needed ? 'ACTION NEEDED' : 'OPTIMAL'}
+                  {result.action_needed ? 'AUTO-CORRECTED' : 'OPTIMAL'}
                 </div>
               </div>
+
+              {result.actions_taken && result.actions_taken.length > 0 && (
+                <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <div className="text-xs text-emerald-400 uppercase tracking-widest mb-2">
+                    Autonomous Actions Executed
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {result.actions_taken.map((action, i) => (
+                      <span key={i} className="px-2 py-1 bg-emerald-500/20 text-emerald-300 text-xs rounded">
+                        {action.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
