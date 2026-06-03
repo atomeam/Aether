@@ -33,7 +33,9 @@ interface DatabaseInspectorProps {
 
 export default function DatabaseInspector({ isOpen, onClose, userPlan }: DatabaseInspectorProps) {
   const [analysis, setAnalysis] = useState<S3Analysis | null>(null);
+  const [history, setHistory] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [executing, setExecuting] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [executedProposals, setExecutedProposals] = useState<Set<string>>(new Set());
@@ -49,10 +51,30 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
       });
       const data = await response.json();
       setAnalysis(data);
+      
+      // Also fetch history
+      fetchHistory();
     } catch (e) {
       setError('Failed to analyze database performance');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const token = localStorage.getItem('aether_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/s3/history`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setHistory(data);
+    } catch (e) {
+      console.error('Failed to fetch history:', e);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -284,6 +306,45 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
                 <p className="text-sm text-white/60">
                   Upgrade to Pro for autonomous resolution proposals with 1-click execution
                 </p>
+              </div>
+            )}
+
+            {/* Autonomous History Feed */}
+            {history && history.total_actions > 0 && (
+              <div>
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Autonomous Actions (Last 7 Days)
+                </h4>
+                <div className="space-y-2">
+                  {history.actions.map((action: any) => (
+                    <div key={action.id} className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="font-medium text-green-300 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            {action.action_taken}
+                          </div>
+                          <div className="text-xs text-white/40 mt-1">
+                            {new Date(action.timestamp).toLocaleString()}
+                          </div>
+                        </div>
+                        {action.execution_time_ms && (
+                          <div className="text-xs text-white/40">
+                            {action.execution_time_ms}ms
+                          </div>
+                        )}
+                      </div>
+                      {action.details && (
+                        <div className="text-xs text-white/60 mt-2">
+                          <div>Query: {action.details.original_query_duration_ms}ms</div>
+                          <div>Table: {action.details.table}</div>
+                          <div>Column: {action.details.column}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

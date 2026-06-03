@@ -3438,39 +3438,168 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       }
     }
 
+    // S3 Agent History endpoint
+    if (url.pathname === "/api/agents/s3/history" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        // Get user's plan to determine access level
+        const user = await env.DB.prepare(
+          "SELECT plan FROM users WHERE id = ?"
+        ).bind(userId).first() as any;
+        
+        if (!user) {
+          return new Response(JSON.stringify({ error: "User not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Fetch S3 agent actions from last 7 days
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const actions = await env.DB.prepare(
+          "SELECT * FROM agent_actions WHERE agent_id = 's3' AND timestamp >= ? ORDER BY timestamp DESC LIMIT 20"
+        ).bind(sevenDaysAgo).all() as any[];
+
+        const history = {
+          agent_id: "s3",
+          total_actions: actions.results.length,
+          actions: actions.results.map((action: any) => ({
+            id: action.id,
+            action_taken: action.action_taken,
+            status: action.status,
+            timestamp: action.timestamp,
+            details: action.details ? JSON.parse(action.details) : null,
+            execution_time_ms: action.execution_time_ms
+          }))
+        };
+
+        return new Response(JSON.stringify(history), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("S3 History error:", e);
+        return new Response(JSON.stringify({ error: "Failed to fetch history" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // 404 for unknown routes
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 
   async scheduled(event: any, env: any, ctx: ExecutionContext): Promise<void> {
-    // Daily cron job for proposal generation
-    console.log("Running daily proposal generation...");
-    
-    try {
-      // 1. Read recent events from D1 (last 24 hours)
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const events = await env.DB.prepare(
-        "SELECT * FROM events WHERE created_at > ? ORDER BY created_at DESC"
-      ).bind(yesterday).all();
+    const cron = event.cron;
+    console.log(`Scheduled task triggered: ${cron}`);
+
+    // S3 Autonomous DBA - Run every 15 minutes
+    if (cron === "*/15 * * * *") {
+      console.log("Running S3 Autonomous DBA optimization...");
       
-      console.log(`Found ${events.results.length} events in last 24 hours`);
-      
-      if (events.results.length === 0) {
-        console.log("No events to analyze");
-        return;
+      try {
+        // 1. Analyze slow queries from last 15 minutes
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const slowQueries = await env.DB.prepare(
+          "SELECT * FROM slow_queries WHERE timestamp >= ? ORDER BY duration_ms DESC LIMIT 10"
+        ).bind(fifteenMinutesAgo).all() as any[];
+
+        console.log(`Found ${slowQueries.results.length} slow queries in last 15 minutes`);
+
+        if (slowQueries.results.length === 0) {
+          console.log("No slow queries to optimize");
+          return;
+        }
+
+        // 2. Analyze and generate index proposals
+        for (const query of slowQueries.results) {
+          const whereMatch = query.query_text.match(/WHERE\s+([\w_]+)/i);
+          if (whereMatch) {
+            const tableName = query.table_name;
+            const columnName = whereMatch[1];
+            const indexName = `idx_${tableName}_${columnName}`;
+            const sqlStatement = `CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName}(${columnName})`;
+
+            // 3. Check if index already exists (by attempting to create it)
+            try {
+              const executionStart = Date.now();
+              await env.DB.prepare(sqlStatement).run();
+              const executionTime = Date.now() - executionStart;
+
+              // 4. Log successful autonomous action
+              const actionId = `s3_action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              await env.DB.prepare(
+                "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details, execution_time_ms) VALUES (?, ?, ?, ?, ?, ?, ?)"
+              ).bind(
+                actionId,
+                "s3",
+                `Created index ${indexName} on ${tableName}`,
+                "completed",
+                new Date().toISOString(),
+                JSON.stringify({
+                  original_query_duration_ms: query.duration_ms,
+                  table: tableName,
+                  column: columnName,
+                  sql: sqlStatement
+                }),
+                executionTime
+              ).run();
+
+              console.log(`S3: Created index ${indexName} in ${executionTime}ms`);
+            } catch (e: any) {
+              // Index likely already exists or error occurred
+              console.log(`S3: Skipped index creation for ${indexName} - ${e.message}`);
+            }
+          }
+        }
+
+        console.log("S3 Autonomous DBA optimization complete");
+      } catch (e: any) {
+        console.error("S3 Autonomous DBA error:", e);
       }
+      return;
+    }
 
-      // 2. Analyze events with Gemini AI for intelligent proposal generation
-      const eventSummary = events.results.map((e: any) => ({
-        kind: e.kind,
-        source: e.source,
-        level: e.level,
-        timestamp: e.created_at,
-        payload: e.payload
-      }));
+    // Daily cron job for proposal generation (runs at midnight)
+    if (cron === "0 0 * * *") {
+      console.log("Running daily proposal generation...");
+      
+      try {
+        // 1. Read recent events from D1 (last 24 hours)
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const events = await env.DB.prepare(
+          "SELECT * FROM events WHERE created_at > ? ORDER BY created_at DESC"
+        ).bind(yesterday).all();
+        
+        console.log(`Found ${events.results.length} events in last 24 hours`);
+        
+        if (events.results.length === 0) {
+          console.log("No events to analyze");
+          return;
+        }
 
-      // Use Gemini to analyze patterns and generate proposals
-      const geminiPrompt = `Analyze these system events and generate 3-5 high-priority self-improvement proposals. Events: ${JSON.stringify(eventSummary)}. 
+        // 2. Analyze events with Gemini AI for intelligent proposal generation
+        const eventSummary = events.results.map((e: any) => ({
+          kind: e.kind,
+          source: e.source,
+          level: e.level,
+          timestamp: e.created_at,
+          payload: e.payload
+        }));
+
+        // Use Gemini to analyze patterns and generate proposals
+        const geminiPrompt = `Analyze these system events and generate 3-5 high-priority self-improvement proposals. Events: ${JSON.stringify(eventSummary)}. 
 
 For each proposal, provide:
 1. Title (short, actionable)
@@ -3482,71 +3611,72 @@ For each proposal, provide:
 
 Return as JSON array with structure: [{"title": "...", "description": "...", "suspected_cause": "...", "recommended_fix": "...", "risk_score": 0.5, "blast_radius_files": 5, "blast_radius_surfaces": 2}]`;
 
-      const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GOOGLE_API_KEY}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: geminiPrompt }]
-          }]
-        })
-      });
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GOOGLE_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: geminiPrompt }]
+            }]
+          })
+        });
 
-      const geminiData = await geminiResponse.json();
-      
-      if (geminiData.candidates && geminiData.candidates[0]?.content?.parts[0]?.text) {
-        const aiResponse = geminiData.candidates[0].content.parts[0].text;
+        const geminiData = await geminiResponse.json();
         
-        // Parse JSON from AI response
-        let proposals = [];
-        try {
-          // Extract JSON from response (handle markdown code blocks)
-          const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            proposals = JSON.parse(jsonMatch[0]);
-          } else {
-            proposals = JSON.parse(aiResponse);
+        if (geminiData.candidates && geminiData.candidates[0]?.content?.parts[0]?.text) {
+          const aiResponse = geminiData.candidates[0].content.parts[0].text;
+          
+          // Parse JSON from AI response
+          let proposals = [];
+          try {
+            // Extract JSON from response (handle markdown code blocks)
+            const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              proposals = JSON.parse(jsonMatch[0]);
+            } else {
+              proposals = JSON.parse(aiResponse);
+            }
+          } catch (e) {
+            console.error("Failed to parse AI proposals:", e);
+            // Fallback to simple proposal
+            proposals = [{
+              title: "Daily System Review",
+              description: `Review ${events.results.length} events from last 24 hours. Events: ${eventSummary.map((e: any) => e.kind).join(", ")}`,
+              suspected_cause: "Routine monitoring",
+              recommended_fix: "Review logs and metrics",
+              risk_score: 0.3,
+              blast_radius_files: 0,
+              blast_radius_surfaces: 0
+            }];
           }
-        } catch (e) {
-          console.error("Failed to parse AI proposals:", e);
-          // Fallback to simple proposal
-          proposals = [{
-            title: "Daily System Review",
-            description: `Review ${events.results.length} events from last 24 hours. Events: ${eventSummary.map((e: any) => e.kind).join(", ")}`,
-            suspected_cause: "Routine monitoring",
-            recommended_fix: "Review logs and metrics",
-            risk_score: 0.3,
-            blast_radius_files: 0,
-            blast_radius_surfaces: 0
-          }];
-        }
 
-        // Store proposals in D1
-        for (const proposal of proposals) {
-          const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          // Store proposals in D1
+          for (const proposal of proposals) {
+            const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            await env.DB.prepare(
+              "INSERT INTO proposals (id, title, body, author, status, risk_score, blast_radius_files, blast_radius_surfaces) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            ).bind(
+              proposalId,
+              proposal.title,
+              `${proposal.description}\n\nSuspected Cause: ${proposal.suspected_cause}\n\nRecommended Fix: ${proposal.recommended_fix}`,
+              "gemini-ai",
+              "pending",
+              proposal.risk_score || 0.5,
+              proposal.blast_radius_files || 0,
+              proposal.blast_radius_surfaces || 0
+            ).run();
+            
+            console.log(`Created AI proposal: ${proposalId} - ${proposal.title}`);
+          }
           
-          await env.DB.prepare(
-            "INSERT INTO proposals (id, title, body, author, status, risk_score, blast_radius_files, blast_radius_surfaces) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-          ).bind(
-            proposalId,
-            proposal.title,
-            `${proposal.description}\n\nSuspected Cause: ${proposal.suspected_cause}\n\nRecommended Fix: ${proposal.recommended_fix}`,
-            "gemini-ai",
-            "pending",
-            proposal.risk_score || 0.5,
-            proposal.blast_radius_files || 0,
-            proposal.blast_radius_surfaces || 0
-          ).run();
-          
-          console.log(`Created AI proposal: ${proposalId} - ${proposal.title}`);
+          console.log(`Generated ${proposals.length} AI proposals from ${events.results.length} events`);
         }
         
-        console.log(`Generated ${proposals.length} AI proposals from ${events.results.length} events`);
+        console.log("Proposal generation complete");
+      } catch (e: any) {
+        console.error("Proposal generation failed:", e);
       }
-      
-      console.log("Proposal generation complete");
-    } catch (e: any) {
-      console.error("Proposal generation failed:", e);
     }
   }
 };

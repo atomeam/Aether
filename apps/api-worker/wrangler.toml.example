@@ -1,0 +1,28 @@
+name = "aether-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-02"
+
+# D1 Database for events and proposals
+[[d1_databases]]
+binding = "DB"
+database_name = "aether-api-db"
+database_id = "YOUR_DATABASE_ID"
+
+# KV Namespaces for real-time telemetry
+[[kv_namespaces]]
+binding = "LOXA_AGENT_STATE"
+id = "YOUR_AGENT_STATE_ID"
+
+[[kv_namespaces]]
+binding = "LOXA_INFRA_HEALTH"
+id = "YOUR_INFRA_HEALTH_ID"
+
+[triggers]
+crons = ["0 0 * * *", "*/15 * * * *"]
+
+[vars]
+GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
+SENDGRID_API_KEY = "YOUR_SENDGRID_API_KEY"
+EMAIL_API_URL = "https://api.sendgrid.com/v3/mail/send"
+APP_URL = "https://a-to-mind.com"
+STRIPE_PUBLIC_KEY = "YOUR_STRIPE_PUBLIC_KEY"
