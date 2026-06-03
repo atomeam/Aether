@@ -19,6 +19,8 @@ export default function SimpleDashboard() {
   const [autonomousActions, setAutonomousActions] = useState(0);
   const [recentActions, setRecentActions] = useState<any[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [showUsersPanel, setShowUsersPanel] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -95,6 +97,25 @@ export default function SimpleDashboard() {
       localStorage.removeItem('user_id');
       localStorage.removeItem('aether_owner_secret');
       location.reload();
+    };
+    
+    // Allow owner to view all users: window.viewUsers()
+    (window as any).viewUsers = async () => {
+      try {
+        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/admin/users', {
+          headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setAllUsers(data.users);
+          setShowUsersPanel(true);
+          console.log('Users loaded:', data.users);
+        } else {
+          console.error('Failed to load users:', data.error);
+        }
+      } catch (e) {
+        console.error('Error loading users:', e);
+      }
     };
   }, []);
 
@@ -343,6 +364,42 @@ export default function SimpleDashboard() {
         onFormDataChange={setFormData}
       />
 
+      {/* Users Panel (Owner Only) */}
+      {showUsersPanel && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">All Users ({allUsers.length})</h2>
+              <button
+                onClick={() => setShowUsersPanel(false)}
+                className="text-white/60 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {allUsers.map((user, index) => (
+                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{user.name || 'Unknown'}</div>
+                      <div className="text-sm text-white/60">{user.email}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-white/60">Referral: {user.referral_code}</div>
+                      <div className="text-xs text-white/40">
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Wall */}
       <PaymentWall
         isOpen={showPaymentWall}
@@ -355,9 +412,18 @@ export default function SimpleDashboard() {
         <div className="absolute inset-0 bg-gradient-to-r from-[#c4a661]/20 to-emerald-500/20 blur-3xl" />
         <div className="relative max-w-7xl mx-auto px-8 py-16">
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 bg-[#c4a661]/10 border border-[#c4a661]/30 rounded-full px-4 py-2 mb-6">
+            <div className="flex items-center gap-2 bg-[#c4a661]/10 border border-[#c4a661]/30 rounded-full px-4 py-2 mb-6">
               <Sparkles className="w-4 h-4 text-[#c4a661]" />
               <span className="text-sm font-medium text-[#c4a661]">Autonomous Intelligence</span>
+              {isEnterprise && (
+                <button
+                  onClick={() => (window as any).viewUsers()}
+                  className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
+                  title="View all users (Owner only)"
+                >
+                  👥
+                </button>
+              )}
             </div>
             <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-white via-[#c4a661] to-emerald-400 bg-clip-text text-transparent">
               a-to-mind

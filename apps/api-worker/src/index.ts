@@ -612,6 +612,38 @@ export default {
       }
     }
 
+    // Get All Users (Owner Only)
+    if (url.pathname === "/api/admin/users" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const secretKey = authHeader?.replace("Bearer ", "");
+        
+        // Only owner with secret key can access
+        if (secretKey !== "ADAM_OWNER_2026_ATOMIC_MOONBEAM") {
+          return new Response(JSON.stringify({ error: "Unauthorized - Owner only" }), {
+            status: 403,
+            headers: corsHeaders,
+          });
+        }
+        
+        const result = await env.DB.prepare(
+          "SELECT id, email, name, referral_code, created_at FROM users ORDER BY created_at DESC"
+        ).all();
+        
+        return new Response(JSON.stringify({ 
+          users: result,
+          count: result.length
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
     // Get Real User Count
     if (url.pathname === "/api/stats/users" && request.method === "GET") {
       try {
