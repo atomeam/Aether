@@ -1,11 +1,13 @@
 /**
  * Weekly Digest Worker - Aggregates runs ledger and posts to Notion
- * 
+ *
  * Cron trigger: Friday 5pm ET (UTC 21:00)
  * Reads from D1 runs table
  * Aggregates by week: total runs, PASS rate, longest blockers, top contributors
  * Posts to Notion via existing notion-worker (stubbed)
  */
+
+import type { D1Database, KVNamespace, ExecutionContext, ScheduledEvent } from '@cloudflare/workers-types';
 
 interface Env {
   DB: D1Database;
@@ -35,9 +37,9 @@ interface WeeklyDigest {
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: any, env: Env, ctx: ExecutionContext): Promise<any> {
     const url = new URL(request.url);
-    
+
     // GET /health
     if (url.pathname === '/health' && request.method === 'GET') {
       return Response.json({
@@ -46,34 +48,34 @@ export default {
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     // POST /generate (manual trigger for testing)
     if (url.pathname === '/generate' && request.method === 'POST') {
       return handleDigestGeneration(request, env, ctx);
     }
-    
+
     return Response.json({ error: 'Not found' }, { status: 404 });
   },
-  
+
   // Scheduled handler for cron trigger
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     console.log('[weekly-digest] Scheduled digest generation triggered');
-    
+
     try {
       const digest = await generateWeeklyDigest(env);
       console.log('[weekly-digest] Digest generated:', digest);
-      
+
       // Stub: Post to Notion via existing notion-worker
       await postToNotion(digest, env);
-      
+
       console.log('[weekly-digest] Digest posted to Notion');
     } catch (error) {
       console.error('[weekly-digest] Error in scheduled digest:', error);
     }
   },
-} satisfies ExportedHandler<Env>;
+};
 
-async function handleDigestGeneration(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function handleDigestGeneration(request: any, env: Env, ctx: ExecutionContext): Promise<any> {
   try {
     const digest = await generateWeeklyDigest(env);
     

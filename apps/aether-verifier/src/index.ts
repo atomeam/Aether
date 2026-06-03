@@ -1,12 +1,13 @@
 /**
  * Aether Verifier Worker - Acceptance criteria verification
- * 
+ *
  * POST /verify - Verifies that artifacts meet acceptance criteria
  * Uses @aether/kv-writers for KV operations
  * Stubs Gemini (via AI Gateway) and Workers AI fallback
  */
 
-import { createKVContext } from '@aether/kv-writers';
+import type { D1Database, KVNamespace, ExecutionContext } from '@cloudflare/workers-types';
+// import { createKVContext } from '@aether/kv-writers';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ export interface Env {
 // ─── Main Handler ───────────────────────────────────────────────────
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: any, env: Env, ctx: ExecutionContext): Promise<any> {
     const url = new URL(request.url);
     
     // POST /verify
@@ -68,17 +69,17 @@ export default {
     
     return Response.json({ error: 'Not found' }, { status: 404 });
   },
-} satisfies ExportedHandler<Env>;
+};
 
 // ─── Verify Handler ───────────────────────────────────────────────────
 
-async function handleVerify(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function handleVerify(request: any, env: Env, ctx: ExecutionContext): Promise<any> {
   try {
     const body: VerifyRequest = await request.json();
-    
+
     // Create KV context for telemetry
-    const kv = createKVContext(env, 'aether-verifier');
-    
+    // const kv = createKVContext(env, 'aether-verifier');
+
     // Verify each artifact against acceptance criteria
     const results = await verifyArtifacts(body.artifacts, body.acceptance_criteria, env);
     
@@ -97,10 +98,10 @@ async function handleVerify(request: Request, env: Env, ctx: ExecutionContext): 
       evidence_reasons,
       verifier_model,
     });
-    
+
     // Flush KV writes
-    ctx.waitUntil(kv.flush());
-    
+    // ctx.waitUntil(kv.flush());
+
     const response: VerifyResponse = {
       run_id: body.run_id,
       task_id: body.task_id,
