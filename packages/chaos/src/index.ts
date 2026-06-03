@@ -76,7 +76,7 @@ const SANDBOX_PATHS = [
 export type ChaosScenario = 'broken_package_json' | 'corrupted_env_var' | 'invalid_syntax' | 'missing_dep' | 'network_timeout';
 
 export interface ChaosResult {
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'skipped';
   scenario: ChaosScenario;
   injected: string;
   ledgerTrace: string;
