@@ -14,7 +14,7 @@ import { TrendingUp, Users, Shield as ShieldIcon, Zap, Lock } from 'lucide-react
 export default function SimpleDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'profit'>('overview');
   const [copied, setCopied] = useState(false);
-  const [userEarnings, setUserEarnings] = useState(1247.83);
+  const [userEarnings, setUserEarnings] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [autonomousActions, setAutonomousActions] = useState(0);
   const [recentActions, setRecentActions] = useState<any[]>([]);
@@ -26,7 +26,7 @@ export default function SimpleDashboard() {
   const [userName, setUserName] = useState('');
   const [showNotification, setShowNotification] = useState(false);
   const [notificationText, setNotificationText] = useState('');
-  const [currentEarnings, setCurrentEarnings] = useState(1247.83);
+  const [currentEarnings, setCurrentEarnings] = useState(0);
   const [showPaymentWall, setShowPaymentWall] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
 
@@ -210,13 +210,28 @@ export default function SimpleDashboard() {
                   setLeaderboard(lbData.leaderboard);
                 }
               });
+            
+            // Refresh earnings for authenticated users
+            const token = localStorage.getItem('session_token');
+            if (token && isAuthenticated && !isEnterprise) {
+              fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/user/earnings', {
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+                .then(res => res.json())
+                .then(earningsData => {
+                  if (earningsData.earnings !== undefined) {
+                    setUserEarnings(earningsData.earnings);
+                    setCurrentEarnings(earningsData.earnings);
+                  }
+                });
+            }
           }
         })
         .catch(err => console.error('Failed to check for updates:', err));
     }, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated, isEnterprise]);
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText('https://a-to-mind.com/ref/AUTO2026');
