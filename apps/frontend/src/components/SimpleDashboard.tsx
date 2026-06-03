@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpRight, Sparkles, Bell, Shield, Crown } from 'lucide-react';
 import ProfitEngine from './ProfitEngine';
 import StatsCard from './dashboard/StatsCard';
@@ -25,6 +25,11 @@ export default function SimpleDashboard() {
   const [financialData, setFinancialData] = useState<any[]>([]);
   const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
   const [showFinancialPanel, setShowFinancialPanel] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const optimizingRef = useRef(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -173,6 +178,38 @@ export default function SimpleDashboard() {
         alert('Error loading financial data: ' + e);
       }
     };
+    
+    // Allow owner to trigger manual optimization: window.runOptimization()
+    (window as any).runOptimization = async () => {
+      if (optimizingRef.current) {
+        showToastMessage('Optimization already in progress', 'info');
+        return;
+      }
+      
+      optimizingRef.current = true;
+      setIsOptimizing(true);
+      showToastMessage('Starting optimization...', 'info');
+      
+      try {
+        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/cron/5min', {
+          method: 'GET'
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToastMessage(`Optimization complete! ${data.tasksExecuted} tasks executed`, 'success');
+          // Refresh optimization results
+          setTimeout(() => (window as any).viewOptimizations(), 1000);
+        } else {
+          showToastMessage('Optimization failed: ' + data.error, 'error');
+        }
+      } catch (e) {
+        showToastMessage('Error running optimization: ' + e, 'error');
+      } finally {
+        optimizingRef.current = false;
+        setIsOptimizing(false);
+      }
+    };
   }, []);
 
   // Real-time earnings animation (disabled for real earnings)
@@ -310,9 +347,17 @@ export default function SimpleDashboard() {
     return () => clearInterval(interval);
   }, [isAuthenticated, isEnterprise]);
 
+  const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
   const copyReferralLink = () => {
     navigator.clipboard.writeText('https://a-to-mind.com/ref/AUTO2026');
     setCopied(true);
+    showToastMessage('Referral link copied!', 'success');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -320,9 +365,11 @@ export default function SimpleDashboard() {
     const text = `I've earned $${userEarnings.toFixed(2)} with a-to-mind's autonomous AI! Start growing your wealth: https://a-to-mind.com/ref/AUTO2026`;
     if (navigator.share) {
       navigator.share({ text });
+      showToastMessage('Shared successfully!', 'success');
     } else {
       navigator.clipboard.writeText(text);
       setCopied(true);
+      showToastMessage('Earnings copied to clipboard!', 'success');
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -524,6 +571,16 @@ export default function SimpleDashboard() {
         </div>
       )}
 
+      {/* Toast Notification */}
+      {showToast && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+          toastType === 'success' ? 'bg-emerald-500' : 
+          toastType === 'error' ? 'bg-red-500' : 'bg-blue-500'
+        } text-white font-medium animate-pulse`}>
+          {toastMessage}
+        </div>
+      )}
+
       {/* Payment Wall */}
       <PaymentWall
         isOpen={showPaymentWall}
@@ -541,6 +598,14 @@ export default function SimpleDashboard() {
               <span className="text-sm font-medium text-[#c4a661]">Autonomous Intelligence</span>
               {isEnterprise && (
                 <>
+                  <button
+                    onClick={() => (window as any).runOptimization()}
+                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
+                    title="Run optimization now (Owner only)"
+                    disabled={isOptimizing}
+                  >
+                    {isOptimizing ? '⏳' : '🚀'}
+                  </button>
                   <button
                     onClick={() => (window as any).viewUsers()}
                     className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
