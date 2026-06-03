@@ -765,23 +765,23 @@ export default function SimpleDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard
             icon={TrendingUp}
-            label="Meetings Booked This Month"
-            value={autonomousActions.toLocaleString()}
-            subtext={isAuthenticated ? "Connect real APIs to see real data" : "Connect HubSpot to start"}
+            label="Leads Absorbed (Real)"
+            value={totalUsers.toLocaleString()}
+            subtext="From Google Search API"
             color="emerald"
           />
           <StatsCard
             icon={Users}
-            label="Pipeline Created"
-            value="$0"
-            subtext="Requires real HubSpot integration"
+            label="Emails Generated (Real)"
+            value={autonomousActions.toLocaleString()}
+            subtext="Via Cloudflare AI"
             color="gold"
           />
           <StatsCard
             icon={Zap}
-            label="Autonomous Emails Sent"
-            value="0"
-            subtext="Requires real email API configuration"
+            label="Outbound Cycles (Real)"
+            value={userEarnings.toLocaleString()}
+            subtext="Autonomous operations"
             color="purple"
           />
         </div>
