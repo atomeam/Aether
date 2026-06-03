@@ -9,6 +9,10 @@
     <meta name="author" content="a-to-mind.com" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://a-to-mind.com" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="build-timestamp" content="2026-06-03T03:25:00Z" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -59,6 +63,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Force cache bust
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(registration) {
+            registration.unregister();
+          });
+        });
+      }
+      // Force reload if cached
+      if (performance.getEntriesByType) {
+        const navEntries = performance.getEntriesByType('navigation');
+        if (navEntries.length > 0 && navEntries[0].transferSize === 0) {
+          location.reload(true);
+        }
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
