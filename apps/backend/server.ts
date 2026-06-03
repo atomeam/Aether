@@ -2,10 +2,20 @@ import dotenv from "dotenv";
 import { parseEnv, BackendEnvSchema } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
-import crypto from "crypto";
 import express from "express";
 
 dotenv.config();
+
+// Simple hash function compatible with Workers (replaces Node crypto)
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16);
+}
 
 // Validate env on boot — fail fast if required vars missing
 const env = parseEnv(BackendEnvSchema, process.env, "backend")
@@ -133,17 +143,15 @@ async function handleMCPRequest(req: MCPRequest) {
     case 'tools/call':
       const { name, arguments: args } = params;
       if (name === 'read_workspace_file') {
-        const fullPath = path.join(process.cwd(), args.path);
-        if (!fullPath.startsWith(process.cwd())) throw new Error("Security Violation: Out of bounds read.");
-        return { content: fs.readFileSync(fullPath, 'utf8') };
+        // NOTE: fs.readFileSync and path.join not compatible with Workers
+        // File operations need to use R2 or KV storage
+        return { error: "File operations not available in Workers mode" };
       }
-      
+
       if (name === 'write_workspace_file') {
-        const fullPath = path.join(process.cwd(), args.path);
-        if (!fullPath.startsWith(process.cwd())) throw new Error("Security Violation: Out of bounds write.");
-        fs.writeFileSync(fullPath, args.content);
-        addProcessLog(`MCP_FS: Modified ${args.path}`);
-        return { success: true };
+        // NOTE: fs.writeFileSync and path.join not compatible with Workers
+        // File operations need to use R2 or KV storage
+        return { error: "File operations not available in Workers mode" };
       }
       
       if (name === 'execute_powershell_bus') {
@@ -295,11 +303,15 @@ async function startServer() {
   // Curator policy (read-only)
   app.get("/api/agents/curator/policy", async (req, res) => {
     try {
-      const fs = await import('fs');
-      const policy = fs.readFileSync(
-        '../../packages/curator/policy.yaml',
-        'utf-8'
-      );
+      // NOTE: fs.readFileSync not compatible with Workers
+      // Policy needs to be moved to KV/D1/R2 or inlined
+      // For now, return hardcoded policy
+      const policy = `
+# Curator Policy
+allow_list: ['stat', 'chart', 'list', 'status', 'gauge']
+max_actions: 10
+denied_patterns: ['**/.env', '**/secrets/**']
+`;
       res.json({ policy, format: 'yaml' });
     } catch (e: any) {
       res.status(404).json({ error: e.message });
@@ -363,7 +375,7 @@ async function startServer() {
   app.post("/api/build", async (req, res) => {
     // Extract or generate traceId for correlation
     const incomingTraceId = req.headers["x-trace-id"]?.toString()
-    const traceId = incomingTraceId || `trace_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`
+    const traceId = incomingTraceId || `trace_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
     
     const txLog = createTraceLogger({ traceId })
     txLog.info({ promptLength: req.body.prompt?.length }, "Inbound build request")
@@ -417,7 +429,8 @@ async function startServer() {
       logCuratorVerdict(verdict, prompt);
 
       // Commit to ledger - fail-soft, never block response
-      const promptHash = crypto.createHash("md5").update(prompt).digest("hex")
+      // Simple hash function compatible with Workers
+      const promptHash = simpleHash(prompt)
       commitToLedger({
         traceId,
         prompt,
@@ -572,7 +585,10 @@ async function startServer() {
       // DNA Ingestion (Source Read)
       let srcDNA = "";
       try {
-        srcDNA = fs.readFileSync(path.join(process.cwd(), 'src/App.tsx'), 'utf-8');
+        // NOTE: fs.readFileSync not compatible with Workers
+        // App.tsx needs to be moved to KV/D1/R2 or served via API
+        // For now, use placeholder
+        srcDNA = "[DNA_PLACEHOLDER]: Core sequence loaded from static storage.";
       } catch (e) {
         srcDNA = "[DNA_READ_FAILURE]: Core sequence inaccessible.";
       }
@@ -755,39 +771,17 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    // NOTE: path.join and express.static not compatible with Workers
+    // Static file serving needs to be handled by Cloudflare Pages or R2
+    // For Workers mode, this endpoint should not be used
+    console.warn("Static file serving not available in Workers mode");
   }
 
   app.post("/api/git/commit", async (req, res) => {
-    const { branchName, commitMessage, files } = req.body;
-    
-    try {
-      // 1. Write mutated files to disk
-      for (const file of files) {
-        const fullPath = path.join(process.cwd(), file.path);
-        fs.writeFileSync(fullPath, file.content);
-      }
-
-      // 2. Git operations
-      const commands = [
-        `git checkout -b ${branchName}`,
-        `git add .`,
-        `git commit -m "${commitMessage}"`
-      ];
-
-      exec(commands.join(" && "), (error, stdout, stderr) => {
-        if (error) {
-          return res.json({ success: false, error: stderr || error.message });
-        }
-        res.json({ success: true, log: stdout });
-      });
-    } catch (e) {
-      res.status(500).json({ success: false, error: String(e) });
-    }
+    // NOTE: fs.writeFileSync and path.join not compatible with Workers
+    // Git operations not available in Workers environment
+    // This endpoint should be disabled or use Cloudflare Git integration
+    return res.status(501).json({ error: "Git operations not available in Workers mode" });
   });
 
   // Independent Bridge: PowerShell / Local Script Endpoint
@@ -1540,10 +1534,10 @@ app.post("/api/sandbox/:profileId/enforce", async (req, res) => {
 
 app.get("/api/sandbox-escapes", async (req, res) => {
   try {
-    const ESCAPE_PATH = '../../logs/sandbox-escapes.jsonl';
-    const content = fs.readFileSync(ESCAPE_PATH, 'utf-8');
-    const escapes = content.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
-    res.json({ escapes, count: escapes.length });
+    // NOTE: fs.readFileSync not compatible with Workers
+    // Sandbox escapes log needs to be moved to R2 or KV
+    // For now, return empty array
+    res.json({ escapes: [], count: 0, note: "Sandbox escapes log not available in Workers mode" });
   } catch (e: any) {
     res.json({ escapes: [], error: e.message });
   }

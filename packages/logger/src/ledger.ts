@@ -16,8 +16,33 @@ export interface ProposalRecord {
 const LEDGER_PATH = path.resolve(process.cwd(), "../../logs/proposals-outcomes.jsonl")
 
 /**
+ * Reads records from the ledger since a given timestamp.
+ * Used by Evaluator to analyze patterns.
+ * NOTE: Uses fs - not compatible with Workers. Needs R2 migration.
+ */
+export function readRecords(since: number = 3600000): ProposalRecord[] {
+  try {
+    if (!fs.existsSync(LEDGER_PATH)) {
+      return [];
+    }
+
+    const content = fs.readFileSync(LEDGER_PATH, 'utf-8');
+    const lines = content.trim().split('\n').filter(Boolean);
+    const cutoff = Date.now() - since;
+
+    return lines
+      .map(line => JSON.parse(line) as ProposalRecord)
+      .filter(record => new Date(record.timestamp).getTime() > cutoff);
+  } catch (err) {
+    console.error("TELEMETRY ERROR: Failed to read from ledger:", err);
+    return [];
+  }
+}
+
+/**
  * Commits a generative proposal transaction safely to the historical ledger.
  * Fail-soft: telemetry errors don't drop client requests.
+ * NOTE: Uses fs - not compatible with Workers. Needs R2 migration.
  */
 export function commitToLedger(record: Omit<ProposalRecord, "timestamp">): void {
   const fullRecord: ProposalRecord = {
