@@ -53,6 +53,8 @@ export default function CommandCenter() {
   const [userVariant, setUserVariant] = useState<'a' | 'b'>('a');
   const [scanProgress, setScanProgress] = useState<string[]>([]);
   const [activeRegion, setActiveRegion] = useState<{ country: string; colo: string }>({ country: 'US', colo: 'IAD' });
+  const [pricingVariant, setPricingVariant] = useState<any>(null);
+  const [isHighIntent, setIsHighIntent] = useState(false);
 
   const fetchS5Components = async () => {
     try {
@@ -68,6 +70,25 @@ export default function CommandCenter() {
       console.error('Failed to fetch S5 components:', e);
     } finally {
       setLoadingS5(false);
+    }
+  };
+
+  const fetchPricingVariant = async () => {
+    try {
+      const token = localStorage.getItem('aether_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/s5/pricing`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setIsHighIntent(data.is_high_intent);
+      setPricingVariant(data.pricing_variant);
+      
+      // Show upgrade modal if user is high-intent
+      if (data.is_high_intent) {
+        setShowUpgradeModal(true);
+      }
+    } catch (e) {
+      console.error('Failed to fetch pricing variant:', e);
     }
   };
 
@@ -256,6 +277,7 @@ export default function CommandCenter() {
     
     fetchTelemetry();
     fetchS5Components();
+    fetchPricingVariant();
     setLoading(false);
     
     // Refresh telemetry every 30 seconds
@@ -658,18 +680,33 @@ export default function CommandCenter() {
               </div>
             )}
             {activePanel === 'revenue' && (
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-400 mb-2">
-                  <Lock className="w-5 h-5" />
-                  <span className="font-bold">Pro Feature</span>
+              <div>
+                <p className="mb-4">S5 Revenue Engine - Autonomous Monetization:</p>
+                
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-4">
+                  <div className="flex items-center gap-2 text-yellow-400 mb-2">
+                    <DollarSign className="w-5 h-5" />
+                    <span className="font-bold">High-Intent Status</span>
+                  </div>
+                  <p className="text-sm text-white/60">
+                    {isHighIntent ? 'You are in the high-intent cohort' : 'Standard usage level'}
+                  </p>
                 </div>
-                <p className="text-sm text-white-60">Upgrade to Pro to view detailed revenue analytics and payment history.</p>
-                <button
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="mt-3 px-4 py-2 bg-yellow-500 text-black rounded-lg font-bold hover:bg-yellow-600 transition-colors"
-                >
-                  Upgrade to Pro
-                </button>
+
+                <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-purple-400 mb-2">
+                    <Zap className="w-5 h-5" />
+                    <span className="font-bold">Active A/B Test</span>
+                  </div>
+                  <p className="text-sm text-white/60 mb-2">
+                    Pricing Variant: {pricingVariant?.type || 'Loading...'}
+                  </p>
+                  <div className="text-xs text-white/40">
+                    <div>Variant A: Cost Savings focus</div>
+                    <div>Variant B: Uptime focus</div>
+                    <div>Conversion tracking: Active</div>
+                  </div>
+                </div>
               </div>
             )}
             {activePanel === 'agents' && (
@@ -1006,6 +1043,43 @@ export default function CommandCenter() {
               <X className="w-4 h-4" />
             </button>
             <DevOpsToolkit />
+          </div>
+        </div>
+      )}
+
+      {showUpgradeModal && pricingVariant && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-purple-500/30 rounded-2xl p-8 max-w-md w-full relative">
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              className="absolute top-4 right-4 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="text-center">
+              <Zap className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold mb-2">Upgrade to Pro</h3>
+              <p className="text-white/80 mb-6">{pricingVariant.copy}</p>
+              <div className="bg-black/30 rounded-xl p-4 mb-6">
+                <div className="text-3xl font-bold text-purple-300">${pricingVariant.price}/mo</div>
+                <div className="text-sm text-white/60">Billed monthly</div>
+              </div>
+              <button
+                className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl font-bold hover:opacity-90 transition-opacity mb-3"
+                onClick={() => {
+                  // Stripe checkout integration
+                  window.location.href = '/checkout';
+                }}
+              >
+                Upgrade Now
+              </button>
+              <button
+                className="w-full py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition-colors text-sm"
+                onClick={() => setShowUpgradeModal(false)}
+              >
+                Maybe Later
+              </button>
+            </div>
           </div>
         </div>
       )}

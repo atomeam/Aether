@@ -3766,6 +3766,61 @@ Requirements:
       }
     }
 
+    // S5 Revenue Engine - Get pricing variants
+    if (url.pathname === "/api/agents/s5/pricing" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        // Check if user is high-intent
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        const userUsage = await env.DB.prepare(
+          "SELECT SUM(event_count) as total_calls FROM api_usage_rollups WHERE user_id = ? AND date >= date('now', '-1 day')"
+        ).bind(userId).first() as any;
+
+        const userPanelTime = await env.DB.prepare(
+          "SELECT COUNT(*) as panel_time FROM user_navigation_logs WHERE user_id = ? AND timestamp >= ? AND (panel_id = 'infrastructure' OR panel_id = 's3_architect')"
+        ).bind(userId, twentyFourHoursAgo).first() as any;
+
+        const isHighIntent = (userUsage?.total_calls > 800) || (userPanelTime?.panel_time > 5);
+
+        // Fetch pricing variants
+        const variantA = await env.LOXA_DYNAMIC_CODE.get('pricing_variant_a');
+        const variantB = await env.LOXA_DYNAMIC_CODE.get('pricing_variant_b');
+
+        // Assign variant (50/50 split based on user ID hash)
+        const userHash = userId.split('').reduce((a: number, b: string) => ((a << 5) - a) + b.charCodeAt(0), 0);
+        const assignedVariant = Math.abs(userHash) % 2 === 0 ? 'a' : 'b';
+
+        const pricingVariant = assignedVariant === 'a' ? JSON.parse(variantA || '{}') : JSON.parse(variantB || '{}');
+
+        return new Response(JSON.stringify({
+          success: true,
+          is_high_intent: isHighIntent,
+          pricing_variant: pricingVariant,
+          variant_id: assignedVariant
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("Pricing variant fetch error:", e);
+        return new Response(JSON.stringify({ error: "Failed to fetch pricing variants" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // S5 Architect - Self-evolving AI agent
     if (url.pathname === "/api/agents/s5/evolve" && request.method === "POST") {
       try {
@@ -4249,7 +4304,67 @@ Requirements:
           }
         }
 
-        // 1. Evaluate A/B test results from last hour
+        // 1. Revenue Engine - High-Intent Cohort Analysis
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        
+        // Identify high-intent users: >800 API calls OR >5 min in Infrastructure/S3 panels
+        const highIntentUsers = await env.DB.prepare(`
+          SELECT DISTINCT user_id 
+          FROM (
+            SELECT user_id, SUM(event_count) as total_calls 
+            FROM api_usage_rollups 
+            WHERE date >= date('now', '-1 day') 
+            GROUP BY user_id
+            HAVING total_calls > 800
+            UNION
+            SELECT user_id, COUNT(*) as panel_time 
+            FROM user_navigation_logs 
+            WHERE timestamp >= ? AND (panel_id = 'infrastructure' OR panel_id = 's3_architect')
+            GROUP BY user_id
+            HAVING panel_time > 5
+          )
+        `).bind(twentyFourHoursAgo).all() as any[];
+
+        console.log(`S5 Revenue Engine: Identified ${highIntentUsers.results.length} high-intent users`);
+
+        // Store pricing variants in KV for A/B testing
+        const variantA = {
+          id: 'pricing_variant_a',
+          type: 'cost_savings',
+          copy: 'S3 saved you 400ms today. Upgrade to Pro for $29/mo',
+          price: 29
+        };
+
+        const variantB = {
+          id: 'pricing_variant_b',
+          type: 'uptime',
+          copy: 'S2 auto-patched 3 errors today. Keep your API online for $29/mo',
+          price: 29
+        };
+
+        await env.LOXA_DYNAMIC_CODE.put('pricing_variant_a', JSON.stringify(variantA));
+        await env.LOXA_DYNAMIC_CODE.put('pricing_variant_b', JSON.stringify(variantB));
+
+        // Log revenue analysis
+        if (highIntentUsers.results.length > 0) {
+          const actionId = `s5_revenue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          await env.DB.prepare(
+            "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+          ).bind(
+            actionId,
+            "s5",
+            `Revenue Engine: ${highIntentUsers.results.length} high-intent users identified`,
+            "completed",
+            new Date().toISOString(),
+            JSON.stringify({
+              high_intent_count: highIntentUsers.results.length,
+              pricing_variants: ['cost_savings', 'uptime'],
+              recommendation: "Trigger upgrade modal for high-intent cohort"
+            })
+          ).run();
+        }
+
+        // 2. Evaluate A/B test results from last hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         
         // Get variant A vs B performance
@@ -4316,15 +4431,15 @@ Requirements:
         }
 
         // 3. Generate new variant B for testing
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         
         const navigationLogs = await env.DB.prepare(
           "SELECT panel_id, action, COUNT(*) as visits FROM user_navigation_logs WHERE timestamp >= ? GROUP BY panel_id ORDER BY visits DESC LIMIT 5"
-        ).bind(twentyFourHoursAgo).all() as any[];
+        ).bind(oneDayAgo).all() as any[];
 
         const slowQueries = await env.DB.prepare(
           "SELECT table_name, duration_ms, query_text FROM slow_queries WHERE timestamp >= ? ORDER BY duration_ms DESC LIMIT 5"
-        ).bind(twentyFourHoursAgo).all() as any[];
+        ).bind(oneDayAgo).all() as any[];
 
         const telemetryContext = {
           top_panels: navigationLogs.results.map((log: any) => ({
