@@ -118,16 +118,16 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-full mb-6">
               <Bot className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-300">AI-Powered Infrastructure Autonomy</span>
+              <span className="text-sm font-medium text-purple-300">Autonomous Business Intelligence</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight">
-              Real Automation.
+              a-to-mind your business.
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-                {' '}The Infrastructure That Evolves Itself.
+                {' '}The World's First Autonomous Business Engine.
               </span>
             </h1>
             <p className="text-xl text-white/60 max-w-2xl mx-auto mb-8">
-              Static dashboards are dead. Loxa is an edge-native orchestration engine that monitors your stack, optimizes your databases, and autonomously writes its own code to adapt to your live telemetry.
+              We build the infrastructure, scale your revenue, and optimize your growth—while you focus on what matters.
             </p>
             
             {/* Social Proof - Trust Badges */}
@@ -171,26 +171,26 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
       {/* Problem Section */}
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Sound Familiar?</h2>
+          <h2 className="text-3xl font-bold mb-4">Scale Without Limits</h2>
           <p className="text-white/60 max-w-2xl mx-auto">
-            These are the problems solo developers face every day.
+            For founders, creators, and teams who need a digital operations department that never sleeps.
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
             <Activity className="w-12 h-12 text-red-400 mb-4" />
-            <h3 className="text-xl font-bold mb-2">"I woke up at 3 AM to fix a server crash"</h3>
-            <p className="text-white/60">Reactive monitoring means you're always putting out fires instead of preventing them.</p>
+            <h3 className="text-xl font-bold mb-2">"I need to scale operations faster"</h3>
+            <p className="text-white/60">Manual infrastructure management slows down market capture. Automate your growth.</p>
           </div>
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
             <Cpu className="w-12 h-12 text-yellow-400 mb-4" />
-            <h3 className="text-xl font-bold mb-2">"I don't know which component is slow"</h3>
-            <p className="text-white/60">Without detailed metrics, you're optimizing blindly and wasting time.</p>
+            <h3 className="text-xl font-bold mb-2">"I need better business decisions"</h3>
+            <p className="text-white/60">Without real-time intelligence, you're optimizing blindly. Turn data into revenue.</p>
           </div>
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
             <Zap className="w-12 h-12 text-blue-400 mb-4" />
-            <h3 className="text-xl font-bold mb-2">"I'm over-provisioning just to be safe"</h3>
-            <p className="text-white/60">Without usage data, you're wasting money on unused infrastructure capacity.</p>
+            <h3 className="text-xl font-bold mb-2">"I need speed to revenue"</h3>
+            <p className="text-white/60">Without autonomous optimization, you're losing money on inefficient operations.</p>
           </div>
         </div>
       </div>
@@ -198,9 +198,9 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
       {/* Testimonials Section */}
       <div className="max-w-7xl mx-auto px-4 py-20 bg-gradient-to-b from-transparent to-purple-500/5">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">What Solo Developers Say</h2>
+          <h2 className="text-3xl font-bold mb-4">What Teams Say</h2>
           <p className="text-white/60 max-w-2xl mx-auto">
-            Real feedback from developers who stopped playing infrastructure whack-a-mole.
+            Real feedback from founders who accelerated their growth with autonomous operations.
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
@@ -209,10 +209,10 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center text-sm font-bold">JD</div>
               <div>
                 <div className="font-bold">John D.</div>
-                <div className="text-sm text-white/40">Solo Developer</div>
+                <div className="text-sm text-white/40">Startup Founder</div>
               </div>
             </div>
-            <p className="text-white/60">"I used to wake up at 3 AM to fix server crashes. Now AI fixes issues automatically. I finally sleep through the night."</p>
+            <p className="text-white/60">"Scaled from 100 to 10,000 users without hiring a DevOps team. The autonomous engine handles it all."</p>
             <div className="flex gap-1 mt-4">
               <span className="text-yellow-400">★★★★★</span>
             </div>
@@ -222,10 +222,10 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="w-10 h-10 rounded-full bg-blue-500/30 flex items-center justify-center text-sm font-bold">AK</div>
               <div>
                 <div className="font-bold">Alex K.</div>
-                <div className="text-sm text-white/40">Indie Hacker</div>
+                <div className="text-sm text-white/40">Creator</div>
               </div>
             </div>
-            <p className="text-white/60">"Cut my infrastructure costs by 40% in the first month. The AI recommendations showed me exactly where to optimize."</p>
+            <p className="text-white/60">"Cut infrastructure costs by 40% while scaling revenue. The autonomous optimization is game-changing."</p>
             <div className="flex gap-1 mt-4">
               <span className="text-yellow-400">★★★★★</span>
             </div>
@@ -235,10 +235,10 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center text-sm font-bold">MR</div>
               <div>
                 <div className="font-bold">Maria R.</div>
-                <div className="text-sm text-white/40">Freelance Developer</div>
+                <div className="text-sm text-white/40">Team Lead</div>
               </div>
             </div>
-            <p className="text-white/60">"Finally, enterprise-grade monitoring built for solo developers. No complex setup, just insights that matter."</p>
+            <p className="text-white/60">"Finally, enterprise-grade autonomous operations for growing teams. No manual oversight required."</p>
             <div className="flex gap-1 mt-4">
               <span className="text-yellow-400">★★★★★</span>
             </div>
@@ -249,9 +249,9 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
       {/* Solution Section */}
       <div id="features" className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">How a-to-mind Helps</h2>
+          <h2 className="text-3xl font-bold mb-4">How a-to-mind Works</h2>
           <p className="text-white/60 max-w-2xl mx-auto">
-            Autonomous infrastructure improvement with human oversight
+            Autonomous business intelligence with human oversight
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-8">
@@ -260,9 +260,9 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="p-3 bg-purple-500/20 rounded-xl">
                 <Activity className="w-6 h-6 text-purple-400" />
               </div>
-              <h3 className="text-xl font-bold">Observes Everything</h3>
+              <h3 className="text-xl font-bold">Monitors Everything</h3>
             </div>
-            <p className="text-white/60">Automatically monitors health checks, API calls, errors, and system metrics 24/7.</p>
+            <p className="text-white/60">Automatically tracks business decisions, revenue metrics, and growth indicators 24/7.</p>
           </div>
           <div className="p-6 bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
@@ -271,7 +271,7 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               </div>
               <h3 className="text-xl font-bold">Analyzes Patterns</h3>
             </div>
-            <p className="text-white/60">AI analyzes events to identify patterns, root causes, and improvement opportunities.</p>
+            <p className="text-white/60">AI analyzes business data to identify growth opportunities and revenue optimization.</p>
           </div>
           <div className="p-6 bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
@@ -280,16 +280,16 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               </div>
               <h3 className="text-xl font-bold">Proposes Solutions</h3>
             </div>
-            <p className="text-white/60">Generates actionable proposals with risk scores and implementation guidance.</p>
+            <p className="text-white/60">Generates actionable business strategies with revenue impact analysis.</p>
           </div>
           <div className="p-6 bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 rounded-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-yellow-500/20 rounded-xl">
                 <Zap className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-xl font-bold">The S5 Continuous Evolution Engine</h3>
+              <h3 className="text-xl font-bold">The S5 Revenue Engine</h3>
             </div>
-            <p className="text-white/60">Analyzes your daily traffic and slow queries to dynamically generate, A/B test, and deploy new dashboard features and performance patches directly to the edge.</p>
+            <p className="text-white/60">Analyzes usage patterns to optimize pricing, maximize market capture, and scale revenue autonomously.</p>
           </div>
         </div>
       </div>
@@ -297,9 +297,9 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
       {/* Testimonials Section */}
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Trusted by Developers</h2>
+          <h2 className="text-3xl font-bold mb-4">Trusted by Teams</h2>
           <p className="text-white/60 max-w-2xl mx-auto">
-            See what solo developers are saying about a-to-mind.com
+            See what founders and creators are saying about a-to-mind.com
           </p>
         </div>
         
@@ -309,11 +309,11 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="w-12 h-12 rounded-full bg-purple-500/30 flex items-center justify-center text-lg font-bold">JD</div>
               <div>
                 <div className="font-bold">John Doe</div>
-                <div className="text-sm text-white/40">Solo Developer</div>
+                <div className="text-sm text-white/40">Startup Founder</div>
               </div>
             </div>
             <p className="text-white/60">
-              "Finally, enterprise-grade monitoring that doesn't break the bank. The AI suggestions have saved me countless hours of debugging."
+              "Finally, enterprise-grade autonomous operations that don't break the bank. The revenue optimization has been game-changing."
             </p>
             <div className="flex gap-1 mt-4">
               {[1,2,3,4,5].map(star => (
@@ -327,11 +327,11 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="w-12 h-12 rounded-full bg-blue-500/30 flex items-center justify-center text-lg font-bold">AK</div>
               <div>
                 <div className="font-bold">Alex Kim</div>
-                <div className="text-sm text-white/40">Indie Hacker</div>
+                <div className="text-sm text-white/40">Creator</div>
               </div>
             </div>
             <p className="text-white/60">
-              "The self-improving infrastructure is like having a senior DevOps engineer on my team. My uptime has never been better."
+              "The autonomous business engine is like having a CFO and CTO on my team. My revenue has never grown faster."
             </p>
             <div className="flex gap-1 mt-4">
               {[1,2,3,4,5].map(star => (
@@ -345,11 +345,11 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               <div className="w-12 h-12 rounded-full bg-emerald-500/30 flex items-center justify-center text-lg font-bold">MR</div>
               <div>
                 <div className="font-bold">Maria Rodriguez</div>
-                <div className="text-sm text-white/40">Startup Founder</div>
+                <div className="text-sm text-white/40">Team Lead</div>
               </div>
             </div>
             <p className="text-white/60">
-              "We scaled from 100 to 10,000 users without hiring a DevOps team. a-to-mind.com handles it all automatically."
+              "We scaled from 100 to 10,000 users without hiring a DevOps team. a-to-mind.com handles operations automatically."
             </p>
             <div className="flex gap-1 mt-4">
               {[1,2,3,4,5].map(star => (
@@ -592,21 +592,21 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
             <h3 className="font-bold mb-2">What is a-to-mind.com?</h3>
             <p className="text-white/60">
-              a-to-mind.com is an AI-powered infrastructure autonomy platform that observes, analyzes, and improves your systems automatically. It's like having a senior DevOps engineer on your team 24/7.
+              a-to-mind.com is the world's first autonomous business engine. We build infrastructure, scale revenue, and optimize growth while you focus on what matters. It's like having a complete digital operations department that never sleeps.
             </p>
           </div>
           
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <h3 className="font-bold mb-2">How does the AI work?</h3>
+            <h3 className="font-bold mb-2">How does the autonomous engine work?</h3>
             <p className="text-white/60">
-              Our AI monitors your infrastructure, identifies patterns, and suggests improvements. You always have final approval before any changes are made, ensuring safe, controlled improvements.
+              Our AI monitors your business metrics, identifies growth opportunities, and optimizes revenue automatically. The system scales operations and maximizes market capture with human oversight for critical decisions.
             </p>
           </div>
           
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
             <h3 className="font-bold mb-2">Is my data secure?</h3>
             <p className="text-white/60">
-              Yes. We use industry-standard encryption and never share your data. All monitoring data is stored securely and you maintain full control over your infrastructure.
+              Yes. We use industry-standard encryption and never share your data. All business data is stored securely and you maintain full control over your operations.
             </p>
           </div>
           
@@ -625,16 +625,9 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
           </div>
           
           <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
-            <h3 className="font-bold mb-2">Can I cancel anytime?</h3>
-            <p className="text-white/60">
-              Absolutely. You can cancel your subscription at any time from your dashboard. Your account will be downgraded to the free Starter plan immediately.
-            </p>
-          </div>
-          
-          <div className="p-6 bg-white/[0.02] border border-white/10 rounded-2xl">
             <h3 className="font-bold mb-2">Is my data secure?</h3>
             <p className="text-white/60">
-              Yes. We use industry-standard encryption and security practices. Your infrastructure data is stored securely and never shared with third parties.
+              Yes. We use industry-standard encryption and security practices. Your business data is stored securely and never shared with third parties.
             </p>
           </div>
         </div>
