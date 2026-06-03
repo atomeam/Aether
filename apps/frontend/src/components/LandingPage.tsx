@@ -130,26 +130,6 @@ export default function LandingPage({ onEnterDashboard }: LandingPageProps) {
               We build the infrastructure, scale your revenue, and optimize your growth—while you focus on what matters.
             </p>
             
-            {/* Social Proof - Trust Badges */}
-            <div className="flex items-center justify-center gap-8 mb-8 flex-wrap">
-              <div className="flex items-center gap-2 text-white/40">
-                <div className="flex -space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/30 border-2 border-black flex items-center justify-center text-xs">JD</div>
-                  <div className="w-8 h-8 rounded-full bg-blue-500/30 border-2 border-black flex items-center justify-center text-xs">AK</div>
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/30 border-2 border-black flex items-center justify-center text-xs">MR</div>
-                </div>
-                <span className="text-sm">500+ developers</span>
-              </div>
-              <div className="flex items-center gap-2 text-white/40">
-                <Activity className="w-4 h-4" />
-                <span className="text-sm">10M+ events monitored</span>
-              </div>
-              <div className="flex items-center gap-2 text-white/40">
-                <Shield className="w-4 h-4" />
-                <span className="text-sm">99.9% uptime</span>
-              </div>
-            </div>
-            
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={onEnterDashboard}
