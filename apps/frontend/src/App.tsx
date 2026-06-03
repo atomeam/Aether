@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import LandingPage from './components/LandingPage';
+import React, { useEffect } from 'react';
 import SimpleDashboard from './components/SimpleDashboard';
 import './index.css';
 
@@ -19,29 +18,13 @@ const ADMIN_USER = {
 };
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
-
   useEffect(() => {
     // Automatic admin authentication for owner
     localStorage.setItem('token', ADMIN_TOKEN);
-    localStorage.setItem('aether_token', ADMIN_TOKEN); // For backwards compatibility
+    localStorage.setItem('aether_token', ADMIN_TOKEN);
     localStorage.setItem('user', JSON.stringify(ADMIN_USER));
-    setIsAuthenticated(true);
-    
-    // Check if user has seen landing page
-    const hasSeenLanding = localStorage.getItem('hasSeenLanding');
-    setShowLanding(!hasSeenLanding);
-  }, []);
-
-  const handleEnterDashboard = () => {
     localStorage.setItem('hasSeenLanding', 'true');
-    setShowLanding(false);
-  };
-
-  if (showLanding) {
-    return <LandingPage onEnterDashboard={handleEnterDashboard} />;
-  }
+  }, []);
 
   return <SimpleDashboard />;
 }
