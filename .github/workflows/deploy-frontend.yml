@@ -8,26 +8,29 @@ on:
       - 'apps/frontend/**'
       - '.github/workflows/deploy-frontend.yml'
 
+# No environment approval gate - automatic deployment on successful build
+# CI/CD is the sole deployment mechanism with zero human blockers
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "npm"
-          
+
       - name: Install dependencies
         run: npm ci
         working-directory: apps/frontend
-        
+
       - name: Build frontend
         run: npm run build
         working-directory: apps/frontend
-        
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:

@@ -9,22 +9,25 @@ on:
       - 'apps/*/wrangler.toml'
       - 'wrangler.toml'
 
+# No environment approval gate - automatic deployment on successful build
+# CI/CD is the sole deployment mechanism with zero human blockers
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "npm"
-          
+
       - name: Install dependencies
         run: npm ci
         working-directory: apps/bridge
-        
+
       - name: Deploy to Cloudflare
         run: npx wrangler deploy
         working-directory: apps/bridge
