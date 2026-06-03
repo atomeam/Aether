@@ -4476,6 +4476,74 @@ Return the complete component code as a single string.`;
       return;
     }
 
+    // Hourly cron job for Profit Engine bootstrap analysis (runs at :30 past every hour)
+    if (cron === "30 * * * *") {
+      console.log("Running Profit Engine bootstrap analysis...");
+      
+      try {
+        // Run bootstrap analysis on default strategy
+        const strategyId = "default";
+        const threshold = 0.05;
+        const bootstrapSamples = 1000;
+
+        // Fetch historical performance data
+        const performanceDataResult = await env.DB.prepare(
+          "SELECT timestamp, revenue, cost, conversions FROM agent_actions WHERE strategy_id = ? ORDER BY timestamp DESC LIMIT 100"
+        ).bind(strategyId).all();
+
+        const performanceData = performanceDataResult.results || performanceDataResult || [];
+
+        if (performanceData.length < 10) {
+          console.log("Insufficient data for bootstrap analysis");
+          return;
+        }
+
+        // Calculate observed metric
+        const observedMetric = calculateProfitMargin(performanceData);
+
+        // Bootstrap resampling
+        const bootstrapMetrics = [];
+        for (let i = 0; i < bootstrapSamples; i++) {
+          const resampledData = resampleWithReplacement(performanceData);
+          const bootstrapMetric = calculateProfitMargin(resampledData);
+          bootstrapMetrics.push(bootstrapMetric);
+        }
+
+        // Calculate p-value
+        const pValue = calculatePValue(observedMetric, bootstrapMetrics);
+
+        // Determine if action is needed (only if margin < 20%)
+        const actionNeeded = observedMetric < 20;
+        const confidenceInterval = calculateConfidenceInterval(bootstrapMetrics, 0.95);
+
+        // Store result
+        await env.DB.prepare(
+          "INSERT INTO bootstrap_results (id, strategy_id, observed_metric, p_value, confidence_interval_lower, confidence_interval_upper, threshold, action_needed, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `bootstrap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          strategyId,
+          observedMetric,
+          pValue,
+          confidenceInterval.lower,
+          confidenceInterval.upper,
+          threshold,
+          actionNeeded ? 1 : 0,
+          new Date().toISOString()
+        ).run();
+
+        // If action needed, trigger autonomous adjustment
+        if (actionNeeded) {
+          const actions = await triggerInfrastructureAdjustment(env, strategyId, pValue, observedMetric);
+          console.log(`Profit Engine: Executed actions: ${actions.join(', ')}`);
+        }
+
+        console.log(`Profit Engine bootstrap analysis complete - Margin: ${observedMetric.toFixed(2)}%, P-Value: ${pValue.toFixed(4)}, Action Needed: ${actionNeeded}`);
+      } catch (e: any) {
+        console.error("Profit Engine bootstrap analysis error:", e);
+      }
+      return;
+    }
+
     // Daily cron job for proposal generation (runs at midnight)
     if (cron === "0 0 * * *") {
       console.log("Running daily proposal generation...");
