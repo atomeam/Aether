@@ -21,6 +21,10 @@ export default function SimpleDashboard() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [showUsersPanel, setShowUsersPanel] = useState(false);
+  const [optimizationResults, setOptimizationResults] = useState<any[]>([]);
+  const [financialData, setFinancialData] = useState<any[]>([]);
+  const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
+  const [showFinancialPanel, setShowFinancialPanel] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -121,6 +125,52 @@ export default function SimpleDashboard() {
       } catch (e) {
         console.error('Error loading users:', e);
         alert('Error loading users: ' + e);
+      }
+    };
+    
+    // Allow owner to view optimization results: window.viewOptimizations()
+    (window as any).viewOptimizations = async () => {
+      console.log('Loading optimizations...');
+      try {
+        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/optimization/results', {
+          headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+          setOptimizationResults(data.optimizations);
+          setShowOptimizationPanel(true);
+          console.log('Optimizations loaded:', data.optimizations.length);
+        } else {
+          console.error('Failed to load optimizations:', data.error);
+          alert('Failed to load optimizations: ' + data.error);
+        }
+      } catch (e) {
+        console.error('Error loading optimizations:', e);
+        alert('Error loading optimizations: ' + e);
+      }
+    };
+    
+    // Allow owner to view financial data: window.viewFinancialData()
+    (window as any).viewFinancialData = async () => {
+      console.log('Loading financial data...');
+      try {
+        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/financial/summary', {
+          headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+          setFinancialData(data.financialData);
+          setShowFinancialPanel(true);
+          console.log('Financial data loaded:', data.financialData.length, 'data types');
+        } else {
+          console.error('Failed to load financial data:', data.error);
+          alert('Failed to load financial data: ' + data.error);
+        }
+      } catch (e) {
+        console.error('Error loading financial data:', e);
+        alert('Error loading financial data: ' + e);
       }
     };
   }, []);
@@ -370,6 +420,74 @@ export default function SimpleDashboard() {
         onFormDataChange={setFormData}
       />
 
+      {/* Optimization Results Panel (Owner Only) */}
+      {showOptimizationPanel && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Optimization Results ({optimizationResults.length})</h2>
+              <button
+                onClick={() => setShowOptimizationPanel(false)}
+                className="text-white/60 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {optimizationResults.map((opt, index) => (
+                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium">{opt.strategy}</div>
+                    <div className="text-emerald-400 font-bold">+${opt.actualSavings}</div>
+                  </div>
+                  <div className="text-sm text-white/60">
+                    {opt.opportunitiesFound} opportunities found • {opt.confidence}% confidence • {opt.priority} priority
+                  </div>
+                  <div className="text-xs text-white/40 mt-1">
+                    {new Date(opt.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Financial Data Panel (Owner Only) */}
+      {showFinancialPanel && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Financial Data Summary</h2>
+              <button
+                onClick={() => setShowFinancialPanel(false)}
+                className="text-white/60 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {financialData.map((data, index) => (
+                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium capitalize">{data.type.replace('_', ' ')}</div>
+                    <div className="text-emerald-400 font-bold">${data.totalBalance.toLocaleString()}</div>
+                  </div>
+                  <div className="text-sm text-white/60">
+                    {data.accounts} accounts • {data.transactions} transactions
+                  </div>
+                  <div className="text-xs text-white/40 mt-1">
+                    Last sync: {new Date(data.lastSync).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Users Panel (Owner Only) */}
       {showUsersPanel && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -422,13 +540,29 @@ export default function SimpleDashboard() {
               <Sparkles className="w-4 h-4 text-[#c4a661]" />
               <span className="text-sm font-medium text-[#c4a661]">Autonomous Intelligence</span>
               {isEnterprise && (
-                <button
-                  onClick={() => (window as any).viewUsers()}
-                  className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
-                  title="View all users (Owner only)"
-                >
-                  👥
-                </button>
+                <>
+                  <button
+                    onClick={() => (window as any).viewUsers()}
+                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
+                    title="View all users (Owner only)"
+                  >
+                    👥
+                  </button>
+                  <button
+                    onClick={() => (window as any).viewOptimizations()}
+                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
+                    title="View optimization results (Owner only)"
+                  >
+                    ⚡
+                  </button>
+                  <button
+                    onClick={() => (window as any).viewFinancialData()}
+                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
+                    title="View financial data (Owner only)"
+                  >
+                    💰
+                  </button>
+                </>
               )}
             </div>
             <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-white via-[#c4a661] to-emerald-400 bg-clip-text text-transparent">
