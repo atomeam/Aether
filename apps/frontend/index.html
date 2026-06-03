@@ -62,43 +62,10 @@
     </script>
   </head>
   <body>
-    <div id="root" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #050505;">
-      <div style="color: #c4a661; font-family: Inter, sans-serif; text-align: center;">
-        <div style="font-size: 24px; margin-bottom: 16px;">a-to-mind</div>
-        <div style="font-size: 14px; opacity: 0.6;">Loading...</div>
-      </div>
-    </div>
-    <script>
-      // Force cache bust
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          registrations.forEach(function(registration) {
-            registration.unregister();
-          });
-        });
-      }
-      // Force reload if cached
-      if (performance.getEntriesByType) {
-        const navEntries = performance.getEntriesByType('navigation');
-        if (navEntries.length > 0 && navEntries[0].transferSize === 0) {
-          location.reload(true);
-        }
-      }
-      
-      // Error handler
-      window.addEventListener('error', function(e) {
-        console.error('Global error:', e);
-        document.getElementById('root').innerHTML = '<div style="color: red; padding: 20px; font-family: sans-serif;">Error loading application. Check console for details.</div>';
-      });
-      
-      // Unhandled promise rejection handler
-      window.addEventListener('unhandledrejection', function(e) {
-        console.error('Unhandled promise rejection:', e);
-      });
-    </script>
-    <script type="module" crossorigin src="/assets/index-DjxGn37r.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/ui-vendor-CszemtQ8.js">
-    <link rel="modulepreload" crossorigin href="/assets/react-vendor-VKYPKYN3.js">
+    <div id="root"></div>
+    <script type="module" crossorigin src="/assets/index-B2quyzSy.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/ui-vendor-Ss3k842n.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-Bv4077ab.js">
     <link rel="stylesheet" crossorigin href="/assets/index-DXWK8r_L.css">
   </body>
 </html>
