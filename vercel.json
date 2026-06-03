@@ -7,7 +7,6 @@
       "use": "@vercel/node"
     }
   ],
-  "install": "npm install",
   "routes": [
     { "src": "/api/(.*)", "dest": "/apps/backend/dist/server.cjs" }
   ]

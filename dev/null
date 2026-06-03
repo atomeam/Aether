@@ -1,0 +1,114 @@
+(() => {
+  // apps/weekly-digest/src/index.ts
+  var index_default = {
+    async fetch(request, env, ctx) {
+      const url = new URL(request.url);
+      if (url.pathname === "/health" && request.method === "GET") {
+        return Response.json({
+          status: "healthy",
+          worker: "weekly-digest",
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      }
+      if (url.pathname === "/generate" && request.method === "POST") {
+        return handleDigestGeneration(request, env, ctx);
+      }
+      return Response.json({ error: "Not found" }, { status: 404 });
+    },
+    // Scheduled handler for cron trigger
+    async scheduled(event, env, ctx) {
+      console.log("[weekly-digest] Scheduled digest generation triggered");
+      try {
+        const digest = await generateWeeklyDigest(env);
+        console.log("[weekly-digest] Digest generated:", digest);
+        await postToNotion(digest, env);
+        console.log("[weekly-digest] Digest posted to Notion");
+      } catch (error) {
+        console.error("[weekly-digest] Error in scheduled digest:", error);
+      }
+    }
+  };
+  async function handleDigestGeneration(request, env, ctx) {
+    try {
+      const digest = await generateWeeklyDigest(env);
+      await postToNotion(digest, env);
+      return Response.json({
+        success: true,
+        digest,
+        message: "Digest generated and posted to Notion (stubbed)"
+      });
+    } catch (error) {
+      console.error("[weekly-digest] Error in manual digest generation:", error);
+      return Response.json(
+        { error: "Digest generation failed", message: String(error) },
+        { status: 500 }
+      );
+    }
+  }
+  async function generateWeeklyDigest(env) {
+    const now = /* @__PURE__ */ new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    const runs = await getRunsForWeek(env.DB, weekStart.toISOString(), weekEnd.toISOString());
+    const total_runs = runs.length;
+    const passed_runs = runs.filter((r) => r.evidence_passed === true).length;
+    const pass_rate = total_runs > 0 ? passed_runs / total_runs * 100 : 0;
+    const longest_blockers = findLongestBlockers(runs);
+    const top_contributors = findTopContributors(runs);
+    return {
+      week_start: weekStart.toISOString(),
+      week_end: weekEnd.toISOString(),
+      total_runs,
+      pass_rate: Math.round(pass_rate * 100) / 100,
+      longest_blockers,
+      top_contributors,
+      generated_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  async function getRunsForWeek(db, weekStart, weekEnd) {
+    try {
+      const stmt = db.prepare(`
+      SELECT id, title, status, created_at, updated_at, agent_id, evidence_passed
+      FROM runs
+      WHERE created_at >= ? AND created_at <= ?
+      ORDER BY created_at DESC
+    `);
+      const result = await stmt.bind(weekStart, weekEnd).all();
+      return result.results || [];
+    } catch (error) {
+      console.error("[weekly-digest] Error querying runs:", error);
+      return [];
+    }
+  }
+  function findLongestBlockers(runs) {
+    const blockers = runs.map((run) => {
+      const created = new Date(run.created_at).getTime();
+      const updated = new Date(run.updated_at).getTime();
+      const duration_hours = (updated - created) / (1e3 * 60 * 60);
+      return {
+        title: run.title,
+        duration_hours: Math.round(duration_hours * 100) / 100
+      };
+    }).filter((b) => b.duration_hours > 0).sort((a, b) => b.duration_hours - a.duration_hours).slice(0, 5);
+    return blockers;
+  }
+  function findTopContributors(runs) {
+    const contributorMap = /* @__PURE__ */ new Map();
+    for (const run of runs) {
+      if (run.agent_id && run.status === "completed") {
+        const count = contributorMap.get(run.agent_id) || 0;
+        contributorMap.set(run.agent_id, count + 1);
+      }
+    }
+    const contributors = Array.from(contributorMap.entries()).map(([agent_id, runs_completed]) => ({ agent_id, runs_completed })).sort((a, b) => b.runs_completed - a.runs_completed).slice(0, 5);
+    return contributors;
+  }
+  async function postToNotion(digest, env) {
+    console.log("[weekly-digest] Stub: Posting to Notion via notion-worker");
+    console.log("[weekly-digest] Digest content:", JSON.stringify(digest, null, 2));
+  }
+})();

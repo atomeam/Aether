@@ -8,5 +8,6 @@ coverage/
 !.env.example
 .aider*
 .wrangler/
+.turbo/
 apps/api-worker/wrangler.toml
 !apps/api-worker/wrangler.toml.example
