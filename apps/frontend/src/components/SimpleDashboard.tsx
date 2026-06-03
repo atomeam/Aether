@@ -26,6 +26,8 @@ export default function SimpleDashboard() {
   const [notificationText, setNotificationText] = useState('');
   const [currentEarnings, setCurrentEarnings] = useState(1247.83);
   const [showPaymentWall, setShowPaymentWall] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [inputName, setInputName] = useState('');
   const [leaderboard] = useState([
     { name: 'Sarah M.', earnings: 45847.23, badge: '👑', joined: 'Jan 2024' },
     { name: 'James K.', earnings: 32345.67, badge: '🔥', joined: 'Feb 2024' },
@@ -38,41 +40,29 @@ export default function SimpleDashboard() {
   useEffect(() => {
     // Check if user is enterprise (hardcoded for owner)
     const isOwner = localStorage.getItem('is_owner') === 'true';
+    const storedName = localStorage.getItem('user_name');
     
     if (isOwner) {
       // Owner gets enterprise access
       setIsAuthenticated(true);
       setIsEnterprise(true);
-      setUserName('Enterprise Admin');
+      setUserName('Adam'); // Owner's actual name
       localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
       localStorage.setItem('admin_user', 'enterprise');
-    } else {
-      // Regular users get auto-signed in as new users
+      localStorage.setItem('user_name', 'Adam');
+    } else if (storedName) {
+      // Returning user with stored name
       const existingUserId = localStorage.getItem('user_id');
-      const existingUserName = localStorage.getItem('user_name');
-      
-      if (existingUserId) {
-        setIsAuthenticated(true);
-        setIsEnterprise(false);
-        setUserName(existingUserName || 'User');
-      } else {
-        // Create new user
-        const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        const randomNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Jamie', 'Quinn'];
-        const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
-        
-        localStorage.setItem('user_id', newUserId);
-        localStorage.setItem('user_name', randomName);
-        
-        setIsAuthenticated(true);
-        setIsEnterprise(false);
-        setUserName(randomName);
-        
-        // Show payment wall after 3 seconds
-        setTimeout(() => {
-          setShowPaymentWall(true);
-        }, 3000);
-      }
+      setIsAuthenticated(true);
+      setIsEnterprise(false);
+      setUserName(storedName);
+    } else {
+      // New user - will show name input modal
+      const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem('user_id', newUserId);
+      setIsAuthenticated(true);
+      setIsEnterprise(false);
+      setShowNameInput(true);
     }
     
     // Allow owner to set themselves via console: localStorage.setItem('is_owner', 'true'); location.reload();
@@ -162,8 +152,59 @@ export default function SimpleDashboard() {
     console.log('Connect bank account clicked');
   };
 
+  const handleNameSubmit = () => {
+    if (inputName.trim()) {
+      localStorage.setItem('user_name', inputName.trim());
+      setUserName(inputName.trim());
+      setShowNameInput(false);
+      
+      // Show payment wall after 3 seconds for regular users
+      setTimeout(() => {
+        setShowPaymentWall(true);
+      }, 3000);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#0f0f0f] text-white">
+      {/* Name Input Modal */}
+      {showNameInput && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Welcome to a-to-mind</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-white/60 mb-2 block">What should we call you?</label>
+                <input
+                  type="text"
+                  placeholder="Enter your name"
+                  value={inputName}
+                  onChange={(e) => setInputName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#c4a661]"
+                  autoFocus
+                />
+              </div>
+              
+              <button
+                onClick={handleNameSubmit}
+                disabled={!inputName.trim()}
+                className="w-full bg-gradient-to-r from-[#c4a661] to-[#d4b671] text-black font-bold py-3 rounded-lg hover:shadow-lg hover:shadow-[#c4a661]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Get Started
+              </button>
+              
+              <p className="text-center text-sm text-white/40">
+                Your name will be used to personalize your experience
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Social Proof Notification */}
       {showNotification && (
         <div className="fixed top-4 right-4 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-xl rounded-xl p-4 flex items-center gap-3 z-50 animate-in slide-in-from-right">
