@@ -42,6 +42,12 @@ export default function SimpleDashboard() {
     const isOwner = localStorage.getItem('is_owner') === 'true';
     const storedName = localStorage.getItem('user_name');
     
+    // Clear old random name data for fresh start
+    if (storedName && ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Jamie', 'Quinn'].includes(storedName)) {
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_id');
+    }
+    
     if (isOwner) {
       // Owner gets enterprise access
       setIsAuthenticated(true);
@@ -50,24 +56,35 @@ export default function SimpleDashboard() {
       localStorage.setItem('admin_token', 'admin_automatic_access_token_2026');
       localStorage.setItem('admin_user', 'enterprise');
       localStorage.setItem('user_name', 'Adam');
-    } else if (storedName) {
-      // Returning user with stored name
-      const existingUserId = localStorage.getItem('user_id');
-      setIsAuthenticated(true);
-      setIsEnterprise(false);
-      setUserName(storedName);
     } else {
-      // New user - will show name input modal
-      const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-      localStorage.setItem('user_id', newUserId);
-      setIsAuthenticated(true);
-      setIsEnterprise(false);
-      setShowNameInput(true);
+      const existingUserId = localStorage.getItem('user_id');
+      const currentStoredName = localStorage.getItem('user_name');
+      
+      if (currentStoredName && existingUserId) {
+        // Returning user with stored name
+        setIsAuthenticated(true);
+        setIsEnterprise(false);
+        setUserName(currentStoredName);
+      } else {
+        // New user - will show name input modal
+        const newUserId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        localStorage.setItem('user_id', newUserId);
+        setIsAuthenticated(true);
+        setIsEnterprise(false);
+        setShowNameInput(true);
+      }
     }
     
     // Allow owner to set themselves via console: localStorage.setItem('is_owner', 'true'); location.reload();
     (window as any).setOwner = () => {
       localStorage.setItem('is_owner', 'true');
+      location.reload();
+    };
+    
+    // Allow user to reset name: window.resetName()
+    (window as any).resetName = () => {
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_id');
       location.reload();
     };
   }, []);
