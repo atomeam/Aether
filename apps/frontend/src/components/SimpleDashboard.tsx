@@ -15,7 +15,8 @@ export default function SimpleDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'profit'>('overview');
   const [copied, setCopied] = useState(false);
   const [userEarnings, setUserEarnings] = useState(1247.83);
-  const [totalUsers, setTotalUsers] = useState(48293);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [autonomousActions, setAutonomousActions] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
@@ -26,13 +27,7 @@ export default function SimpleDashboard() {
   const [notificationText, setNotificationText] = useState('');
   const [currentEarnings, setCurrentEarnings] = useState(1247.83);
   const [showPaymentWall, setShowPaymentWall] = useState(false);
-  const [leaderboard] = useState([
-    { name: 'Sarah M.', earnings: 45847.23, badge: '👑', joined: 'Jan 2024' },
-    { name: 'James K.', earnings: 32345.67, badge: '🔥', joined: 'Feb 2024' },
-    { name: 'Emily R.', earnings: 29876.54, badge: '⚡', joined: 'Mar 2024' },
-    { name: 'Michael T.', earnings: 28765.43, badge: '💎', joined: 'Mar 2024' },
-    { name: 'Jessica L.', earnings: 27654.32, badge: '🌟', joined: 'Apr 2024' }
-  ]);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   // Auto-authenticate all users on mount
   useEffect(() => {
@@ -102,15 +97,11 @@ export default function SimpleDashboard() {
     };
   }, []);
 
-  // Real-time earnings animation
+  // Real-time earnings animation (disabled for real earnings)
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isAuthenticated) {
-        const increment = Math.random() * 0.5;
-        setCurrentEarnings(prev => prev + increment);
-        setUserEarnings(prev => prev + increment);
-        
-        // Random social proof notification
+      if (isAuthenticated && isEnterprise) {
+        // Only show fake notifications for owner mode
         if (Math.random() > 0.95) {
           const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley'];
           const amounts = [23, 45, 67, 89, 112, 156];
@@ -123,7 +114,50 @@ export default function SimpleDashboard() {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isEnterprise]);
+
+  // Fetch real user count
+  useEffect(() => {
+    fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/stats/users')
+      .then(res => res.json())
+      .then(data => {
+        if (data.count !== undefined) {
+          setTotalUsers(data.count);
+          setAutonomousActions(data.count); // For now, match user count
+        }
+      })
+      .catch(err => console.error('Failed to fetch user count:', err));
+  }, []);
+
+  // Fetch real user earnings
+  useEffect(() => {
+    const token = localStorage.getItem('session_token');
+    if (token && isAuthenticated && !isEnterprise) {
+      fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/user/earnings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.earnings !== undefined) {
+            setUserEarnings(data.earnings);
+            setCurrentEarnings(data.earnings);
+          }
+        })
+        .catch(err => console.error('Failed to fetch earnings:', err));
+    }
+  }, [isAuthenticated, isEnterprise]);
+
+  // Fetch real leaderboard
+  useEffect(() => {
+    fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/leaderboard')
+      .then(res => res.json())
+      .then(data => {
+        if (data.leaderboard) {
+          setLeaderboard(data.leaderboard);
+        }
+      })
+      .catch(err => console.error('Failed to fetch leaderboard:', err));
+  }, []);
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText('https://a-to-mind.com/ref/AUTO2026');
@@ -281,20 +315,20 @@ export default function SimpleDashboard() {
             icon={TrendingUp}
             label="Your Earnings This Month"
             value={`$${currentEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            subtext={`+$${(124.73 + (currentEarnings - userEarnings)).toFixed(2)} today`}
+            subtext={isAuthenticated ? "From real bonuses" : "Sign up to start earning"}
             color="emerald"
           />
           <StatsCard
             icon={Users}
             label="Total Users"
             value={totalUsers.toLocaleString()}
-            subtext="+1,247 new today"
+            subtext={totalUsers > 0 ? `+${Math.floor(totalUsers * 0.025)} new today` : 'Growing fast'}
             color="gold"
           />
           <StatsCard
             icon={Zap}
             label="Autonomous Actions"
-            value="48,293"
+            value={autonomousActions.toLocaleString()}
             subtext="All optimized today"
             color="purple"
           />

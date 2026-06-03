@@ -10,34 +10,42 @@ interface ActivityItem {
 }
 
 export default function LiveActivity() {
-  const [activities, setActivities] = useState<ActivityItem[]>([
-    { user: 'Sarah M.', action: 'earned', amount: 23.45, time: '2s ago', icon: 'earnings' },
-    { user: 'James K.', action: 'optimized', time: '15s ago', icon: 'action' },
-    { user: 'Emily R.', action: 'earned', amount: 67.89, time: '32s ago', icon: 'earnings' },
-    { user: 'Michael T.', action: 'claimed bonus', amount: 15, time: '1m ago', icon: 'bonus' },
-    { user: 'Jessica L.', action: 'earned', amount: 45.12, time: '2m ago', icon: 'earnings' }
-  ]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
-  const actions = ['optimized costs', 'revenue spike', 'conversion boost', 'AI adjustment'];
-  const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Jamie', 'Quinn', 'Sam', 'Drew'];
+  const formatTime = (timeString: string) => {
+    const date = new Date(timeString);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const randomName = names[Math.floor(Math.random() * names.length)];
-      const randomAction = actions[Math.floor(Math.random() * actions.length)];
-      const randomAmount = Math.random() > 0.5 ? (Math.random() * 100).toFixed(2) : undefined;
-      
-      const newActivity: ActivityItem = {
-        user: `${randomName}.`,
-        action: randomAction,
-        amount: randomAmount ? parseFloat(randomAmount) : undefined,
-        time: 'Just now',
-        icon: randomAmount ? 'earnings' : 'action'
-      };
+    // Fetch real activity from API
+    const fetchActivity = async () => {
+      try {
+        const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/activity/recent');
+        const data = await response.json();
+        if (data.activities) {
+          const formattedActivities = data.activities.map((item: any) => ({
+            user: item.user,
+            action: item.action,
+            amount: item.amount,
+            time: formatTime(item.time),
+            icon: item.amount ? 'earnings' : 'action'
+          }));
+          setActivities(formattedActivities);
+        }
+      } catch (err) {
+        console.error('Failed to fetch activity:', err);
+      }
+    };
 
-      setActivities(prev => [newActivity, ...prev].slice(0, 6));
-    }, 5000);
-
+    fetchActivity();
+    const interval = setInterval(fetchActivity, 10000); // Update every 10 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -65,23 +73,29 @@ export default function LiveActivity() {
         </div>
       </div>
       <div className="space-y-3">
-        {activities.map((activity, index) => (
-          <div key={index} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
-              {getIcon(activity.icon)}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm">
-                <span className="font-medium">{activity.user}</span>
-                <span className="text-white/60"> {activity.action}</span>
-                {activity.amount && (
-                  <span className="text-emerald-400 font-bold ml-1">+${activity.amount.toFixed(2)}</span>
-                )}
+        {activities.length > 0 ? (
+          activities.map((activity, index) => (
+            <div key={index} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+                {getIcon(activity.icon)}
               </div>
-              <div className="text-xs text-white/40">{activity.time}</div>
+              <div className="flex-1">
+                <div className="text-sm">
+                  <span className="font-medium">{activity.user}</span>
+                  <span className="text-white/60"> {activity.action}</span>
+                  {activity.amount && (
+                    <span className="text-emerald-400 font-bold ml-1">+${activity.amount.toFixed(2)}</span>
+                  )}
+                </div>
+                <div className="text-xs text-white/40">{activity.time}</div>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="text-center text-white/40 py-8">
+            No recent activity
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

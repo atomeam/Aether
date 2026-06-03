@@ -305,19 +305,119 @@ export default {
       return result;
     }
 
-    // Get Leaderboard
+    // Get User Earnings (Real)
+    if (url.pathname === "/api/user/earnings" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: corsHeaders,
+          });
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        // Validate token and get user ID (simplified for now)
+        const userId = token.split("_")[1]; // Extract user ID from token
+
+        // Calculate real earnings from database
+        const result = await env.DB.prepare(`
+          SELECT SUM(CAST(JSON_EXTRACT(details, '$.amount') AS REAL)) as total_earnings
+          FROM agent_actions
+          WHERE JSON_EXTRACT(details, '$.userId') = ?
+          AND (action_taken = 'welcome_bonus' OR action_taken = 'daily_bonus')
+        `).bind(userId).first();
+
+        const earnings = result?.total_earnings || 0;
+
+        return new Response(JSON.stringify({ 
+          earnings,
+          userId,
+          message: "Real earnings from database"
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Get Real User Count
+    if (url.pathname === "/api/stats/users" && request.method === "GET") {
+      try {
+        const result = await env.DB.prepare(
+          "SELECT COUNT(*) as count FROM users"
+        ).first();
+        
+        const count = result?.count || 0;
+        
+        return new Response(JSON.stringify({ 
+          count,
+          message: "Real user count from database"
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Get Real Activity Feed
+    if (url.pathname === "/api/activity/recent" && request.method === "GET") {
+      try {
+        // Get recent user actions from agent_actions table
+        const result = await env.DB.prepare(
+          "SELECT * FROM agent_actions ORDER BY timestamp DESC LIMIT 10"
+        ).all();
+        
+        const activities = result.map(row => ({
+          user: row.agent_id === 'profit_engine' ? 'System' : 'User',
+          action: row.action_taken,
+          amount: row.details && JSON.parse(row.details).amount,
+          time: new Date(row.timestamp).toLocaleString()
+        }));
+        
+        return new Response(JSON.stringify({ activities }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Get Real Leaderboard
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
       try {
-        // In production, this would fetch real data from database
-        // For now, return mock leaderboard data
-        const leaderboard = [
-          { name: 'Sarah M.', earnings: 15847.23, badge: '👑', streak: 45 },
-          { name: 'James K.', earnings: 12345.67, badge: '🔥', streak: 32 },
-          { name: 'Emily R.', earnings: 9876.54, badge: '⚡', streak: 28 },
-          { name: 'Michael T.', earnings: 8765.43, badge: '💎', streak: 21 },
-          { name: 'Jessica L.', earnings: 7654.32, badge: '🌟', streak: 18 }
-        ];
-
+        // Get top users by earnings from agent_actions
+        const result = await env.DB.prepare(`
+          SELECT 
+            u.name,
+            u.created_at,
+            SUM(CAST(JSON_EXTRACT(a.details, '$.amount') AS REAL)) as total_earnings
+          FROM users u
+          LEFT JOIN agent_actions a ON u.id = JSON_EXTRACT(a.details, '$.userId')
+          WHERE a.action_taken = 'welcome_bonus' OR a.action_taken = 'daily_bonus'
+          GROUP BY u.id
+          ORDER BY total_earnings DESC
+          LIMIT 5
+        `).all();
+        
+        const leaderboard = result.map((row, index) => ({
+          name: row.name,
+          earnings: row.total_earnings || 0,
+          badge: index === 0 ? '👑' : index === 1 ? '🔥' : index === 2 ? '⚡' : index === 3 ? '💎' : '🌟',
+          joined: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        }));
+        
         return new Response(JSON.stringify({ leaderboard }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
