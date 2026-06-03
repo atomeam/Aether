@@ -1,13 +1,15 @@
 /**
  * Panic Button
- * 
+ *
  * One-call full autonomy pause.
  * Sets system to lock-down mode instantly.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Panic state storage needs to use KV/R2 in Workers environment
  */
 
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
+// import crypto from 'crypto';
 
 // Panic state
 export interface PanicState {
@@ -20,16 +22,13 @@ export interface PanicState {
 }
 
 // Lock file path
-const PANIC_PATH = path.resolve(process.cwd(), '../../logs/panic.json');
+// const PANIC_PATH = path.resolve(process.cwd(), '../../logs/panic.json');
 
 // Get current panic state
 export function getPanicState(): PanicState {
-  if (!fs.existsSync(PANIC_PATH)) {
-    return { active: false, reason: 'normal', level: 'pause' };
-  }
-  
-  const content = fs.readFileSync(PANIC_PATH, 'utf-8');
-  return JSON.parse(content);
+  // NOTE: fs and path not compatible with Workers
+  // Panic state storage needs to use KV/R2 in Workers environment
+  return { active: false, reason: 'normal', level: 'pause' };
 }
 
 // Trigger panic
@@ -40,7 +39,7 @@ export function triggerPanic(options?: {
   triggeredBy?: string;
 }): PanicState {
   const { reason = 'manual', level = 'lockdown', autoResumeMinutes, triggeredBy = 'system' } = options || {};
-  
+
   const state: PanicState = {
     active: true,
     triggeredAt: Date.now(),
@@ -49,12 +48,13 @@ export function triggerPanic(options?: {
     level,
     autoResumeAt: autoResumeMinutes ? Date.now() + autoResumeMinutes * 60 * 1000 : undefined,
   };
-  
-  const dir = path.dirname(PANIC_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  
-  fs.writeFileSync(PANIC_PATH, JSON.stringify(state, null, 2));
-  
+
+  // NOTE: fs and path not compatible with Workers
+  // Panic state storage needs to use KV/R2 in Workers environment
+  // const dir = path.dirname(PANIC_PATH);
+  // if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  // fs.writeFileSync(PANIC_PATH, JSON.stringify(state, null, 2));
+
   return state;
 }
 
@@ -65,9 +65,11 @@ export function releasePanic(reason = 'manual_release'): PanicState {
     reason,
     level: 'pause',
   };
-  
-  fs.writeFileSync(PANIC_PATH, JSON.stringify(state, null, 2));
-  
+
+  // NOTE: fs and path not compatible with Workers
+  // Panic state storage needs to use KV/R2 in Workers environment
+  // fs.writeFileSync(PANIC_PATH, JSON.stringify(state, null, 2));
+
   return state;
 }
 

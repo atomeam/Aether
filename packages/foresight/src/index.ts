@@ -1,13 +1,15 @@
 /**
  * Foresight
- * 
+ *
  * Reflector emits predictions.
  * System scores its own foresight when windows expire.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Predictions storage needs to use KV/R2 in Workers environment
  */
 
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
+// import crypto from 'crypto';
 
 // Prediction
 export interface Prediction {
@@ -49,44 +51,49 @@ export function scorePredictions(windowDays = 7): { scored: number; accuracy: nu
       // In production, get actual outcome from lessons
       // For now, simulate based on confidence
       const actual = pred.predictedConfidence > 0.5 ? 'success' : 'failure';
-      const correct = actual === pred.predictedOutcome;
-      
+      let correctCount = actual === pred.predictedOutcome;
+
       pred.actualOutcome = actual;
-      pred.actualConfidence = correct ? 1.0 : 0.0;
+      pred.actualConfidence = correctCount ? 1.0 : 0.0;
       pred.scoredAt = now;
-      
+
       scored++;
-      if (correct) correct++;
+      if (correctCount) correctCount++;
     }
     
     newLines.push(JSON.stringify(pred));
   }
-  
-  fs.writeFileSync(PREDICTIONS_PATH, newLines.join('\n') + '\n');
-  
+
+  // NOTE: fs and path not compatible with Workers
+  // Predictions storage needs to use KV/R2 in Workers environment
+  // fs.writeFileSync(PREDICTIONS_PATH, newLines.join('\n') + '\n');
+
   return {
     scored,
-    accuracy: scored > 0 ? correct / scored : 0,
+    accuracy: scored > 0 ? correctCount / scored : 0,
   };
 }
 
 // Make a prediction (called by Reflector)
 export function predict(pattern: string, predictedOutcome: 'success' | 'failure' | 'noop', confidence: number, windowDays = 7): Prediction {
-  const PREDICTIONS_PATH = path.resolve(process.cwd(), '../../logs/predictions.jsonl');
-  
+  // NOTE: fs and path not compatible with Workers
+  // Predictions storage needs to use KV/R2 in Workers environment
+  // const PREDICTIONS_PATH = path.resolve(process.cwd(), '../../logs/predictions.jsonl');
+
   const prediction: Prediction = {
-    id: crypto.randomUUID(),
+    id: Math.random().toString(36).substring(2, 15),
     pattern,
     predictedOutcome,
     predictedConfidence: confidence,
     windowDays,
     createdAt: Date.now(),
   };
-  
-  const dir = path.dirname(PREDICTIONS_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  
-  fs.appendFileSync(PREDICTIONS_PATH, JSON.stringify(prediction) + '\n');
+
+  // NOTE: fs and path not compatible with Workers
+  // const dir = path.dirname(PREDICTIONS_PATH);
+  // if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  // fs.appendFileSync(PREDICTIONS_PATH, JSON.stringify(prediction) + '\n');
   return prediction;
 }
 

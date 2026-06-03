@@ -1,18 +1,20 @@
 /**
  * AutoRevert - Rollback Signals and Mechanism
- * 
+ *
  * Defines signals that trigger rollback and implements the rollback mechanism.
  * Part of the Alpha Loop Hardening spec.
- * 
+ * NOTE: fs and path not compatible with Workers
+ * Auto-revert logging needs to use KV/R2 in Workers environment
+ *
  * @version 1.0.0
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// import * as fs from 'fs';
+// import * as path from 'path';
 
-const LOG_DIR = './logs';
-const CHECKPOINT_DIR = `${LOG_DIR}/checkpoints`;
-const REVERT_LOG = `${LOG_DIR}/revert-log.jsonl`;
+// const LOG_DIR = './logs';
+// const CHECKPOINT_DIR = `${LOG_DIR}/checkpoints`;
+// const REVERT_LOG = `${LOG_DIR}/revert-log.jsonl`;
 
 // --- Types ---
 
@@ -59,26 +61,22 @@ interface RevertState {
   lastResetAt: number;
 }
 
-const STATE_FILE = `${LOG_DIR}/revert-state.json`;
+// const STATE_FILE = `${LOG_DIR}/revert-state.json`;
 
 function loadState(): RevertState {
-  if (!fs.existsSync(STATE_FILE)) {
-    return {
-      errorCount: 0,
-      totalCycles: 0,
-      consecutiveDenials: 0,
-      lastResetAt: Date.now(),
-    };
-  }
-  
-  return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
+  return {
+    errorCount: 0,
+    totalCycles: 0,
+    consecutiveDenials: 0,
+    lastResetAt: Date.now(),
+  };
 }
 
 function saveState(state: RevertState): void {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
 }
 
 // --- Core Functions ---
@@ -122,42 +120,8 @@ export function recordCuratorDenial(): void {
  * @returns Signal if drift exceeds threshold
  */
 export function checkRuntimeDrift(checkpointId: string): RevertSignal | null {
-  const cpFile = `${CHECKPOINT_DIR}/${checkpointId}.json`;
-  if (!fs.existsSync(cpFile)) return null;
-  
-  const checkpoint: Checkpoint = JSON.parse(fs.readFileSync(cpFile, 'utf-8'));
-  const thresholds = DEFAULT_REVERT_THRESHOLDS;
-  
-  let driftCount = 0;
-  for (const [file, expectedHash] of Object.entries(checkpoint.files)) {
-    if (!fs.existsSync(file)) {
-      driftCount++;  // File deleted
-      continue;
-    }
-    
-    const content = fs.readFileSync(file, 'utf-8');
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      hash = ((hash << 5) - hash) + content.charCodeAt(i);
-      hash = hash & hash;
-    }
-    const currentHash = Math.abs(hash).toString(16);
-    
-    if (currentHash !== expectedHash) {
-      driftCount++;
-    }
-  }
-  
-  if (driftCount > thresholds.runtimeDriftThreshold) {
-    return {
-      type: 'runtime_drift',
-      timestamp: Date.now(),
-      cycleId: checkpoint.cycleId,
-      context: { driftCount, checkpointId },
-      severity: 'hard',
-    };
-  }
-  
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
   return null;
 }
 
@@ -240,10 +204,12 @@ export async function createCheckpoint(
   cycleId: string,
   files: string[]
 ): Promise<Checkpoint> {
-  if (!fs.existsSync(CHECKPOINT_DIR)) {
-    fs.mkdirSync(CHECKPOINT_DIR, { recursive: true });
-  }
-  
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
+  // if (!fs.existsSync(CHECKPOINT_DIR)) {
+  //   fs.mkdirSync(CHECKPOINT_DIR, { recursive: true });
+  // }
+
   const checkpoint: Checkpoint = {
     id: `cp_${Date.now()}`,
     cycleId,
@@ -251,25 +217,27 @@ export async function createCheckpoint(
     files: {},
     createdAt: Date.now(),
   };
-  
-  for (const file of files) {
-    if (fs.existsSync(file)) {
-      const content = fs.readFileSync(file, 'utf-8');
-      // Simple hash for content
-      let hash = 0;
-      for (let i = 0; i < content.length; i++) {
-        hash = ((hash << 5) - hash) + content.charCodeAt(i);
-        hash = hash & hash;
-      }
-      checkpoint.files[file] = Math.abs(hash).toString(16);
-    }
-  }
-  
-  const cpFile = `${CHECKPOINT_DIR}/${checkpoint.id}.json`;
-  fs.writeFileSync(cpFile, JSON.stringify(checkpoint, null, 2));
-  
-  console.log(`[AutoRevert] Created checkpoint ${checkpoint.id} for cycle ${cycleId}`);
-  
+
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
+  // for (const file of files) {
+  //   if (fs.existsSync(file)) {
+  //     const content = fs.readFileSync(file, 'utf-8');
+  //     // Simple hash for content
+  //     let hash = 0;
+  //     for (let i = 0; i < content.length; i++) {
+  //       hash = ((hash << 5) - hash) + content.charCodeAt(i);
+  //       hash = hash & hash;
+  //     }
+  //     checkpoint.files[file] = Math.abs(hash).toString(16);
+  //   }
+  // }
+
+  // const cpFile = `${CHECKPOINT_DIR}/${checkpoint.id}.json`;
+  // fs.writeFileSync(cpFile, JSON.stringify(checkpoint, null, 2));
+
+  console.log(`[AutoRevert] Checkpoint creation not available in Workers environment`);
+
   return checkpoint;
 }
 
@@ -280,64 +248,19 @@ export async function createCheckpoint(
  * @returns Files reverted
  */
 export async function revertToCheckpoint(checkpointId: string): Promise<string[]> {
-  const cpFile = `${CHECKPOINT_DIR}/${checkpointId}.json`;
-  
-  if (!fs.existsSync(cpFile)) {
-    console.log(`[AutoRevert] Checkpoint ${checkpointId} not found`);
-    return [];
-  }
-  
-  const checkpoint: Checkpoint = JSON.parse(fs.readFileSync(cpFile, 'utf-8'));
-  const reverted: string[] = [];
-  
-  for (const [file, expectedHash] of Object.entries(checkpoint.files)) {
-    if (!fs.existsSync(file)) continue;
-    
-    const content = fs.readFileSync(file, 'utf-8');
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      hash = ((hash << 5) - hash) + content.charCodeAt(i);
-      hash = hash & hash;
-    }
-    const currentHash = Math.abs(hash).toString(16);
-    
-    // Only revert if different
-    if (currentHash !== expectedHash) {
-      // This is a simple "would revert" check
-      // Actual revert would need git or backup storage
-      reverted.push(file);
-    }
-  }
-  
-  // Log the revert
-  const signal: RevertSignal = {
-    type: 'manual',
-    timestamp: Date.now(),
-    cycleId: checkpoint.cycleId,
-    context: { checkpointId, revertedFiles: reverted },
-    severity: 'soft',
-  };
-  
-  const logEntry = JSON.stringify(signal) + '\n';
-  fs.appendFileSync(REVERT_LOG, logEntry);
-  
-  console.log(`[AutoRevert] Reverted to checkpoint ${checkpointId}, ${reverted.length} files differ`);
-  
-  return reverted;
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
+  console.log(`[AutoRevert] Revert not available in Workers environment`);
+  return [];
 }
 
 /**
  * Log a revert event
  */
 function logRevert(signal: RevertSignal): void {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-  
-  const logEntry = JSON.stringify(signal) + '\n';
-  fs.appendFileSync(REVERT_LOG, logEntry);
-  
-  console.log(`[AutoRevert] 📝 Logged revert signal: ${signal.type} (${signal.severity})`);
+  // NOTE: fs not compatible with Workers
+  // Auto-revert logging needs to use KV/R2 in Workers environment
+  console.log(`[AutoRevert] 📝 Logging revert not available in Workers environment`);
 }
 
 // --- CLI Entry ---

@@ -1,16 +1,18 @@
 /**
  * Convene - Cross-Assistant Coordination Layer
- * 
+ *
  * "Your AI tools don't just have memory. They have meetings."
- * 
+ *
  * Enables multiple assistants to deliberate through a shared profile,
  * weighted voting, and unified resolution.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Convene storage needs to use KV/R2 in Workers environment
  */
 
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
+// import crypto from 'crypto';
 
 // ============================================================================
 // SCHEMAS

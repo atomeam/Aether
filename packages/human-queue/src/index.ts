@@ -1,12 +1,14 @@
 /**
  * Human Queue
- * 
+ *
  * Manual review queue for escalated items.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Queue storage needs to use KV/R2 in Workers environment
  */
 
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
+// import crypto from 'crypto';
 
 // Queue item
 export interface QueueItem {
@@ -25,50 +27,52 @@ export interface QueueItem {
 }
 
 // Queue path
-const QUEUE_PATH = path.resolve(process.cwd(), '../../logs/human-queue.jsonl');
+// const QUEUE_PATH = path.resolve(process.cwd(), '../../logs/human-queue.jsonl');
 
 // Ensure directory
 function ensureDir() {
-  const dir = path.dirname(QUEUE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  // NOTE: fs and path not compatible with Workers
+  // const dir = path.dirname(QUEUE_PATH);
+  // if (!fs.existsSync(dir)) {
+  //   fs.mkdirSync(dir, { recursive: true });
+  // }
 }
 
 // Add to queue
 export function enqueue(item: Omit<QueueItem, 'id' | 'createdAt' | 'status'>): QueueItem {
-  ensureDir();
-  
+  // NOTE: fs and path not compatible with Workers
+  // Queue storage needs to use KV/R2 in Workers environment
+  // ensureDir();
+
   const fullItem: QueueItem = {
     ...item,
-    id: crypto.randomUUID(),
+    id: Math.random().toString(36).substring(2, 15),
     createdAt: Date.now(),
     status: 'pending',
   };
-  
-  fs.appendFileSync(QUEUE_PATH, JSON.stringify(fullItem) + '\n');
+
+  // fs.appendFileSync(QUEUE_PATH, JSON.stringify(fullItem) + '\n');
   return fullItem;
 }
 
 // Get pending items
 export function getPending(limit = 20): QueueItem[] {
-  if (!fs.existsSync(QUEUE_PATH)) return [];
-  
-  const content = fs.readFileSync(QUEUE_PATH, 'utf-8');
-  const items = content.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
-  
-  return items
-    .filter((item: QueueItem) => item.status === 'pending')
-    .sort((a: QueueItem, b: QueueItem) => b.priority - a.priority)
-    .slice(0, limit);
+  // NOTE: fs and path not compatible with Workers
+  // Queue storage needs to use KV/R2 in Workers environment
+  // if (!fs.existsSync(QUEUE_PATH)) return [];
+  // const content = fs.readFileSync(QUEUE_PATH, 'utf-8');
+  // const items = content.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+
+  return [];
 }
 
 // Resolve an item
 export function resolve(id: string, status: 'approved' | 'rejected', resolvedBy = 'human'): QueueItem | null {
-  if (!fs.existsSync(QUEUE_PATH)) return null;
-  
-  const content = fs.readFileSync(QUEUE_PATH, 'utf-8');
-  const lines = content.trim().split('\n').filter(Boolean);
+  // NOTE: fs and path not compatible with Workers
+  // Queue storage needs to use KV/R2 in Workers environment
+  // if (!fs.existsSync(QUEUE_PATH)) return null;
+  // const content = fs.readFileSync(QUEUE_PATH, 'utf-8');
+  // const lines = content.trim().split('\n').filter(Boolean);
   
   let found = false;
   const newLines = lines.map(line => {

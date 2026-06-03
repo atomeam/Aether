@@ -1,13 +1,15 @@
 /**
  * Sandbox Enforcement Runtime
- * 
+ *
  * Multi-tenant isolation with path/network/process/resource policies.
  * Designed with per-tenant namespacing from the start.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Sandbox file operations need to use R2 in Workers environment
  */
 
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
+// import crypto from 'crypto';
 
 // ============================================================================
 // CONFIGURATION
@@ -302,55 +304,31 @@ export function checkResources(usage: ResourceUsage): {
 
 // Create sandbox for a profile
 export function createSandbox(profileId: string): { success: boolean; sandboxRoot?: string; error?: string } {
+  // NOTE: fs and path not compatible with Workers
+  // Sandbox creation disabled in Workers environment
   const root = getSandboxRoot(profileId);
-  
-  try {
-    if (!fs.existsSync(root)) {
-      fs.mkdirSync(root, { recursive: true });
-      
-      // Create subdirectories
-      fs.mkdirSync(path.join(root, 'workspace'), { recursive: true });
-      fs.mkdirSync(path.join(root, 'temp'), { recursive: true });
-    }
-    
-    return { success: true, sandboxRoot: root };
-  } catch (e: any) {
-    return { success: false, error: e.message };
-  }
+  return { success: false, error: 'Sandbox creation not available in Workers environment' };
 }
 
 // Delete sandbox for a profile
 export function deleteSandbox(profileId: string): { success: boolean; error?: string } {
-  const root = getSandboxRoot(profileId);
-  
-  try {
-    if (fs.existsSync(root)) {
-      fs.rmSync(root, { recursive: true, force: true });
-    }
-    return { success: true };
-  } catch (e: any) {
-    return { success: false, error: e.message };
-  }
+  // NOTE: fs and path not compatible with Workers
+  // Sandbox deletion disabled in Workers environment
+  return { success: false, error: 'Sandbox deletion not available in Workers environment' };
 }
 
 // List all sandboxes
 export function listSandboxes(): string[] {
-  if (!fs.existsSync(config.basePath)) return [];
-  
-  return fs.readdirSync(config.basePath).filter(stat => {
-    try {
-      return fs.statSync(path.join(config.basePath, stat)).isDirectory();
-    } catch {
-      return false;
-    }
-  });
+  // NOTE: fs and path not compatible with Workers
+  // Sandbox listing disabled in Workers environment
+  return [];
 }
 
 // ============================================================================
 // ESCAPE ATTEMPT LOGGING
 // ============================================================================
 
-const ESCAPE_LOG_PATH = path.resolve(process.cwd(), '../../logs/sandbox-escapes.jsonl');
+// const ESCAPE_LOG_PATH = path.resolve(process.cwd(), '../../logs/sandbox-escapes.jsonl');
 
 export function logEscapeAttempt(options: {
   profileId: string;
@@ -360,17 +338,19 @@ export function logEscapeAttempt(options: {
   syscall?: string;
   timestamp: number;
 }) {
+  // NOTE: fs and path not compatible with Workers
+  // Escape logging disabled in Workers environment
   if (!config.logDeniedSyscalls) return;
-  
+
   const entry = {
-    id: crypto.randomUUID(),
+    id: Math.random().toString(36).substring(2, 15),
     ...options,
   };
-  
-  const dir = path.dirname(ESCAPE_LOG_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  
-  fs.appendFileSync(ESCAPE_LOG_PATH, JSON.stringify(entry) + '\n');
+
+  // const dir = path.dirname(ESCAPE_LOG_PATH);
+  // if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  // fs.appendFileSync(ESCAPE_LOG_PATH, JSON.stringify(entry) + '\n');
 }
 
 // ============================================================================

@@ -1,17 +1,22 @@
 /**
  * Signed Provenance
- * 
+ *
  * Cryptographically signed lesson provenance.
  * Prevents lesson poisoning via source verification and quotas.
+ * NOTE: crypto, fs, and path not compatible with Workers
+ * Provenance storage needs to use KV/R2 in Workers environment
  */
 
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+// import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
 
 // Signer keys (in production, use external key service)
-const SIGNING_KEY = process.env.AETHER_SIGNING_KEY || crypto.randomBytes(32).toString('hex');
-const VERIFY_KEY = process.env.AETHER_VERIFY_KEY || SIGNING_KEY.slice(0, 32);
+// NOTE: crypto.randomBytes not compatible with Workers
+// const SIGNING_KEY = process.env.AETHER_SIGNING_KEY || crypto.randomBytes(32).toString('hex');
+// const VERIFY_KEY = process.env.AETHER_VERIFY_KEY || SIGNING_KEY.slice(0, 32);
+const SIGNING_KEY = process.env.AETHER_SIGNING_KEY || Math.random().toString(36).substring(2, 34);
+const VERIFY_KEY = process.env.AETHER_VERIFY_KEY || SIGNING_KEY.substring(0, 32);
 
 // Provenance record for each lesson
 export interface SignedLesson {

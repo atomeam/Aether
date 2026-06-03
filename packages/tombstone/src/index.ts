@@ -1,13 +1,15 @@
 /**
  * Tombstone
- * 
+ *
  * GDPR-style deletion with hash-chain preservation.
  * Mark records as suppressed without breaking integrity.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Tombstone storage needs to use KV/R2 in Workers environment
  */
 
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+// import crypto from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
 
 // Tombstone record
 export interface Tombstone {

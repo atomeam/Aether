@@ -1,18 +1,20 @@
 /**
  * Canary - Low-Stakes Surface for Alpha Testing
- * 
+ *
  * Provides sandbox surfaces where Alpha applies before broader rollout.
  * The canary acts as an early warning system.
- * 
+ * NOTE: fs and path not compatible with Workers
+ * Canary logging needs to use KV/R2 in Workers environment
+ *
  * @version 1.0.0
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// import * as fs from 'fs';
+// import * as path from 'path';
 
-const LOG_DIR = './logs';
-const CANARY_LOG = `${LOG_DIR}/canary.jsonl`;
-const DOCS_DIR = './docs/sandbox';
+// const LOG_DIR = './logs';
+// const CANARY_LOG = `${LOG_DIR}/canary.jsonl`;
+// const DOCS_DIR = './docs/sandbox';
 
 // --- Configuration ---
 
@@ -54,19 +56,14 @@ export interface CanaryRun {
 // --- Storage ---
 
 function loadCanaryRuns(): CanaryRun[] {
-  if (!fs.existsSync(CANARY_LOG)) {
-    return [];
-  }
-  
-  const lines = fs.readFileSync(CANARY_LOG, 'utf-8').split('\n').filter(Boolean);
-  return lines.map(line => JSON.parse(line));
+  // NOTE: fs not compatible with Workers
+  // Canary logging needs to use KV/R2 in Workers environment
+  return [];
 }
 
 function saveCanaryRuns(runs: CanaryRun[]): void {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-  fs.writeFileSync(CANARY_LOG, runs.map(r => JSON.stringify(r)).join('\n') + '\n');
+  // NOTE: fs not compatible with Workers
+  // Canary logging needs to use KV/R2 in Workers environment
 }
 
 // --- Core Functions ---
@@ -75,22 +72,9 @@ function saveCanaryRuns(runs: CanaryRun[]): void {
  * Initialize canary environment (create sandbox docs if needed)
  */
 export function initCanary(): void {
-  if (!fs.existsSync(DOCS_DIR)) {
-    fs.mkdirSync(DOCS_DIR, { recursive: true });
-  }
-  
-  // Create placeholder sandbox file
-  const placeholder = `${DOCS_DIR}/README.md`;
-  if (!fs.existsSync(placeholder)) {
-    fs.writeFileSync(placeholder, `# Sandbox Surface
-
-This directory contains sandbox surfaces for Alpha canary testing.
-
-Alpha should apply changes here first before production rollout.
-`);
-  }
-  
-  console.log('[Canary] Initialized sandbox surface at', DOCS_DIR);
+  // NOTE: fs not compatible with Workers
+  // Canary logging needs to use KV/R2 in Workers environment
+  console.log('[Canary] Canary initialization not available in Workers environment');
 }
 
 /**

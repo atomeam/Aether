@@ -1,16 +1,18 @@
 /**
  * BlastRadiusCap - Per-Cycle Limits for Alpha Execution
- * 
+ *
  * Implements blast-radius caps to contain the impact of any single Alpha execution.
  * Part of the Alpha Loop Hardening spec.
- * 
+ * NOTE: fs and path not compatible with Workers
+ * Blast radius logging needs to use KV/R2 in Workers environment
+ *
  * @version 1.0.0
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// import * as fs from 'fs';
+// import * as path from 'path';
 
-const LOG_DIR = './logs';
+// const LOG_DIR = './logs';
 
 // --- Configuration ---
 
@@ -37,38 +39,23 @@ interface CycleState {
   lastCycleDate: string;
 }
 
-const CYCLE_STATE_FILE = `${LOG_DIR}/cycle-state.json`;
+// const CYCLE_STATE_FILE = `${LOG_DIR}/cycle-state.json`;
 
 function loadState(): CycleState {
+  // NOTE: fs not compatible with Workers
+  // Blast radius logging needs to use KV/R2 in Workers environment
   const today = new Date().toISOString().split('T')[0];
-  
-  if (!fs.existsSync(CYCLE_STATE_FILE)) {
-    return {
-      filesTouched: [],
-      surfacesWritten: [],
-      cyclesExecutedToday: 0,
-      lastCycleDate: today,
-    };
-  }
-  
-  const state: CycleState = JSON.parse(fs.readFileSync(CYCLE_STATE_FILE, 'utf-8'));
-  
-  // Reset daily counter if new day
-  if (state.lastCycleDate !== today) {
-    state.cyclesExecutedToday = 0;
-    state.lastCycleDate = today;
-    state.filesTouched = [];
-    state.surfacesWritten = [];
-  }
-  
-  return state;
+  return {
+    filesTouched: [],
+    surfacesWritten: [],
+    cyclesExecutedToday: 0,
+    lastCycleDate: today,
+  };
 }
 
 function saveState(state: CycleState): void {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-  fs.writeFileSync(CYCLE_STATE_FILE, JSON.stringify(state, null, 2));
+  // NOTE: fs not compatible with Workers
+  // Blast radius logging needs to use KV/R2 in Workers environment
 }
 
 // --- Core Functions ---

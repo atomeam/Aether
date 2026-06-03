@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+// import fs from "fs"
+// import path from "path"
 
 export interface ProposalRecord {
   traceId: string
@@ -13,30 +13,18 @@ export interface ProposalRecord {
 }
 
 // Write transactions to a shared workspace analytics root
-const LEDGER_PATH = path.resolve(process.cwd(), "../../logs/proposals-outcomes.jsonl")
+// const LEDGER_PATH = path.resolve(process.cwd(), "../../logs/proposals-outcomes.jsonl")
 
 /**
  * Reads records from the ledger since a given timestamp.
  * Used by Evaluator to analyze patterns.
- * NOTE: Uses fs - not compatible with Workers. Needs R2 migration.
+ * NOTE: fs and path not compatible with Workers
+ * Ledger storage needs to use KV/R2 in Workers environment
  */
 export function readRecords(since: number = 3600000): ProposalRecord[] {
-  try {
-    if (!fs.existsSync(LEDGER_PATH)) {
-      return [];
-    }
-
-    const content = fs.readFileSync(LEDGER_PATH, 'utf-8');
-    const lines = content.trim().split('\n').filter(Boolean);
-    const cutoff = Date.now() - since;
-
-    return lines
-      .map(line => JSON.parse(line) as ProposalRecord)
-      .filter(record => new Date(record.timestamp).getTime() > cutoff);
-  } catch (err) {
-    console.error("TELEMETRY ERROR: Failed to read from ledger:", err);
-    return [];
-  }
+  // NOTE: fs and path not compatible with Workers
+  // Ledger storage needs to use KV/R2 in Workers environment
+  return [];
 }
 
 /**
@@ -45,20 +33,8 @@ export function readRecords(since: number = 3600000): ProposalRecord[] {
  * NOTE: Uses fs - not compatible with Workers. Needs R2 migration.
  */
 export function commitToLedger(record: Omit<ProposalRecord, "timestamp">): void {
-  const fullRecord: ProposalRecord = {
-    timestamp: new Date().toISOString(),
-    ...record,
-  }
-
-  try {
-    const dir = path.dirname(LEDGER_PATH)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
-
-    fs.appendFileSync(LEDGER_PATH, JSON.stringify(fullRecord) + "\n", "utf8")
-  } catch (err) {
-    // Fail-soft on telemetry recording so it doesn't drop client requests
-    console.error("TELEMETRY ERROR: Failed to commit transaction to ledger:", err)
-  }
+  // NOTE: fs and path not compatible with Workers
+  // Ledger storage needs to use KV/R2 in Workers environment
+  // Fail-soft on telemetry recording so it doesn't drop client requests
+  console.error("TELEMETRY ERROR: Ledger commit not available in Workers environment");
 }

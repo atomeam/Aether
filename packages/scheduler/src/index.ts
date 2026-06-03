@@ -1,10 +1,12 @@
 /**
  * Scheduler
- * 
+ *
  * Cron-like job scheduling for the agent system.
+ * NOTE: EventEmitter not compatible with Workers
+ * Use simple callback pattern or Workers-compatible event system
  */
 
-import { EventEmitter } from 'events';
+// import { EventEmitter } from 'events';
 
 // Job definition
 export interface Job {
@@ -39,71 +41,77 @@ function parseCron(schedule: string): number {
   return next.getTime();
 }
 
-export class Scheduler extends EventEmitter {
+export class Scheduler {
   private jobs = new Map<string, Job>();
   private running = false;
   private interval?: NodeJS.Timeout;
-  
+  private callbacks: Array<(event: string, data: any) => void> = [];
+
+  // Add callback for events
+  onEvent(callback: (event: string, data: any) => void) {
+    this.callbacks.push(callback);
+  }
+
   // Add a job
   addJob(name: string, schedule: string, handler: () => Promise<void>): string {
     const job: Job = {
-      id: crypto.randomUUID(),
+      id: Math.random().toString(36).substring(2, 15),
       name,
       schedule,
       handler,
       enabled: true,
     };
-    
+
     job.nextRun = parseCron(schedule);
     this.jobs.set(name, job);
-    this.emit('jobAdded', job);
-    
+    this.callbacks.forEach(cb => cb('jobAdded', job));
+
     return job.id;
   }
-  
+
   // Remove a job
   removeJob(name: string) {
     this.jobs.delete(name);
   }
-  
+
   // Enable/disable
   enableJob(name: string, enabled: boolean) {
     const job = this.jobs.get(name);
     if (job) job.enabled = enabled;
   }
-  
+
   // Start scheduler
   start() {
     if (this.running) return;
     this.running = true;
-    
+
     this.interval = setInterval(() => this.tick(), 10000); // Check every 10s
-    this.emit('started');
+    this.callbacks.forEach(cb => cb('started', null));
   }
-  
+
   // Stop scheduler
   stop() {
     if (this.interval) clearInterval(this.interval);
     this.running = false;
-    this.emit('stopped');
+    this.callbacks.forEach(cb => cb('stopped', null));
   }
   
   // Tick: run due jobs
   private async tick() {
     const now = Date.now();
-    
+
     for (const [name, job] of this.jobs) {
       if (!job.enabled) continue;
       if (!job.nextRun || now < job.nextRun) continue;
-      
+
       try {
         await job.handler();
         job.lastRun = now;
-        this.emit('jobRun', { job: name, status: 'success' });
+        this.callbacks.forEach(cb => cb('jobRun', { job: name, status: 'success' }));
       } catch (e) {
-        this.emit('jobRun', { job: name, status: 'error', error: (e as Error).message });
+        this.callbacks.forEach(cb => cb('jobRun', { job: name, status: 'error', error: (e as Error).message }));
       }
-      
+
       job.nextRun = parseCron(job.schedule);
     }
   }

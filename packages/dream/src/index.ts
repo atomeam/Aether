@@ -97,5 +97,3 @@ export function getDreamStatus() {
     idleMinutes: (Date.now() - lastActivity) / 60000,
   };
 }
-
-import crypto from 'crypto';

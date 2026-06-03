@@ -1,10 +1,12 @@
 /**
  * Alert Rules Engine
- * 
+ *
  * Configurable alert thresholds.
+ * NOTE: EventEmitter not compatible with Workers
+ * Use simple callback pattern or Workers-compatible event system
  */
 
-import { EventEmitter } from 'events';
+// import { EventEmitter } from 'events';
 
 // Alert rule
 export interface AlertRule {
@@ -32,27 +34,33 @@ export const DEFAULT_RULES: AlertRule[] = [
   { id: 'failures-high', name: 'High Failures', condition: 'failures_above', threshold: 10, severity: 'critical', enabled: true },
 ];
 
-export class AlertEngine extends EventEmitter {
+export class AlertEngine {
   private rules = new Map<string, AlertRule>();
-  
+  private callbacks: Array<(alert: AlertResult) => void> = [];
+
   constructor() {
     for (const rule of DEFAULT_RULES) {
       this.rules.set(rule.id, rule);
     }
   }
-  
+
+  // Add callback for alerts
+  onAlert(callback: (alert: AlertResult) => void) {
+    this.callbacks.push(callback);
+  }
+
   // Add rule
   addRule(rule: Omit<AlertRule, 'id'>) {
-    const id = crypto.randomUUID();
+    const id = Math.random().toString(36).substring(2, 15);
     this.rules.set(id, { ...rule, id });
     return id;
   }
-  
+
   // Remove rule
   removeRule(id: string) {
     return this.rules.delete(id);
   }
-  
+
   // Enable/disable
   enableRule(id: string, enabled: boolean) {
     const rule = this.rules.get(id);
@@ -89,16 +97,16 @@ export class AlertEngine extends EventEmitter {
       }
       
       results.push({ rule: rule.id, triggered, value, threshold: rule.threshold });
-      
+
       if (triggered) {
         rule.lastTriggered = Date.now();
-        this.emit('alert', { rule: rule.id, severity: rule.severity, value });
+        this.callbacks.forEach(cb => cb({ rule: rule.id, severity: rule.severity, value }));
       }
     }
-    
+
     return results;
   }
-  
+
   // List rules
   listRules() {
     return Array.from(this.rules.values());
@@ -106,5 +114,3 @@ export class AlertEngine extends EventEmitter {
 }
 
 export const alertEngine = new AlertEngine();
-
-import crypto from 'crypto';

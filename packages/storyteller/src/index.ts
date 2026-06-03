@@ -1,11 +1,13 @@
 /**
  * Storyteller
- * 
+ *
  * Human-readable narrative journal of learning.
+ * NOTE: fs and path not compatible with Workers
+ * Journaling needs to use KV/R2 storage in Workers environment
  */
 
-import fs from 'fs';
-import path from 'path';
+// import fs from 'fs';
+// import path from 'path';
 
 // Journal entry
 export interface JournalEntry {
@@ -17,27 +19,30 @@ export interface JournalEntry {
   keyInsight: string;
 }
 
-const JOURNAL_PATH = path.resolve(process.cwd(), '../../logs/journal.jsonl');
+// const JOURNAL_PATH = path.resolve(process.cwd(), '../../logs/journal.jsonl');
 
 function ensureDir() {
-  const dir = path.dirname(JOURNAL_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  // NOTE: fs and path not compatible with Workers
+  // const dir = path.dirname(JOURNAL_PATH);
+  // if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 // Write daily journal
 export function writeJournal(summary: string, events: string[], lessonsLearned: number, insight: string): JournalEntry {
-  ensureDir();
-  
+  // NOTE: fs and path not compatible with Workers
+  // Journaling needs to use KV/R2 storage in Workers environment
+  // ensureDir();
+
   const entry: JournalEntry = {
-    id: crypto.randomUUID(),
+    id: Math.random().toString(36).substring(2, 15),
     date: new Date().toISOString().split('T')[0],
     summary,
     events,
     lessonsLearned,
     keyInsight: insight,
   };
-  
-  fs.appendFileSync(JOURNAL_PATH, JSON.stringify(entry) + '\n');
+
+  // fs.appendFileSync(JOURNAL_PATH, JSON.stringify(entry) + '\n');
   return entry;
 }
 

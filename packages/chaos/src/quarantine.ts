@@ -1,17 +1,19 @@
 /**
  * Quarantine - Holding State for Failed Validations
- * 
+ *
  * Provides a holding state for proposals/outputs that fail validation.
  * Items in quarantine are inspectable but inert.
- * 
+ * NOTE: fs and path not compatible with Workers
+ * Quarantine logging needs to use KV/R2 in Workers environment
+ *
  * @version 1.0.0
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// import * as fs from 'fs';
+// import * as path from 'path';
 
-const LOG_DIR = './logs';
-const QUARANTINE_FILE = `${LOG_DIR}/quarantine.jsonl`;
+// const LOG_DIR = './logs';
+// const QUARANTINE_FILE = `${LOG_DIR}/quarantine.jsonl`;
 
 // --- Types ---
 
@@ -35,19 +37,14 @@ export interface QuarantinedItem {
 // --- Storage ---
 
 function loadQuarantine(): QuarantinedItem[] {
-  if (!fs.existsSync(QUARANTINE_FILE)) {
-    return [];
-  }
-  
-  const lines = fs.readFileSync(QUARANTINE_FILE, 'utf-8').split('\n').filter(Boolean);
-  return lines.map(line => JSON.parse(line));
+  // NOTE: fs not compatible with Workers
+  // Quarantine logging needs to use KV/R2 in Workers environment
+  return [];
 }
 
 function saveQuarantine(items: QuarantinedItem[]): void {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-  fs.writeFileSync(QUARANTINE_FILE, items.map(i => JSON.stringify(i)).join('\n') + '\n');
+  // NOTE: fs not compatible with Workers
+  // Quarantine logging needs to use KV/R2 in Workers environment
 }
 
 // --- Core Functions ---

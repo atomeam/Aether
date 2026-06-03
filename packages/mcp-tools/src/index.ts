@@ -17,15 +17,18 @@ const fileReadTool: Tool = {
   async execute(args) {
     const path = args.path as string;
     if (!path) throw new Error('path required');
-    
+
     // Security: Only allow reads within workspace
     if (!path.includes('/workspace/project/Aether')) {
       throw new Error('Access denied: path must be in workspace');
     }
-    
-    const fs = await import('fs/promises');
-    const content = await fs.readFile(path, 'utf-8');
-    return { path, content, length: content.length };
+
+    // NOTE: fs/promises not compatible with Workers
+    // File operations need to use R2 in Workers environment
+    // const fs = await import('fs/promises');
+    // const content = await fs.readFile(path, 'utf-8');
+    throw new Error('File read not available in Workers environment');
+    // return { path, content, length: content.length };
   }
 };
 
@@ -36,17 +39,20 @@ const fileWriteTool: Tool = {
   async execute(args) {
     const path = args.path as string;
     const content = args.content as string;
-    
+
     if (!path || content === undefined) throw new Error('path and content required');
-    
+
     // Security: Only allow writes within workspace
     if (!path.includes('/workspace/project/Aether')) {
       throw new Error('Access denied: path must be in workspace');
     }
-    
-    const fs = await import('fs/promises');
-    await fs.writeFile(path, content, 'utf-8');
-    return { path, written: true };
+
+    // NOTE: fs/promises not compatible with Workers
+    // File operations need to use R2 in Workers environment
+    // const fs = await import('fs/promises');
+    // await fs.writeFile(path, content, 'utf-8');
+    throw new Error('File write not available in Workers environment');
+    // return { path, written: true };
   }
 };
 
@@ -55,13 +61,15 @@ const gitStatusTool: Tool = {
   name: 'git_status',
   description: 'Check git repository status',
   async execute(args) {
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec.exec);
-    
-    const cwd = args.cwd as string || process.cwd();
-    const { stdout } = await execAsync('git status --short', { cwd });
-    return { status: stdout || 'clean', cwd };
+    // NOTE: child_process and util not compatible with Workers
+    // Git operations need to use Workers-compatible solution or be disabled
+    throw new Error('Git operations not available in Workers environment');
+    // const { exec } = await import('child_process');
+    // const { promisify } = await import('util');
+    // const execAsync = promisify(exec.exec);
+    // const cwd = args.cwd as string || process.cwd();
+    // const { stdout } = await execAsync('git status --short', { cwd });
+    // return { status: stdout || 'clean', cwd };
   }
 };
 
@@ -70,18 +78,18 @@ const gitCommitTool: Tool = {
   name: 'git_commit',
   description: 'Create a git commit',
   async execute(args) {
-    const message = args.message as string;
-    if (!message) throw new Error('message required');
-    
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec.exec);
-    
-    const cwd = args.cwd as string || process.cwd();
-    
-    await execAsync('git add -A', { cwd });
-    const { stdout } = await execAsync(`git commit -m "${message}"`, { cwd });
-    return { message, output: stdout };
+    // NOTE: child_process and util not compatible with Workers
+    // Git operations need to use Workers-compatible solution or be disabled
+    throw new Error('Git operations not available in Workers environment');
+    // const message = args.message as string;
+    // if (!message) throw new Error('message required');
+    // const { exec } = await import('child_process');
+    // const { promisify } = await import('util');
+    // const execAsync = promisify(exec.exec);
+    // const cwd = args.cwd as string || process.cwd();
+    // await execAsync('git add -A', { cwd });
+    // const { stdout } = await execAsync(`git commit -m "${message}"`, { cwd });
+    // return { message, output: stdout };
   }
 };
 
@@ -90,17 +98,9 @@ const gitDiffTool: Tool = {
   name: 'git_diff',
   description: 'Show uncommitted changes',
   async execute(args) {
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec.exec);
-    
-    const cwd = args.cwd as string || process.cwd();
-    const file = args.file as string || '';
-    
-    const cmd = file ? `git diff ${file}` : 'git diff';
-    const { stdout } = await execAsync(cmd, { cwd });
-    
-    return { diff: stdout || 'no changes', cwd, file: file || 'all' };
+    // NOTE: child_process not compatible with Workers
+    // Git operations need to use Workers-compatible solution or be disabled
+    throw new Error('Git operations not available in Workers environment');
   }
 };
 

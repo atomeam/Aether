@@ -1,14 +1,16 @@
 /**
  * Time Capsule
- * 
+ *
  * Daily signed snapshot of policy + lessons + ledger hash.
  * Provenance for audits.
+ * NOTE: fs, path, and crypto not compatible with Workers
+ * Time capsule storage needs to use KV/R2 in Workers environment
  */
 
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { createHash } from 'crypto';
+// import fs from 'fs';
+// import path from 'path';
+// import crypto from 'crypto';
+// import { createHash } from 'crypto';
 
 // Snapshot
 export interface CapsuleSnapshot {

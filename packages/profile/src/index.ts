@@ -1,14 +1,16 @@
 /**
  * Profile API
- * 
+ *
  * Read-only, scoped, signed API exposing lessons/patterns to external assistants.
  * This is the bridge from internal runtime to Loxa product.
+ * NOTE: crypto not compatible with Workers
+ * Use crypto.subtle in Workers environment
  */
 
 import { readLessons, getPatternConfidence, getLearnedPatterns } from '@aether/lessons';
 import { getStats } from '@aether/curator-audit';
 import { getStats as getTriageStats } from '@aether/triage';
-import crypto from 'crypto';
+// import crypto from 'crypto';
 
 // Profile data structure (what external assistants see)
 export interface AgentProfile {
@@ -100,9 +102,9 @@ export async function generateProfile(options?: {
   const avgConfidence = patterns.length > 0
     ? patterns.reduce((sum, p) => sum + p.confidence, 0) / patterns.length
     : 0;
-  
+
   const profile: AgentProfile = {
-    id: crypto.randomUUID(),
+    id: Math.random().toString(36).substring(2, 15),
     name: 'Aether',
     version: '1.0.0',
     capabilities: [
@@ -118,12 +120,25 @@ export async function generateProfile(options?: {
     signature: '', // Filled below
     generatedAt: Date.now(),
   };
-  
+
   // Sign the profile
+  // NOTE: crypto.createHash not compatible with Workers
+  // Use crypto.subtle in Workers environment
   const payload = JSON.stringify({ patterns, stats, generatedAt: profile.generatedAt });
-  profile.signature = crypto.createHash('sha256').update(payload).digest('hex');
-  
+  profile.signature = simpleHash(payload);
+
   return profile;
+}
+
+// Simple hash function for Workers compatibility
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16);
 }
 
 // Query patterns (public read-only API)
@@ -172,6 +187,6 @@ export async function queryPatterns(filters?: {
 export function verifyProfile(profile: AgentProfile): boolean {
   const { signature, ...rest } = profile;
   const payload = JSON.stringify({ patterns: rest.patterns, stats: rest.stats, generatedAt: profile.generatedAt });
-  const expected = crypto.createHash('sha256').update(payload).digest('hex');
+  const expected = simpleHash(payload);
   return signature === expected;
 }
