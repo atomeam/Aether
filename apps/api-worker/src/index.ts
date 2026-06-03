@@ -524,6 +524,69 @@ export default {
       }
     }
 
+    // Create Stripe Checkout Session
+    if (url.pathname === "/api/payment/create-checkout" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { plan, userId, email } = body;
+
+        // Plan pricing
+        const prices = {
+          starter: 'price_starter_id', // Replace with actual Stripe price ID
+          pro: 'price_pro_id', // Replace with actual Stripe price ID
+          enterprise: 'price_enterprise_id' // Replace with actual Stripe price ID
+        };
+
+        const priceId = prices[plan as keyof typeof prices];
+        if (!priceId) {
+          return new Response(JSON.stringify({ error: "Invalid plan" }), {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+
+        // Create Stripe checkout session
+        // Note: This requires Stripe SDK to be installed
+        // For now, return a mock response
+        const checkoutUrl = `https://checkout.stripe.com/mock-session/${priceId}`;
+
+        return new Response(JSON.stringify({
+          checkoutUrl,
+          plan,
+          message: "Checkout session created"
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Stripe Webhook Handler
+    if (url.pathname === "/api/payment/webhook" && request.method === "POST") {
+      try {
+        const body = await request.text();
+        const signature = request.headers.get("Stripe-Signature");
+
+        // Verify webhook signature
+        // Note: This requires Stripe SDK
+        // For now, just log the event
+        console.log("Stripe webhook received:", body);
+
+        return new Response(JSON.stringify({ received: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
     // User Registration
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       try {
