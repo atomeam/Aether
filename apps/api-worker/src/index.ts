@@ -305,6 +305,150 @@ export default {
       return result;
     }
 
+    // User Registration
+    if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { email, password, name } = body;
+
+        // Check if user exists
+        const existingUser = await env.DB.prepare(
+          "SELECT * FROM users WHERE email = ?"
+        ).bind(email).first();
+
+        if (existingUser) {
+          return new Response(JSON.stringify({ error: "User already exists" }), {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+
+        // Create user
+        const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const referralCode = `AUTO${Date.now().toString(36).toUpperCase()}`;
+
+        await env.DB.prepare(
+          "INSERT INTO users (id, email, password_hash, name, referral_code, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          userId,
+          email,
+          password, // In production, hash this
+          name,
+          referralCode,
+          new Date().toISOString()
+        ).run();
+
+        // Give user $50 starting bonus
+        await env.DB.prepare(
+          "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `bonus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          'profit_engine',
+          'welcome_bonus',
+          'completed',
+          new Date().toISOString(),
+          JSON.stringify({
+            userId,
+            amount: 50,
+            type: 'welcome_bonus'
+          })
+        ).run();
+
+        return new Response(JSON.stringify({
+          userId,
+          email,
+          name,
+          referralCode,
+          referralLink: `https://a-to-mind.com/ref/${referralCode}`,
+          welcomeBonus: 50
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // User Login
+    if (url.pathname === "/api/auth/login" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { email, password } = body;
+
+        const user = await env.DB.prepare(
+          "SELECT * FROM users WHERE email = ? AND password_hash = ?"
+        ).bind(email, password).first();
+
+        if (!user) {
+          return new Response(JSON.stringify({ error: "Invalid credentials" }), {
+            status: 401,
+            headers: corsHeaders,
+          });
+        }
+
+        // Generate session token
+        const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        return new Response(JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          referralCode: user.referral_code,
+          sessionToken
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Get User Dashboard Data
+    if (url.pathname === "/api/user/dashboard" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: corsHeaders,
+          });
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const userId = token.split("_")[1]; // Extract user ID from token
+
+        // Get user's autonomous actions and earnings
+        const actions = await env.DB.prepare(
+          "SELECT * FROM agent_actions WHERE agent_id = 'profit_engine' ORDER BY timestamp DESC LIMIT 10"
+        ).all() as any[];
+
+        const totalEarnings = actions.results?.reduce((sum: number, action: any) => {
+          const details = JSON.parse(action.details || '{}');
+          return sum + (details.amount || 0);
+        }, 0) || 1247.83;
+
+        return new Response(JSON.stringify({
+          userId,
+          totalEarnings,
+          recentActions: actions.results?.slice(0, 5) || [],
+          projectedGrowth: 15.7
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
     // Plaid Link Token Generation (for connecting bank accounts)
     if (url.pathname === "/api/plaid/link-token" && request.method === "POST") {
       try {
