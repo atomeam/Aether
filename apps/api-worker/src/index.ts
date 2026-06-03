@@ -305,6 +305,82 @@ export default {
       return result;
     }
 
+    // Get Leaderboard
+    if (url.pathname === "/api/leaderboard" && request.method === "GET") {
+      try {
+        // In production, this would fetch real data from database
+        // For now, return mock leaderboard data
+        const leaderboard = [
+          { name: 'Sarah M.', earnings: 15847.23, badge: '👑', streak: 45 },
+          { name: 'James K.', earnings: 12345.67, badge: '🔥', streak: 32 },
+          { name: 'Emily R.', earnings: 9876.54, badge: '⚡', streak: 28 },
+          { name: 'Michael T.', earnings: 8765.43, badge: '💎', streak: 21 },
+          { name: 'Jessica L.', earnings: 7654.32, badge: '🌟', streak: 18 }
+        ];
+
+        return new Response(JSON.stringify({ leaderboard }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // Daily Bonus Claim
+    if (url.pathname === "/api/bonus/daily" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { userId } = body;
+
+        // Check if user already claimed today
+        const today = new Date().toISOString().split('T')[0];
+        const existingClaim = await env.DB.prepare(
+          "SELECT * FROM agent_actions WHERE agent_id = 'profit_engine' AND action_taken = 'daily_bonus' AND details LIKE ?"
+        ).bind(`%"date":"${today}"%`).first();
+
+        if (existingClaim) {
+          return new Response(JSON.stringify({ error: "Already claimed today" }), {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+
+        // Calculate bonus based on streak (simplified for now)
+        const bonusAmount = 10 + Math.floor(Math.random() * 20); // $10-$30 random bonus
+
+        await env.DB.prepare(
+          "INSERT INTO agent_actions (id, agent_id, action_taken, status, timestamp, details) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `daily_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+          'profit_engine',
+          'daily_bonus',
+          'completed',
+          new Date().toISOString(),
+          JSON.stringify({
+            userId,
+            amount: bonusAmount,
+            date: today,
+            type: 'daily_bonus'
+          })
+        ).run();
+
+        return new Response(JSON.stringify({
+          bonusAmount,
+          message: `Daily bonus claimed! +$${bonusAmount}`
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
     // User Registration
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       try {

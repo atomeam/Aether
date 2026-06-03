@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, Sparkles, TrendingUp, Shield, Zap, Users, Gift, Copy, Check, X, Mail, Lock, User } from 'lucide-react';
+import { ArrowUpRight, Sparkles, TrendingUp, Shield, Zap, Users, Gift, Copy, Check, X, Mail, Lock, User, Trophy, Share2, Bell, Crown, Flame } from 'lucide-react';
 import ProfitEngine from './ProfitEngine';
 
 export default function SimpleDashboard() {
@@ -12,11 +12,55 @@ export default function SimpleDashboard() {
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationText, setNotificationText] = useState('');
+  const [currentEarnings, setCurrentEarnings] = useState(1247.83);
+  const [leaderboard, setLeaderboard] = useState([
+    { name: 'Sarah M.', earnings: 15847.23, badge: '👑' },
+    { name: 'James K.', earnings: 12345.67, badge: '🔥' },
+    { name: 'Emily R.', earnings: 9876.54, badge: '⚡' },
+    { name: 'Michael T.', earnings: 8765.43, badge: '💎' },
+    { name: 'Jessica L.', earnings: 7654.32, badge: '🌟' }
+  ]);
+
+  // Real-time earnings animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isAuthenticated) {
+        const increment = Math.random() * 0.5;
+        setCurrentEarnings(prev => prev + increment);
+        setUserEarnings(prev => prev + increment);
+        
+        // Random social proof notification
+        if (Math.random() > 0.95) {
+          const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley'];
+          const amounts = [23, 45, 67, 89, 112, 156];
+          const randomName = names[Math.floor(Math.random() * names.length)];
+          const randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
+          setNotificationText(`${randomName} just earned $${randomAmount}!`);
+          setShowNotification(true);
+          setTimeout(() => setShowNotification(false), 3000);
+        }
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText('https://a-to-mind.com/ref/AUTO2026');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareEarnings = () => {
+    const text = `I've earned $${userEarnings.toFixed(2)} with a-to-mind's autonomous AI! Start growing your wealth: https://a-to-mind.com/ref/AUTO2026`;
+    if (navigator.share) {
+      navigator.share({ text });
+    } else {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleAuth = async () => {
@@ -34,6 +78,7 @@ export default function SimpleDashboard() {
         setShowAuthModal(false);
         if (authMode === 'signup' && data.welcomeBonus) {
           setUserEarnings(prev => prev + data.welcomeBonus);
+          setCurrentEarnings(prev => prev + data.welcomeBonus);
         }
       }
     } catch (e) {
@@ -43,6 +88,14 @@ export default function SimpleDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#0f0f0f] text-white">
+      {/* Social Proof Notification */}
+      {showNotification && (
+        <div className="fixed top-4 right-4 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-xl rounded-xl p-4 flex items-center gap-3 z-50 animate-in slide-in-from-right">
+          <Bell className="w-5 h-5 text-emerald-400" />
+          <span className="text-sm font-medium">{notificationText}</span>
+        </div>
+      )}
+
       {/* Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -177,43 +230,123 @@ export default function SimpleDashboard() {
       {/* Live Stats */}
       <div className="max-w-7xl mx-auto px-8 -mt-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-emerald-400" />
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/60">Your Earnings This Month</div>
+                  <div className="text-3xl font-bold text-emerald-400">${currentEarnings.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-sm text-white/60">Your Earnings This Month</div>
-                <div className="text-3xl font-bold text-emerald-400">${userEarnings.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
-              </div>
+              <div className="text-sm text-white/40">+${(124.73 + (currentEarnings - userEarnings)).toFixed(2)} today</div>
             </div>
-            <div className="text-sm text-white/40">+${124.73} today</div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-[#c4a661]/20 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-[#c4a661]" />
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#c4a661]/10 rounded-full blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-[#c4a661]/20 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-[#c4a661]" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/60">Total Users</div>
+                  <div className="text-3xl font-bold text-[#c4a661]">{totalUsers.toLocaleString()}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-sm text-white/60">Total Users</div>
-                <div className="text-3xl font-bold text-[#c4a661]">{totalUsers.toLocaleString()}</div>
-              </div>
+              <div className="text-sm text-white/40">+247 new today</div>
             </div>
-            <div className="text-sm text-white/40">+247 new today</div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-purple-400" />
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/60">Autonomous Actions</div>
+                  <div className="text-3xl font-bold text-purple-400">1,247</div>
+                </div>
               </div>
-              <div>
-                <div className="text-sm text-white/60">Autonomous Actions</div>
-                <div className="text-3xl font-bold text-purple-400">1,247</div>
-              </div>
+              <div className="text-sm text-white/40">All optimized today</div>
             </div>
-            <div className="text-sm text-white/40">All optimized today</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Share Earnings CTA */}
+      {isAuthenticated && (
+        <div className="max-w-7xl mx-auto px-8 py-8">
+          <div className="bg-gradient-to-r from-emerald-500/10 to-[#c4a661]/10 border border-emerald-500/30 rounded-2xl p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Share Your Success</h3>
+                  <p className="text-sm text-white/60">Show others how a-to-mind is growing your wealth</p>
+                </div>
+              </div>
+              <button
+                onClick={shareEarnings}
+                className="bg-emerald-500 text-white font-medium px-6 py-3 rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2"
+              >
+                <Share2 className="w-5 h-5" />
+                Share Earnings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <Crown className="w-5 h-5 text-[#c4a661]" />
+              Top Earners This Month
+            </h3>
+            <div className="text-sm text-white/60">Updated live</div>
+          </div>
+          <div className="space-y-3">
+            {leaderboard.map((user, index) => (
+              <div key={index} className={`flex items-center justify-between p-4 rounded-xl ${
+                index === 0 ? 'bg-gradient-to-r from-[#c4a661]/20 to-emerald-500/20 border border-[#c4a661]/30' : 'bg-white/5'
+              }`}>
+                <div className="flex items-center gap-4">
+                  <div className="text-2xl">{user.badge}</div>
+                  <div>
+                    <div className="font-medium">{user.name}</div>
+                    <div className="text-sm text-white/60">
+                      {index === 0 && '🔥 On fire! '}
+                      {index === 1 && '⚡ Rising fast! '}
+                      {index === 2 && '💎 Consistent! '}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-emerald-400">${user.earnings.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+              </div>
+            ))}
+            {isAuthenticated && (
+              <div className="flex items-center justify-between p-4 rounded-xl bg-[#c4a661]/10 border border-[#c4a661]/30">
+                <div className="flex items-center gap-4">
+                  <div className="text-2xl">🎯</div>
+                  <div>
+                    <div className="font-medium">You ({userName})</div>
+                    <div className="text-sm text-white/60">Keep going!</div>
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-[#c4a661]">${currentEarnings.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
