@@ -13,10 +13,13 @@ interface S3Analysis {
     query_type: string;
     timestamp: string;
   }>;
-  index_suggestions?: Array<{
+  proposals?: Array<{
+    id: string;
     table: string;
-    suggested_index: string;
-    estimated_improvement: string;
+    sql_statement: string;
+    current_latency_ms: number;
+    projected_latency_ms: number;
+    expected_improvement: string;
     priority: string;
   }>;
   estimated_cost_savings?: string | null;
@@ -31,7 +34,9 @@ interface DatabaseInspectorProps {
 export default function DatabaseInspector({ isOpen, onClose, userPlan }: DatabaseInspectorProps) {
   const [analysis, setAnalysis] = useState<S3Analysis | null>(null);
   const [loading, setLoading] = useState(false);
+  const [executing, setExecuting] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [executedProposals, setExecutedProposals] = useState<Set<string>>(new Set());
 
   const runAnalysis = async () => {
     try {
@@ -48,6 +53,38 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
       setError('Failed to analyze database performance');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const executeProposal = async (proposal: any) => {
+    try {
+      setExecuting(proposal.id);
+      setError('');
+      const token = localStorage.getItem('aether_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/agents/s3/execute`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          proposal_id: proposal.id,
+          sql_statement: proposal.sql_statement,
+          table_name: proposal.table,
+          expected_improvement: proposal.expected_improvement
+        })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setExecutedProposals(prev => new Set([...prev, proposal.id]));
+      } else {
+        setError(data.error || 'Execution failed');
+      }
+    } catch (e) {
+      setError('Failed to execute proposal');
+    } finally {
+      setExecuting(null);
     }
   };
 
@@ -136,7 +173,7 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
                 <div className="flex-1">
                   <div className="font-medium text-yellow-300">Performance Issue Detected</div>
                   <div className="text-sm text-white/60">
-                    {analysis.total_slow_queries} slow queries detected. Upgrade to Pro for automated index suggestions and optimization.
+                    {analysis.total_slow_queries} slow queries detected. Upgrade to Pro for automated resolution proposals with 1-click execution.
                   </div>
                 </div>
                 <Lock className="w-5 h-5 text-yellow-400" />
@@ -167,34 +204,73 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
               </div>
             </div>
 
-            {/* Index Suggestions - Pro Only */}
-            {isPro && analysis.index_suggestions && analysis.index_suggestions.length > 0 && (
+            {/* Resolution Proposals - Pro Only */}
+            {isPro && analysis.proposals && analysis.proposals.length > 0 && (
               <div>
                 <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Index Suggestions
+                  <Zap className="w-4 h-4" />
+                  Resolution Proposals
                 </h4>
-                <div className="space-y-2">
-                  {analysis.index_suggestions.map((suggestion, index) => (
-                    <div key={index} className={`p-4 border rounded-lg ${
-                      suggestion.priority === 'high' ? 'border-red-500/30 bg-red-500/10' : 'border-yellow-500/30 bg-yellow-500/10'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium">{suggestion.table}</div>
-                        <div className="text-xs text-green-400">{suggestion.estimated_improvement}</div>
+                <div className="space-y-3">
+                  {analysis.proposals.map((proposal) => {
+                    const isExecuted = executedProposals.has(proposal.id);
+                    const isExecuting = executing === proposal.id;
+                    
+                    return (
+                      <div key={proposal.id} className={`p-4 border rounded-lg ${
+                        isExecuted 
+                          ? 'border-green-500/30 bg-green-500/10' 
+                          : proposal.priority === 'high' 
+                            ? 'border-red-500/30 bg-red-500/10' 
+                            : 'border-yellow-500/30 bg-yellow-500/10'
+                      }`}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="font-medium flex items-center gap-2">
+                              {proposal.table}
+                              {isExecuted && <CheckCircle className="w-4 h-4 text-green-400" />}
+                            </div>
+                            <div className="text-sm text-white/60 mt-1">
+                              {proposal.current_latency_ms}ms → {proposal.projected_latency_ms}ms
+                            </div>
+                          </div>
+                          <div className="text-sm text-green-400 font-medium">
+                            {proposal.expected_improvement}
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs text-white/40 font-mono mb-3 bg-black/30 p-2 rounded">
+                          {proposal.sql_statement}
+                        </div>
+                        
+                        {!isExecuted && (
+                          <button
+                            onClick={() => executeProposal(proposal)}
+                            disabled={isExecuting}
+                            className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          >
+                            {isExecuting ? (
+                              <>
+                                <RefreshCcw className="w-4 h-4 animate-spin" />
+                                Applying...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-4 h-4" />
+                                Approve & Apply
+                              </>
+                            )}
+                          </button>
+                        )}
+                        
+                        {isExecuted && (
+                          <div className="text-center text-sm text-green-400 font-medium">
+                            ✓ Index applied successfully
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-white/40 font-mono mb-2">
-                        {suggestion.suggested_index}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          suggestion.priority === 'high' ? 'bg-red-500/20 text-red-300' : 'bg-yellow-500/20 text-yellow-300'
-                        }`}>
-                          {suggestion.priority} priority
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -206,7 +282,7 @@ export default function DatabaseInspector({ isOpen, onClose, userPlan }: Databas
                   <span className="font-medium text-purple-300">Pro Feature</span>
                 </div>
                 <p className="text-sm text-white/60">
-                  Upgrade to Pro to see index suggestions and estimated cost savings
+                  Upgrade to Pro for autonomous resolution proposals with 1-click execution
                 </p>
               </div>
             )}

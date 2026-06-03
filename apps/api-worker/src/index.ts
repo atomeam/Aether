@@ -3302,26 +3302,30 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
           }))
         };
 
-        // For Pro users, generate index suggestions
+        // For Pro users, generate resolution proposals
         if (user.plan === 'pro' || user.plan === 'enterprise') {
-          const indexSuggestions = analysis.worst_offenders.map((query: any) => {
+          const proposals = analysis.worst_offenders.map((query: any, index: number) => {
             // Simple heuristic: if query has WHERE clause, suggest index on those columns
             const whereMatch = query.query_text.match(/WHERE\s+([\w_]+)/i);
             if (whereMatch) {
+              const projectedLatency = Math.max(20, Math.round(query.duration_ms * 0.1)); // 90% improvement estimate
               return {
+                id: `prop_${Date.now()}_${index}`,
                 table: query.table_name,
-                suggested_index: `CREATE INDEX IF NOT EXISTS idx_${query.table_name}_${whereMatch[1]} ON ${query.table_name}(${whereMatch[1]})`,
-                estimated_improvement: `${Math.round((query.duration_ms - 20) / query.duration_ms * 100)}% faster`,
+                sql_statement: `CREATE INDEX IF NOT EXISTS idx_${query.table_name}_${whereMatch[1]} ON ${query.table_name}(${whereMatch[1]})`,
+                current_latency_ms: query.duration_ms,
+                projected_latency_ms: projectedLatency,
+                expected_improvement: `${Math.round((query.duration_ms - projectedLatency) / query.duration_ms * 100)}% faster`,
                 priority: query.duration_ms > 200 ? 'high' : 'medium'
               };
             }
             return null;
           }).filter(Boolean);
 
-          analysis.index_suggestions = indexSuggestions;
+          analysis.proposals = proposals;
           analysis.estimated_cost_savings = `$${Math.round(slowQueries.results.length * 0.5)}/month`;
         } else {
-          analysis.index_suggestions = [];
+          analysis.proposals = [];
           analysis.estimated_cost_savings = null;
         }
 
@@ -3331,6 +3335,103 @@ Return as JSON array with structure: [{"title": "...", "description": "...", "su
       } catch (e: any) {
         console.error("S3 Database Inspector error:", e);
         return new Response(JSON.stringify({ error: "Database analysis failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // S3 Database Inspector - Execute index proposal
+    if (url.pathname === "/api/agents/s3/execute" && request.method === "POST") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = atob(token);
+        const userId = decoded.split(":")[0];
+
+        const { proposal_id, sql_statement, table_name, expected_improvement } = await request.json();
+
+        // Validate user is Pro tier
+        const user = await env.DB.prepare(
+          "SELECT plan FROM users WHERE id = ?"
+        ).bind(userId).first() as any;
+        
+        if (!user) {
+          return new Response(JSON.stringify({ error: "User not found" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (user.plan !== 'pro' && user.plan !== 'enterprise') {
+          return new Response(JSON.stringify({ error: "Pro tier required for autonomous execution" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Security: Validate SQL statement is a CREATE INDEX command
+        if (!sql_statement.trim().toUpperCase().startsWith("CREATE INDEX")) {
+          return new Response(JSON.stringify({ error: "Invalid SQL statement. Only CREATE INDEX commands are allowed." }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Execute the index creation
+        const executionStart = Date.now();
+        try {
+          await env.DB.prepare(sql_statement).run();
+        } catch (e: any) {
+          return new Response(JSON.stringify({ 
+            error: "Index creation failed",
+            details: e.message 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const executionTime = Date.now() - executionStart;
+
+        // Log the execution as an event
+        await env.DB.prepare(
+          "INSERT INTO events (event_id, source, kind, level, payload) VALUES (?, ?, ?, ?, ?)"
+        ).bind(
+          `evt_s3_execute_${Date.now()}`,
+          "s3_agent",
+          "index_created",
+          "info",
+          JSON.stringify({
+            user_id: userId,
+            proposal_id,
+            table_name,
+            sql_statement,
+            execution_time_ms: executionTime,
+            expected_improvement
+          })
+        ).run();
+
+        return new Response(JSON.stringify({
+          success: true,
+          execution_id: `exec_${Date.now()}`,
+          table_name,
+          sql_statement,
+          execution_time_ms: executionTime,
+          expected_improvement,
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        console.error("S3 Execution error:", e);
+        return new Response(JSON.stringify({ error: "Execution failed" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
