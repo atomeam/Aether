@@ -17,6 +17,7 @@ export default function SimpleDashboard() {
   const [userEarnings, setUserEarnings] = useState(1247.83);
   const [totalUsers, setTotalUsers] = useState(0);
   const [autonomousActions, setAutonomousActions] = useState(0);
+  const [recentActions, setRecentActions] = useState<any[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
@@ -123,7 +124,6 @@ export default function SimpleDashboard() {
       .then(data => {
         if (data.count !== undefined) {
           setTotalUsers(data.count);
-          setAutonomousActions(data.count); // For now, match user count
         }
       })
       .catch(err => console.error('Failed to fetch user count:', err));
@@ -158,6 +158,34 @@ export default function SimpleDashboard() {
       })
       .catch(err => console.error('Failed to fetch leaderboard:', err));
   }, []);
+
+  // Fetch real autonomous actions
+  useEffect(() => {
+    const token = localStorage.getItem('session_token');
+    if (token && isAuthenticated) {
+      fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/actions/recent', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.actions) {
+            setRecentActions(data.actions);
+            setAutonomousActions(data.totalCount || data.actions.length);
+          }
+        })
+        .catch(err => console.error('Failed to fetch actions:', err));
+    } else {
+      // For owner mode, count all profit_engine actions
+      fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/actions/recent')
+        .then(res => res.json())
+        .then(data => {
+          if (data.totalCount) {
+            setAutonomousActions(data.totalCount);
+          }
+        })
+        .catch(err => console.error('Failed to fetch actions:', err));
+    }
+  }, [isAuthenticated]);
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText('https://a-to-mind.com/ref/AUTO2026');
@@ -392,27 +420,23 @@ export default function SimpleDashboard() {
                 Recent Autonomous Actions
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="font-medium">Cost Optimization</div>
-                    <div className="text-sm text-white/60">Reduced infrastructure costs by 23%</div>
+                {recentActions.length > 0 ? (
+                  recentActions.map((action, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <div className="font-medium capitalize">{action.action.replace(/_/g, ' ')}</div>
+                        <div className="text-sm text-white/60">Status: {action.status}</div>
+                      </div>
+                      {action.amount && (
+                        <div className="text-emerald-400 font-bold">+${action.amount.toFixed(2)}</div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-white/40 py-4">
+                    No recent actions
                   </div>
-                  <div className="text-emerald-400 font-bold">+$312</div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="font-medium">Revenue Anomaly Detection</div>
-                    <div className="text-sm text-white/60">Identified 2 high-value opportunities</div>
-                  </div>
-                  <div className="text-emerald-400 font-bold">+$891</div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div>
-                    <div className="font-medium">Conversion Optimization</div>
-                    <div className="text-sm text-white/60">Improved conversion rate by 15%</div>
-                  </div>
-                  <div className="text-emerald-400 font-bold">+$44</div>
-                </div>
+                )}
               </div>
             </div>
 

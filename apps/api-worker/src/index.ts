@@ -305,6 +305,49 @@ export default {
       return result;
     }
 
+    // Get Real Autonomous Actions
+    if (url.pathname === "/api/actions/recent" && request.method === "GET") {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        let userId = null;
+        
+        if (authHeader) {
+          const token = authHeader.replace("Bearer ", "");
+          userId = token.split("_")[1]; // Extract user ID from token
+        }
+
+        // Get recent autonomous actions from database
+        const result = await env.DB.prepare(`
+          SELECT * FROM agent_actions
+          WHERE agent_id = 'profit_engine'
+          ORDER BY timestamp DESC
+          LIMIT 5
+        `).all();
+
+        const actions = result.map(row => ({
+          action: row.action_taken,
+          amount: row.details && JSON.parse(row.details).amount,
+          timestamp: row.timestamp,
+          status: row.status
+        }));
+
+        // Get total count
+        const countResult = await env.DB.prepare(
+          "SELECT COUNT(*) as count FROM agent_actions WHERE agent_id = 'profit_engine'"
+        ).first();
+        const totalCount = countResult?.count || 0;
+
+        return new Response(JSON.stringify({ actions, userId, totalCount }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
     // Get User Earnings (Real)
     if (url.pathname === "/api/user/earnings" && request.method === "GET") {
       try {
