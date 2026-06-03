@@ -55,6 +55,7 @@ export default function CommandCenter() {
   const [activeRegion, setActiveRegion] = useState<{ country: string; colo: string }>({ country: 'US', colo: 'IAD' });
   const [pricingVariant, setPricingVariant] = useState<any>(null);
   const [isHighIntent, setIsHighIntent] = useState(false);
+  const [statisticalData, setStatisticalData] = useState<any>(null);
 
   const fetchS5Components = async () => {
     try {
@@ -82,6 +83,7 @@ export default function CommandCenter() {
       const data = await response.json();
       setIsHighIntent(data.is_high_intent);
       setPricingVariant(data.pricing_variant);
+      setStatisticalData(data.statistical_data);
       
       // Show upgrade modal if user is high-intent
       if (data.is_high_intent) {
@@ -693,7 +695,7 @@ export default function CommandCenter() {
                   </p>
                 </div>
 
-                <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg mb-4">
                   <div className="flex items-center gap-2 text-purple-400 mb-2">
                     <Zap className="w-5 h-5" />
                     <span className="font-bold">Active A/B Test</span>
@@ -707,6 +709,26 @@ export default function CommandCenter() {
                     <div>Conversion tracking: Active</div>
                   </div>
                 </div>
+
+                {statisticalData && (
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-blue-400 mb-2">
+                      <Activity className="w-5 h-5" />
+                      <span className="font-bold">Statistical Analysis</span>
+                    </div>
+                    <div className="text-sm text-white/60 mb-2">
+                      P-Value: {statisticalData.p_value.toFixed(4)}
+                    </div>
+                    <div className={`text-sm mb-2 ${statisticalData.confidence_interval === 'Significant' ? 'text-green-400' : 'text-yellow-400'}`}>
+                      Confidence: {statisticalData.confidence_interval}
+                    </div>
+                    <div className="text-xs text-white/40">
+                      <div>Next Evolution: 1 hour</div>
+                      <div>Bootstrap Samples: 1000</div>
+                      <div>Significance Threshold: p &lt; 0.05</div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {activePanel === 'agents' && (

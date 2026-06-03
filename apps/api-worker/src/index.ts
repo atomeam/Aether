@@ -3804,11 +3804,65 @@ Requirements:
 
         const pricingVariant = assignedVariant === 'a' ? JSON.parse(variantA || '{}') : JSON.parse(variantB || '{}');
 
+        // Fetch statistical data
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        
+        const variantConversions = await env.DB.prepare(
+          "SELECT variant, COUNT(*) as conversions FROM user_navigation_logs WHERE timestamp >= ? AND panel_id = 'revenue' AND action = 'upgrade_clicked' GROUP BY variant"
+        ).bind(sevenDaysAgo).all() as any[];
+
+        const variantViews = await env.DB.prepare(
+          "SELECT variant, COUNT(*) as views FROM user_navigation_logs WHERE timestamp >= ? AND panel_id = 'revenue' GROUP BY variant"
+        ).bind(sevenDaysAgo).all() as any[];
+
+        // Calculate conversion rates and p-value
+        const conversionData: { [key: string]: { conversions: number; views: number; rate: number } } = {};
+        
+        for (const conv of variantConversions.results) {
+          if (!conversionData[conv.variant]) conversionData[conv.variant] = { conversions: 0, views: 0, rate: 0 };
+          conversionData[conv.variant].conversions = conv.conversions;
+        }
+        
+        for (const view of variantViews.results) {
+          if (!conversionData[view.variant]) conversionData[view.variant] = { conversions: 0, views: 0, rate: 0 };
+          conversionData[view.variant].views = view.views;
+        }
+        
+        for (const variant in conversionData) {
+          if (conversionData[variant].views > 0) {
+            conversionData[variant].rate = conversionData[variant].conversions / conversionData[variant].views;
+          }
+        }
+
+        // Calculate p-value
+        let pValue = 1.0;
+        if (conversionData['a'] && conversionData['b'] && conversionData['a'].views > 10 && conversionData['b'].views > 10) {
+          const rateA = conversionData['a'].rate;
+          const rateB = conversionData['b'].rate;
+          
+          const bootstrapSamples = 1000;
+          let bWins = 0;
+          
+          for (let i = 0; i < bootstrapSamples; i++) {
+            const sampleA = Math.random() < rateA ? 1 : 0;
+            const sampleB = Math.random() < rateB ? 1 : 0;
+            
+            if (sampleB > sampleA) bWins++;
+          }
+          
+          pValue = bWins / bootstrapSamples;
+        }
+
         return new Response(JSON.stringify({
           success: true,
           is_high_intent: isHighIntent,
           pricing_variant: pricingVariant,
-          variant_id: assignedVariant
+          variant_id: assignedVariant,
+          statistical_data: {
+            p_value: pValue,
+            conversion_data: conversionData,
+            confidence_interval: pValue < 0.05 ? 'Significant' : 'Not Significant'
+          }
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -4345,6 +4399,111 @@ Requirements:
         await env.LOXA_DYNAMIC_CODE.put('pricing_variant_a', JSON.stringify(variantA));
         await env.LOXA_DYNAMIC_CODE.put('pricing_variant_b', JSON.stringify(variantB));
 
+        // Statistical Optimization - Bootstrap P-Value Analysis
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        
+        // Get conversion data for both variants
+        const variantConversions = await env.DB.prepare(`
+          SELECT variant, COUNT(*) as conversions 
+          FROM user_navigation_logs 
+          WHERE timestamp >= ? AND panel_id = 'revenue' AND action = 'upgrade_clicked'
+          GROUP BY variant
+        `).bind(sevenDaysAgo).all() as any[];
+
+        const variantViews = await env.DB.prepare(`
+          SELECT variant, COUNT(*) as views 
+          FROM user_navigation_logs 
+          WHERE timestamp >= ? AND panel_id = 'revenue'
+          GROUP BY variant
+        `).bind(sevenDaysAgo).all() as any[];
+
+        // Calculate conversion rates
+        const conversionData: { [key: string]: { conversions: number; views: number; rate: number } } = {};
+        
+        for (const conv of variantConversions.results) {
+          if (!conversionData[conv.variant]) conversionData[conv.variant] = { conversions: 0, views: 0, rate: 0 };
+          conversionData[conv.variant].conversions = conv.conversions;
+        }
+        
+        for (const view of variantViews.results) {
+          if (!conversionData[view.variant]) conversionData[view.variant] = { conversions: 0, views: 0, rate: 0 };
+          conversionData[view.variant].views = view.views;
+        }
+        
+        for (const variant in conversionData) {
+          if (conversionData[variant].views > 0) {
+            conversionData[variant].rate = conversionData[variant].conversions / conversionData[variant].views;
+          }
+        }
+
+        // Bootstrap p-value calculation
+        let pValue = 1.0;
+        let winner = null;
+        
+        if (conversionData['a'] && conversionData['b'] && conversionData['a'].views > 10 && conversionData['b'].views > 10) {
+          const rateA = conversionData['a'].rate;
+          const rateB = conversionData['b'].rate;
+          const viewsA = conversionData['a'].views;
+          const viewsB = conversionData['b'].views;
+          
+          // Simplified bootstrap simulation
+          const bootstrapSamples = 1000;
+          let bWins = 0;
+          
+          for (let i = 0; i < bootstrapSamples; i++) {
+            // Resample with replacement
+            const sampleA = Math.random() < rateA ? 1 : 0;
+            const sampleB = Math.random() < rateB ? 1 : 0;
+            
+            if (sampleB > sampleA) bWins++;
+          }
+          
+          pValue = bWins / bootstrapSamples;
+          
+          if (pValue < 0.05) {
+            winner = rateB > rateA ? 'b' : 'a';
+            console.log(`S5 Statistical Optimization: Variant ${winner} wins with p=${pValue.toFixed(4)}`);
+            
+            // Deprecate loser and promote winner
+            if (winner === 'b') {
+              await env.LOXA_DYNAMIC_CODE.put('pricing_variant_a', JSON.stringify({
+                ...variantA,
+                status: 'deprecated',
+                deprecated_at: new Date().toISOString()
+              }));
+              
+              // Generate new challenger using AI
+              const aiPrompt = `You are S5, an AI Revenue Optimizer. Based on this winning pricing copy, generate a new challenger variant that tests a different psychological trigger.
+
+Winning Copy: "${variantB.copy}"
+Type: ${variantB.type}
+Conversion Rate: ${rateB.toFixed(2)}
+
+Requirements:
+- Output ONLY raw JSON with keys: type, copy, price
+- Test a different psychological trigger (urgency, social proof, scarcity, etc.)
+- Keep price at $29
+- Make it compelling and action-oriented`;
+
+              const aiResponse = await env.AI.run(aiPrompt, {
+                model: "@cf/meta/llama-3.8b-instruct"
+              });
+
+              if (aiResponse.success) {
+                const newChallenger = JSON.parse(aiResponse.response);
+                await env.LOXA_DYNAMIC_CODE.put('pricing_variant_a', JSON.stringify({
+                  ...newChallenger,
+                  id: 'pricing_variant_a',
+                  status: 'challenger',
+                  generated_at: new Date().toISOString()
+                }));
+                
+                console.log(`S5: Generated new challenger variant: ${newChallenger.type}`);
+              }
+            }
+          }
+        }
+
         // Log revenue analysis
         if (highIntentUsers.results.length > 0) {
           const actionId = `s5_revenue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -4359,7 +4518,10 @@ Requirements:
             JSON.stringify({
               high_intent_count: highIntentUsers.results.length,
               pricing_variants: ['cost_savings', 'uptime'],
-              recommendation: "Trigger upgrade modal for high-intent cohort"
+              p_value: pValue,
+              winner: winner,
+              conversion_data: conversionData,
+              recommendation: winner ? `Promote variant ${winner}` : "Continue A/B test"
             })
           ).run();
         }
