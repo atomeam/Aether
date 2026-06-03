@@ -155,15 +155,9 @@ const lessonsWriteTool: Tool = {
   name: 'lessons_write',
   description: 'Write a lesson to the Lessons DB',
   async execute(args) {
-    const { reflect } = await import('./src/agents/reflector.js');
-    const result = await reflect({
-      pattern: args.pattern as string,
-      suggestion: args.suggestion as string,
-      action: args.action as string,
-      outcome: args.outcome as 'success' | 'failure' | 'noop',
-      confidence: args.confidence as number,
-    });
-    return result;
+    // DISABLED - reflector import path issue
+    // const { reflect } = await import('./src/agents/reflector.js');
+    throw new Error('lessons_write tool disabled - reflector import path needs fixing');
   }
 };
 

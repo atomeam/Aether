@@ -12,7 +12,7 @@
 import { default as app } from './server';
 
 // Shared constants
-const VERSION = '0.16.2';
+const VERSION = '1.0.0';
 const SERVICE = 'aether-bridge';
 
 // No-store JSON helper - prevents stale cache
@@ -548,7 +548,7 @@ export default {
   </style>
 </head>
 <body>
-  <h1>AETHER BRIDGE <span style="color:#666">v0.3.0</span></h1>
+  <h1>AETHER BRIDGE <span style="color:#666">v${VERSION}</span></h1>
   <div class="meta">Operator dashboard &middot; ${new Date().toISOString()}</div>
 
   <div class="cards">
@@ -986,12 +986,22 @@ export default {
             const expectedSigHex = Array.from(new Uint8Array(expectedSig))
               .map(b => b.toString(16).padStart(2, '0'))
               .join('');
-            
+
             const providedSig = signature.replace(/^sha256=/, '');
-            
-            if (expectedSigHex === providedSig) {
+
+            // Constant-time comparison to prevent timing attacks
+            if (expectedSigHex.length !== providedSig.length) {
+              valid = false;
+            } else {
+              let diff = 0;
+              for (let i = 0; i < expectedSigHex.length; i++) {
+                diff |= expectedSigHex.charCodeAt(i) ^ providedSig.charCodeAt(i);
+              }
+              valid = diff === 0;
+            }
+
+            if (valid) {
               agentName = agent;
-              valid = true;
               break;
             }
           }

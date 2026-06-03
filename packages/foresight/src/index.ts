@@ -35,8 +35,8 @@ export function scorePredictions(windowDays = 7): { scored: number; accuracy: nu
   
   const now = Date.now();
   const windowMs = windowDays * 24 * 60 * 60 * 1000;
-  
-  let correct = 0;
+
+  let correctCount = 0;
   let scored = 0;
   
   const newLines: string[] = [];
@@ -50,23 +50,23 @@ export function scorePredictions(windowDays = 7): { scored: number; accuracy: nu
       // For now, simulate based on confidence
       const actual = pred.predictedConfidence > 0.5 ? 'success' : 'failure';
       const correct = actual === pred.predictedOutcome;
-      
+
       pred.actualOutcome = actual;
       pred.actualConfidence = correct ? 1.0 : 0.0;
       pred.scoredAt = now;
-      
+
       scored++;
-      if (correct) correct++;
+      if (correct) correctCount++;
     }
     
     newLines.push(JSON.stringify(pred));
   }
   
   fs.writeFileSync(PREDICTIONS_PATH, newLines.join('\n') + '\n');
-  
+
   return {
     scored,
-    accuracy: scored > 0 ? correct / scored : 0,
+    accuracy: scored > 0 ? correctCount / scored : 0,
   };
 }
 

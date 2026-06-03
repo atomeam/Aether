@@ -5,7 +5,7 @@ BASE="${AETHER_BRIDGE_URL:-https://aether.a-to-mind.com}"
 DB_NAME="${AETHER_BRIDGE_DB:-aether-bridge-db}"
 REPO_ROOT="${REPO_ROOT:-.}"
 
-echo "Testing Aether Bridge v0.2.0 (Extended Smoke Test)..."
+echo "Testing Aether Bridge v1.0.0 (Extended Smoke Test)..."
 echo "Base URL: $BASE"
 echo "Database: $DB_NAME"
 echo ""
@@ -52,7 +52,7 @@ assert_string_absent() {
     fi
 }
 
-echo "Testing Aether Bridge v0.2.0 (Extended Smoke Test)..."
+echo "Testing Aether Bridge v1.0.0 (Extended Smoke Test)..."
 echo "Base URL: $BASE"
 echo "Database: $DB_NAME"
 echo ""

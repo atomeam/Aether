@@ -109,6 +109,9 @@ const DEFAULT_PATH_POLICY: PathPolicy[] = [
   },
 ];
 
+// Export default path policy for external consumers
+export { DEFAULT_PATH_POLICY };
+
 export function getPathPolicy(tool: string): PathPolicy | undefined {
   return DEFAULT_PATH_POLICY.find(p => p.tool === tool);
 }

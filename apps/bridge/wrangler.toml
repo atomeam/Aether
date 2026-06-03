@@ -11,11 +11,6 @@ account_id = "95745fedbea06314e24c27233033a37d"
 main = "src/worker.ts"
 compatibility_date = "2024-12-01"
 
-# KV Namespaces
-routes = [
-  { pattern = "bridge.a-to-mind.com/*", custom_domain = true }
-]
-
 [[kv_namespaces]]
 binding = "STATE"
 id = "7319ee9195df4ccf8f4b2c8449dd7930"
@@ -30,7 +25,6 @@ binding = "DB"
 database_name = "council-routing-db"
 database_id = "218e0bc6-f955-45d1-b9bf-276d384917c7"
 
-# Cloudflare Queue - Consumer (processes curator-jobs)
 [[d1_databases]]
 binding = "BRIDGE_DB"
 database_name = "aether-bridge-db"
@@ -40,6 +34,7 @@ database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
 binding = "METRICS"
 id = "49202b2460a74d2dbd6d747d35dda5b7"
 
+# Cloudflare Queue - Consumer (processes curator-jobs)
 [[queues.producers]]
 binding = "CURATOR_QUEUE"
 queue = "curator-jobs"
@@ -54,6 +49,10 @@ max_retries = 3
 binding = "MYBROWSER"
 
 # R2 Bucket for execution logs
+[[r2_buckets]]
+binding = "_LOGS"
+bucket_name = "aether-logs"
+
 # ACTIONS queue - needs to be created via Cloudflare API
 # [[queues.producers]]
 # binding = "ACTIONS"
@@ -64,27 +63,21 @@ binding = "MYBROWSER"
 # max_batch_size = 10
 # max_retries = 3
 
-[browser]
-binding = "MYBROWSER"
-
 [[services]]
 binding = "DISPATCHER"
 service = "aether"
-
-[triggers]
-crons = ["*/15 * * * *", "0 * * * *"]
-
-[[r2_buckets]]
-binding = "_LOGS"
-bucket_name = "aether-logs"
 
 # Service Binding - Call aether (dispatcher) directly
 [[services]]
 binding = "AETHER"
 service = "aether"
 
+[triggers]
+crons = ["*/15 * * * *", "0 * * * *"]
+
 [vars]
 WORKER_ROLE = "executor"
+
 [[routes]]
 pattern = "bridge.a-to-mind.com"
 custom_domain = true

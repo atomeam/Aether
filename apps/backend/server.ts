@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import { parseEnv, BackendEnvSchema } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
-import crypto from "crypto";
 import express from "express";
 
 dotenv.config();
@@ -293,18 +292,20 @@ async function startServer() {
   });
 
   // Curator policy (read-only)
+  // DISABLED - Workers don't support fs.readFileSync
+  // TODO: Move policy to KV or D1, or inline as constant
+  /*
   app.get("/api/agents/curator/policy", async (req, res) => {
     try {
-      const fs = await import('fs');
-      const policy = fs.readFileSync(
-        '../../packages/curator/policy.yaml',
-        'utf-8'
-      );
+      // Import static policy file at build time (Workers-compatible)
+      const policyModule = await import('../../packages/curator/policy.yaml?raw');
+      const policy = policyModule.default || policyModule;
       res.json({ policy, format: 'yaml' });
     } catch (e: any) {
       res.status(404).json({ error: e.message });
     }
   });
+  */
 
   // Evaluate ledger for patterns
   app.get("/api/agents/evaluate", async (req, res) => {
@@ -363,7 +364,7 @@ async function startServer() {
   app.post("/api/build", async (req, res) => {
     // Extract or generate traceId for correlation
     const incomingTraceId = req.headers["x-trace-id"]?.toString()
-    const traceId = incomingTraceId || `trace_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`
+    const traceId = incomingTraceId || `trace_${Date.now()}_${globalThis.crypto.getRandomValues(new Uint8Array(4)).toString("hex")}`
     
     const txLog = createTraceLogger({ traceId })
     txLog.info({ promptLength: req.body.prompt?.length }, "Inbound build request")
@@ -417,7 +418,8 @@ async function startServer() {
       logCuratorVerdict(verdict, prompt);
 
       // Commit to ledger - fail-soft, never block response
-      const promptHash = crypto.createHash("md5").update(prompt).digest("hex")
+      const promptHashBuffer = await globalThis.crypto.subtle.digest('MD5', new TextEncoder().encode(prompt))
+      const promptHash = Array.from(new Uint8Array(promptHashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('')
       commitToLedger({
         traceId,
         prompt,

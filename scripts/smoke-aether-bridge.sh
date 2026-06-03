@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE="${AETHER_BRIDGE_URL:-https://aether.atomicmoonbeam88.workers.dev}"
 
-echo "Testing Aether Bridge v0.2.0..."
+echo "Testing Aether Bridge v1.0.0..."
 echo "Base URL: $BASE"
 echo ""
 
