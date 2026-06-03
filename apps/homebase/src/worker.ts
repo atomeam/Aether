@@ -33,7 +33,7 @@ function renderDashboard(status: any): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aether Workspace</title>
+  <title>a-to-mind your business</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -76,8 +76,8 @@ function renderDashboard(status: any): string {
 <body>
   <div class="container">
     <header>
-      <h1>🏛️ Aether Workspace</h1>
-      <p class="subtitle">Connected multi-worker system</p>
+      <h1>a-to-mind your business</h1>
+      <p class="subtitle">The World's First Autonomous Business Engine</p>
       <p style="margin-top: 1rem; opacity: 0.5;">Version: ${VERSION}</p>
     </header>
     
@@ -86,7 +86,7 @@ function renderDashboard(status: any): string {
     </div>
     
     <footer>
-      <p>Aether Workspace &copy; ${new Date().getFullYear()}</p>
+      <p>a-to-mind &copy; ${new Date().getFullYear()}</p>
     </footer>
   </div>
 </body>
