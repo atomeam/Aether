@@ -119,6 +119,46 @@ export function getPathPolicy(tool: string): PathPolicy | undefined {
 }
 
 // ============================================================================
+// WORKERS-SAFE PATH UTILITIES
+// ============================================================================
+
+// Simple path utilities for Workers compatibility
+// NOTE: This is a simplified implementation for Workers environment
+// Full path normalization and security handling should use R2/KV in production
+
+function pathJoin(...parts: string[]): string {
+  return parts.filter(Boolean).join('/').replace(/\/+/g, '/');
+}
+
+function pathIsAbsolute(pathStr: string): boolean {
+  return pathStr.startsWith('/');
+}
+
+function pathResolve(base: string, relative: string): string {
+  if (pathIsAbsolute(relative)) {
+    return relative;
+  }
+  return pathJoin(base, relative);
+}
+
+function pathNormalize(pathStr: string): string {
+  // Remove . and .. segments (simplified)
+  const parts = pathStr.split('/').filter(Boolean);
+  const result: string[] = [];
+
+  for (const part of parts) {
+    if (part === '.') continue;
+    if (part === '..') {
+      result.pop();
+    } else {
+      result.push(part);
+    }
+  }
+
+  return '/' + result.join('/');
+}
+
+// ============================================================================
 // TENANT / PROFILE NAMESPACE
 // ============================================================================
 
@@ -127,7 +167,7 @@ export function getSandboxRoot(profileId: string): string {
   if (!config.perTenantNamespacing) {
     return config.basePath;
   }
-  return path.join(config.basePath, profileId);
+  return pathJoin(config.basePath, profileId);
 }
 
 // Resolve a path to its sandbox-limited version
@@ -137,21 +177,21 @@ export function resolveSandboxPath(profileId: string, requestedPath: string): {
   reason?: string;
 } {
   const sandboxRoot = getSandboxRoot(profileId);
-  
+
   // Resolve to absolute
-  const absPath = path.isAbsolute(requestedPath)
+  const absPath = pathIsAbsolute(requestedPath)
     ? requestedPath
-    : path.resolve(process.cwd(), requestedPath);
-  
+    : pathResolve(process.cwd(), requestedPath);
+
   // Check it's within sandbox (or explicitly allowed)
-  const normalized = path.normalize(absPath);
-  const normalizedRoot = path.normalize(sandboxRoot);
-  
+  const normalized = pathNormalize(absPath);
+  const normalizedRoot = pathNormalize(sandboxRoot);
+
   // Allow if under sandbox root
   if (normalized.startsWith(normalizedRoot)) {
     return { resolved: normalized, allowed: true };
   }
-  
+
   // Check explicitly allowed external paths
   const toolPolicy = getPathPolicy('file_write');
   if (toolPolicy) {
@@ -161,7 +201,7 @@ export function resolveSandboxPath(profileId: string, requestedPath: string): {
       }
     }
   }
-  
+
   return {
     resolved: normalized,
     allowed: false,
