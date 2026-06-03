@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, AlertTriangle, RefreshCcw, LogOut, User, CreditCard, X, MessageSquare, Settings, DollarSign, Server, Gift, Layout, Zap, Activity, Users, Target, Command, Maximize2, Minimize2, Cpu, Database, Globe, Shield, Clock, ArrowUpRight, Lock, Star, Trophy, Flame, Mail, CheckCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, RefreshCcw, LogOut, User, CreditCard, X, MessageSquare, Settings, DollarSign, Server, Gift, Layout, Zap, Activity, Users, Target, Command, Maximize2, Minimize2, Cpu, Database, Globe, Shield, Clock, ArrowUpRight, Star, Trophy, Flame, Mail, CheckCircle } from 'lucide-react';
 import GamifiedReferralProgram from './GamifiedReferralProgram';
 import DevOpsToolkit from './DevOpsToolkit';
 import CommandPalette from './CommandPalette';
@@ -56,6 +56,11 @@ export default function CommandCenter() {
   const [pricingVariant, setPricingVariant] = useState<any>(null);
   const [isHighIntent, setIsHighIntent] = useState(false);
   const [statisticalData, setStatisticalData] = useState<any>(null);
+
+  // Pluralization helper
+  const pluralize = (count: number, singular: string, plural: string) => {
+    return count === 1 ? singular : plural;
+  };
 
   const fetchS5Components = async () => {
     try {
@@ -343,8 +348,8 @@ export default function CommandCenter() {
         id: 'infrastructure',
         title: 'Infrastructure',
         icon: Server,
-        value: isScanning ? 'Scanning...' : `${telemetryData.infrastructure.total} Systems`,
-        trend: isScanning ? 'Running S1 Agent...' : telemetryData.infrastructure.healthy === telemetryData.infrastructure.total ? '✓ All Healthy' : `${telemetryData.infrastructure.total - telemetryData.infrastructure.healthy} issues`,
+        value: isScanning ? 'Scanning...' : `${telemetryData.infrastructure.total} ${pluralize(telemetryData.infrastructure.total, 'System', 'Systems')}`,
+        trend: isScanning ? 'Running S1 Agent...' : telemetryData.infrastructure.healthy === telemetryData.infrastructure.total ? '✓ All Healthy' : `${telemetryData.infrastructure.total - telemetryData.infrastructure.healthy} ${pluralize(telemetryData.infrastructure.total - telemetryData.infrastructure.healthy, 'Issue', 'Issues')}`,
         status: isScanning ? 'warning' : telemetryData.infrastructure.healthy === telemetryData.infrastructure.total ? 'good' : 'warning',
         proOnly: false
       },
@@ -352,7 +357,7 @@ export default function CommandCenter() {
         id: 'referrals',
         title: 'Referrals',
         icon: Users,
-        value: `${telemetryData.referrals.active} Active`,
+        value: `${telemetryData.referrals.active} ${pluralize(telemetryData.referrals.active, 'Referral', 'Referrals')}`,
         trend: `+$${telemetryData.referrals.earned} earned`,
         status: 'good',
         proOnly: false
@@ -362,18 +367,18 @@ export default function CommandCenter() {
         title: 'Revenue',
         icon: DollarSign,
         value: `$${telemetryData.revenue}`,
-        trend: 'From completed payments',
+        trend: 'Monthly Recurring',
         status: 'good',
-        proOnly: true
+        proOnly: false
       },
       {
         id: 'agents',
         title: 'Active Agents',
         icon: Zap,
-        value: `${telemetryData.agents.active} Running`,
+        value: `${telemetryData.agents.active} ${pluralize(telemetryData.agents.active, 'Agent', 'Agents')}`,
         trend: `${telemetryData.agents.latency}ms avg latency`,
         status: 'good',
-        proOnly: true
+        proOnly: false
       },
       {
         id: 'uptime',
@@ -397,9 +402,9 @@ export default function CommandCenter() {
         id: 'performance',
         title: 'Response Time',
         icon: Clock,
-        value: `${telemetryData.infrastructure.responseTime}ms`,
+        value: telemetryData.infrastructure.responseTime > 0 ? `${telemetryData.infrastructure.responseTime}ms` : 'N/A',
         trend: 'P99: 120ms',
-        status: telemetryData.infrastructure.responseTime < 100 ? 'good' : 'warning',
+        status: telemetryData.infrastructure.responseTime > 0 && telemetryData.infrastructure.responseTime < 100 ? 'good' : 'warning',
         proOnly: false
       },
       {
@@ -409,7 +414,7 @@ export default function CommandCenter() {
         value: 'Self-Healing',
         trend: 'Monitoring for anomalies',
         status: 'good',
-        proOnly: true
+        proOnly: false
       },
       {
         id: 's5_architect',
@@ -732,15 +737,15 @@ export default function CommandCenter() {
               </div>
             )}
             {activePanel === 'agents' && (
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-400 mb-2">
-                  <Lock className="w-5 h-5" />
-                  <span className="font-bold">Pro Feature</span>
+              <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                <div className="flex items-center gap-2 text-purple-400 mb-2">
+                  <Zap className="w-5 h-5" />
+                  <span className="font-bold">Autonomous Agents</span>
                 </div>
-                <p className="text-sm text-white-60">Upgrade to Pro to manage autonomous agents and view detailed performance metrics.</p>
+                <p className="text-sm text-white/60 mb-4">S2, S3, and S5 are running autonomously to heal, optimize, and evolve your infrastructure.</p>
                 <button
                   onClick={() => setShowUpgradeModal(true)}
-                  className="mt-3 px-4 py-2 bg-yellow-500 text-black rounded-lg font-bold hover:bg-yellow-600 transition-colors"
+                  className="w-full py-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg font-bold hover:opacity-90 transition-opacity"
                 >
                   Upgrade to Pro
                 </button>
@@ -754,15 +759,15 @@ export default function CommandCenter() {
               </div>
             )}
             {activePanel === 'security' && (
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-400 mb-2">
-                  <Lock className="w-5 h-5" />
-                  <span className="font-bold">Pro Feature</span>
+              <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                <div className="flex items-center gap-2 text-purple-400 mb-2">
+                  <Shield className="w-5 h-5" />
+                  <span className="font-bold">Security Analysis</span>
                 </div>
-                <p className="text-sm text-white/60">Upgrade to Pro to view detailed security analysis and vulnerability reports.</p>
+                <p className="text-sm text-white/60 mb-4">S4 Security Scanner monitors for vulnerabilities and generates WAF rules automatically.</p>
                 <button
                   onClick={() => setShowUpgradeModal(true)}
-                  className="mt-3 px-4 py-2 bg-yellow-500 text-black rounded-lg font-bold hover:bg-yellow-600 transition-colors"
+                  className="w-full py-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg font-bold hover:opacity-90 transition-opacity"
                 >
                   Upgrade to Pro
                 </button>
