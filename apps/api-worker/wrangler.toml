@@ -1,0 +1,37 @@
+name = "aether-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-02"
+
+# D1 Database for events and proposals
+[[d1_databases]]
+binding = "DB"
+database_name = "aether-api-db"
+database_id = "218e0bc6-f955-45d1-b9bf-276d384917c7"
+
+# KV Namespaces for real-time telemetry
+[[kv_namespaces]]
+binding = "LOXA_AGENT_STATE"
+id = "da3d30ba717b4bef8b2325acae86a04b"
+
+[[kv_namespaces]]
+binding = "LOXA_INFRA_HEALTH"
+id = "00aa0892c73145b495255b96f5fc3b51"
+
+[[kv_namespaces]]
+binding = "LOXA_DYNAMIC_CODE"
+id = "d67a514b852e4e00b7a2c6354dcf61c4"
+
+[[kv_namespaces]]
+binding = "LOXA_HOT_PATCHES"
+id = "7db266a3b0ee4646a0627bc200773ec9"
+
+[ai]
+binding = "AI"
+
+[triggers]
+crons = ["0 * * * *", "30 * * * *", "*/15 * * * *", "*/5 * * * *"]
+
+[vars]
+GOOGLE_API_KEY = "AIzaSyB_Kbolhnrk1j87vmkra9eReciLAflMpKg"
+APP_URL = "https://a-to-mind.com"
+STRIPE_PUBLIC_KEY = "pk_test_51TRrzj3vI7ykonbS0raH1DGZmbEle9Sutb6nO3kWMKPBUmv5XVv0y7A0SinTGxw33XzGVnww3awSwHC1BZkAUJCH00nq4cDzMi"
