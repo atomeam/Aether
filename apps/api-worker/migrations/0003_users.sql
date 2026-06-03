@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  name TEXT,
+  referral_code TEXT,
   plan TEXT NOT NULL DEFAULT 'starter',
   status TEXT NOT NULL DEFAULT 'pending',
   email_verified INTEGER NOT NULL DEFAULT 0,
