@@ -101,20 +101,26 @@ export default function SimpleDashboard() {
     
     // Allow owner to view all users: window.viewUsers()
     (window as any).viewUsers = async () => {
+      console.log('Loading users...');
       try {
         const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/admin/users', {
           headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
         });
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
+        
         if (response.ok) {
           setAllUsers(data.users);
           setShowUsersPanel(true);
-          console.log('Users loaded:', data.users);
+          console.log('Users loaded successfully:', data.users.length, 'users');
         } else {
           console.error('Failed to load users:', data.error);
+          alert('Failed to load users: ' + data.error);
         }
       } catch (e) {
         console.error('Error loading users:', e);
+        alert('Error loading users: ' + e);
       }
     };
   }, []);
