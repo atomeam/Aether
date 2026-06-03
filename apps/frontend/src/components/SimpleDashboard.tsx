@@ -767,21 +767,21 @@ export default function SimpleDashboard() {
             icon={TrendingUp}
             label="Meetings Booked This Month"
             value={autonomousActions.toLocaleString()}
-            subtext={isAuthenticated ? "All from autonomous outbound" : "Connect HubSpot to start"}
+            subtext={isAuthenticated ? "Connect real APIs to see real data" : "Connect HubSpot to start"}
             color="emerald"
           />
           <StatsCard
             icon={Users}
             label="Pipeline Created"
-            value={`$${(totalUsers * 10).toLocaleString()}`}
-            subtext="Qualified opportunities sourced"
+            value="$0"
+            subtext="Requires real HubSpot integration"
             color="gold"
           />
           <StatsCard
             icon={Zap}
             label="Autonomous Emails Sent"
-            value={userEarnings.toLocaleString()}
-            subtext="All optimized and tracked"
+            value="0"
+            subtext="Requires real email API configuration"
             color="purple"
           />
         </div>
