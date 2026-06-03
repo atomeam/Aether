@@ -631,8 +631,8 @@ export default {
         ).all();
         
         return new Response(JSON.stringify({ 
-          users: result,
-          count: result.length
+          users: result.results,
+          count: result.results.length
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
