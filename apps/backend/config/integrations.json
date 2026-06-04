@@ -54,7 +54,7 @@
       "name": "stripe-mcp",
       "type": "mcp",
       "enabled": false,
-      "mcpServerUrl": "http://localhost:3100",
+      "mcpServerUrl": "https://a-to-mind.com/mcp",
       "mcpTools": ["stripe_validate_charge", "stripe_list_payments", "stripe_get_customer"],
       "metadata": {
         "description": "Stripe MCP for payment scope voting",
@@ -65,7 +65,7 @@
       "name": "filesystem-mcp",
       "type": "mcp",
       "enabled": true,
-      "mcpServerUrl": "http://localhost:3100",
+      "mcpServerUrl": "https://a-to-mind.com/mcp",
       "mcpTools": ["read_file", "write_file", "list_directory"],
       "metadata": {
         "description": "MCP server for filesystem operations"

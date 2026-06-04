@@ -18,7 +18,7 @@ const MOCK_AGENTS: AgentStatus[] = [
   { id: 'cf-assistant', name: 'CF Assistant', lane: 'CF API executor', status: 'standby', leverage: 25, lastHeartbeat: null, currentTask: null, tasksCompleted: 2, prsShipped: 0 },
   { id: 'twin-a', name: 'Twin A', lane: 'Dashboard retarget', status: 'standby', leverage: 0, lastHeartbeat: null, currentTask: null, tasksCompleted: 0, prsShipped: 0 },
   { id: 'twin-b', name: 'Twin B', lane: 'Loxa public copy', status: 'active', leverage: 15, lastHeartbeat: new Date(Date.now() - 1800_000).toISOString(), currentTask: 'Rename sweep', tasksCompleted: 3, prsShipped: 0 },
-  { id: 'slackbot', name: 'Slackbot', lane: 'NS-check + ops', status: 'active', leverage: 10, lastHeartbeat: new Date(Date.now() - 900_000).toISOString(), currentTask: 'Retire atomind.io NS-check', tasksCompleted: 4, prsShipped: 0 },
+  { id: 'slackbot', name: 'Slackbot', lane: 'NS-check + ops', status: 'active', leverage: 10, lastHeartbeat: new Date(Date.now() - 900_000).toISOString(), currentTask: 'Retire a-to-mind.com NS-check', tasksCompleted: 4, prsShipped: 0 },
   { id: 'gemini-api', name: 'Gemini API', lane: 'Active, no asks', status: 'active', leverage: 5, lastHeartbeat: new Date(Date.now() - 3600_000).toISOString(), currentTask: null, tasksCompleted: 1, prsShipped: 0 },
 ];
 

@@ -54,7 +54,7 @@
       "name": "filesystem-mcp",
       "type": "mcp",
       "enabled": true,
-      "mcpServerUrl": "http://localhost:3100",
+      "mcpServerUrl": "https://a-to-mind.com/mcp",
       "mcpTools": ["read_file", "write_file", "list_directory"],
       "metadata": {
         "description": "MCP server for filesystem operations"
