@@ -26,5 +26,5 @@
     "execa": "^8.0.1",
     "vite": "^6.2.3"
   },
-  "packageManager": "npm@10.9.8"
+  "packageManager": "pnpm@9.15.0"
 }
