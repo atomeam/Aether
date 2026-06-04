@@ -10,7 +10,7 @@
 
 | # | Gate | CI Job Name | Script / Action |
 |---|------|------------|-----------------|
-| 1 | **Gitleaks** | `Gitleaks` | `gitleaks/gitleaks-action@v2` + `.gitleaks.toml` |
+| 1 | **Gitleaks** | `Gitleaks` | `gitleaks` CLI (`--no-git`) + `.gitleaks.toml` |
 | 2 | **IaC Drift Check** | `IaC Drift Check` | `scripts/iac-drift-check.sh` + `infra/iac-manifest.json` |
 | 3 | **Strategy Metrics Verify** | `Strategy Metrics Verify` | `scripts/strategy-metrics-verify.mjs` + `infra/strategy-metrics.json` |
 
@@ -26,7 +26,7 @@ All three are independent jobs in `.github/workflows/ci.yml`. The `Build` job de
 
 **Injection**: `tests/ci-gates-expected-fail.env` containing known-safe fake AWS key:
 ```
-AWS_ACCESS_KEY_ID=AKIAQFAKECIGATE12345
+AWS_ACCESS_KEY_ID=AKIA<REDACTED-FAKE-KEY>
 ```
 
 **CI Failure Evidence** (job `Gitleaks`, job_id `79637679593`):
@@ -86,4 +86,4 @@ Each gate was proven to:
 2. **Fail deterministically** with a clear, actionable error message
 3. **Recover cleanly** when the issue is resolved
 
-No production code was modified. The fake AWS key (`AKIAQFAKECIGATE12345`) is a known-safe pattern that was fully removed in the final commit.
+No production code was modified. The fake AWS key (`AKIA…`) is a known-safe pattern that was fully removed in the final commit.
