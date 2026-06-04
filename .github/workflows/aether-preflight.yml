@@ -165,5 +165,6 @@ jobs:
           echo "Detected Cloudflare/IaC-relevant changes:"
           echo "${CHANGED}"
 
-          # Run the deterministic, offline validator
+          # Run the deterministic, offline validator with changed files
+          export CHANGED_PATHS="${CHANGED}"
           pnpm run iac:drift-check

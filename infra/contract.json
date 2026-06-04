@@ -1,220 +1,38 @@
 {
   "version": "1.0.0",
-  "description": "Aether Infrastructure Contract - Central source of truth for Cloudflare Workers configuration",
+  "name": "aether-monorepo",
   "workers": [
     {
       "name": "aether-verifier",
       "path": "apps/aether-verifier",
-      "wranglerToml": "apps/aether-verifier/wrangler.toml",
-      "bindings": {
-        "d1_databases": [
-          {
-            "binding": "DB",
-            "database_name": "aether-bridge-db",
-            "database_id": "f29243db-5b7a-407b-aa38-64091c1e0676"
-          }
-        ],
-        "kv_namespaces": [
-          {
-            "binding": "STATE",
-            "id": "7319ee9195df4ccf8f4b2c8449dd7930"
-          },
-          {
-            "binding": "STATE_CACHE",
-            "id": "d22e703c3af9451a9942fa2a551a1aa8"
-          },
-          {
-            "binding": "METRICS",
-            "id": "49202b2460a74d2dbd6d747d35dda5b7"
-          }
-        ],
-        "ai": [
-          {
-            "binding": "AI"
-          }
-        ]
-      }
+      "has_d1": true
     },
     {
       "name": "aether-bridge",
       "path": "apps/bridge",
-      "wranglerToml": "apps/bridge/wrangler.toml",
-      "bindings": {
-        "d1_databases": [
-          {
-            "binding": "DB",
-            "database_name": "council-routing-db",
-            "database_id": "218e0bc6-f955-45d1-b9bf-276d384917c7",
-            "migrations_dir": "apps/bridge/migrations"
-          },
-          {
-            "binding": "BRIDGE_DB",
-            "database_name": "aether-bridge-db",
-            "database_id": "f29243db-5b7a-407b-aa38-64091c1e0676"
-          }
-        ],
-        "kv_namespaces": [
-          {
-            "binding": "STATE",
-            "id": "7319ee9195df4ccf8f4b2c8449dd7930"
-          },
-          {
-            "binding": "STATE_CACHE",
-            "id": "d22e703c3af9451a9942fa2a551a1aa8"
-          },
-          {
-            "binding": "METRICS",
-            "id": "49202b2460a74d2dbd6d747d35dda5b7"
-          }
-        ],
-        "r2_buckets": [
-          {
-            "binding": "_LOGS",
-            "bucket_name": "aether-logs"
-          }
-        ],
-        "queues": [
-          {
-            "binding": "CURATOR_QUEUE",
-            "queue": "curator-jobs"
-          }
-        ],
-        "services": [
-          {
-            "binding": "DISPATCHER",
-            "service": "aether"
-          },
-          {
-            "binding": "AETHER",
-            "service": "aether"
-          }
-        ],
-        "browser": [
-          {
-            "binding": "MYBROWSER"
-          }
-        ]
-      },
-      "routes": [
-        {
-          "pattern": "bridge.a-to-mind.com",
-          "custom_domain": true
-        }
-      ]
+      "has_d1": true,
+      "has_kv": true,
+      "has_r2": true,
+      "service_bindings": ["aether"]
     },
     {
       "name": "homebase",
-      "path": "apps/homebase",
-      "wranglerToml": "apps/homebase/wrangler.toml",
-      "bindings": {
-        "kv_namespaces": [
-          {
-            "binding": "STATE",
-            "id": "7319ee9195df4ccf8f4b2c8449dd7930"
-          }
-        ],
-        "r2_buckets": [
-          {
-            "binding": "_LOGS",
-            "bucket_name": "aether-logs"
-          }
-        ]
-      }
+      "path": "apps/homebase"
     },
     {
       "name": "notion-worker",
       "path": "apps/notion-worker",
-      "wranglerToml": "apps/notion-worker/wrangler.toml",
-      "bindings": {
-        "d1_databases": [
-          {
-            "binding": "DB_RUNS",
-            "database_name": "aether-bridge-db",
-            "database_id": "f29243db-5b7a-407b-aa38-64091c1e0676"
-          }
-        ]
-      },
-      "routes": [
-        {
-          "pattern": "notion.a-to-mind.com",
-          "custom_domain": true
-        }
-      ]
+      "has_d1": true
     },
     {
       "name": "weekly-digest",
-      "path": "apps/weekly-digest",
-      "wranglerToml": "apps/weekly-digest/wrangler.toml",
-      "bindings": {
-        "d1_databases": [
-          {
-            "binding": "DB",
-            "database_name": "aether-bridge-db",
-            "database_id": "f29243db-5b7a-407b-aa38-64091c1e0676"
-          }
-        ],
-        "kv_namespaces": [
-          {
-            "binding": "STATE",
-            "id": "7319ee9195df4ccf8f4b2c8449dd7930"
-          },
-          {
-            "binding": "STATE_CACHE",
-            "id": "d22e703c3af9451a9942fa2a551a1aa8"
-          }
-        ]
-      },
-      "triggers": [
-        {
-          "crons": ["0 17 * * 5"]
-        }
-      ]
+      "path": "apps/weekly-digest"
     }
   ],
-  "service_dependencies": [
+  "external_workers": [
     {
-      "worker": "aether-bridge",
-      "requires": [],
-      "bindings": ["DISPATCHER", "AETHER"],
-      "note": "Service bindings reference external 'aether' worker not in this monorepo"
+      "name": "aether",
+      "note": "External dispatcher worker not in this monorepo"
     }
-  ],
-  "shared_resources": {
-    "d1_databases": [
-      {
-        "database_name": "aether-bridge-db",
-        "database_id": "f29243db-5b7a-407b-aa38-64091c1e0676",
-        "used_by": ["aether-verifier", "bridge", "notion-worker", "weekly-digest"]
-      },
-      {
-        "database_name": "council-routing-db",
-        "database_id": "218e0bc6-f955-45d1-b9bf-276d384917c7",
-        "used_by": ["bridge"]
-      }
-    ],
-    "kv_namespaces": [
-      {
-        "id": "7319ee9195df4ccf8f4b2c8449dd7930",
-        "binding": "STATE",
-        "used_by": ["aether-verifier", "bridge", "homebase", "weekly-digest"]
-      },
-      {
-        "id": "d22e703c3af9451a9942fa2a551a1aa8",
-        "binding": "STATE_CACHE",
-        "used_by": ["aether-verifier", "bridge", "weekly-digest"]
-      },
-      {
-        "id": "49202b2460a74d2dbd6d747d35dda5b7",
-        "binding": "METRICS",
-        "used_by": ["aether-verifier", "bridge"]
-      }
-    ],
-    "r2_buckets": [
-      {
-        "bucket_name": "aether-logs",
-        "binding": "_LOGS",
-        "used_by": ["bridge", "homebase"]
-      }
-    ]
-  }
+  ]
 }
