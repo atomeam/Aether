@@ -1,0 +1,169 @@
+name: aether-preflight
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+concurrency:
+  group: aether-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: ci/lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+  test:
+    name: ci/test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Vitest
+        run: pnpm run test -- --run
+
+  security_scan:
+    name: ci/security-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history helps gitleaks in some modes)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Uses gitleaks' official action. This will fail the job if leaks are found.
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Optional: if you keep a repo config at .gitleaks.toml, gitleaks will pick it up.
+          # config: .gitleaks.toml
+          # Optional: reduce noise by skipping vendored dirs, etc. Prefer config file for this.
+          # args: "--redact --verbose"
+
+  iac_drift_check:
+    name: iac/iac-drift-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      # This job is intentionally DEFAULT-DENY: it does NOT call Cloudflare APIs.
+      # It enforces that the repo's Cloudflare/IaC surfaces remain internally consistent.
+      - name: Basic Cloudflare repo invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Verify contract exists
+          test -f infra/contract.json || (echo "Missing infra/contract.json at repo root" && exit 1)
+
+          echo "Infrastructure contract present."
+
+      # Drift check strategy (PR-local, deterministic):
+      # - Detect changes to Cloudflare-relevant surfaces
+      # - If changes are present, require they pass the drift validator
+      - The drift validator enforces contract ↔ wrangler.toml parity
+      - name: IaC drift check (contract-driven)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_REF="${{ github.base_ref }}"
+          git fetch origin "${BASE_REF}" --depth=1
+
+          # Tune these patterns to match your repo.
+          # Include anything that should be kept synchronized with aether-bridge infra state.
+          DRIFT_PATHS_REGEX='^(infra/contract\.json|apps/.*/wrangler\.toml|apps/.*/migrations/|packages/.*(d1|kv|r2|cloudflare).*)'
+
+          CHANGED="$(git diff --name-only "origin/${BASE_REF}...HEAD" | grep -E "${DRIFT_PATHS_REGEX}" || true)"
+
+          if [ -z "${CHANGED}" ]; then
+            echo "No Cloudflare/IaC-relevant changes detected vs origin/${BASE_REF}."
+            exit 0
+          fi
+
+          echo "Detected Cloudflare/IaC-relevant changes:"
+          echo "${CHANGED}"
+
+          # Run the deterministic, offline validator
+          pnpm run iac:drift-check
