@@ -77,6 +77,46 @@ Changes:
 
 All three gates pass on this commit.
 
+**Final green CI evidence** (latest commit on branch):
+```
+✅ Gitleaks                 (job_id 79638301778)
+✅ IaC Drift Check          (job_id 79638301770)
+✅ Strategy Metrics Verify  (job_id 79638301773)
+```
+
+---
+
+## Gitleaks Implementation Notes
+
+Two adjustments were required to make the Gitleaks gate behave correctly:
+
+1. **Scan the working tree, not commit history.** The first attempt used
+   `gitleaks/gitleaks-action@v2`, which scans the full PR commit range
+   (`--first-parent`). That range includes the intermediate expected-fail commit
+   `b7fe079`, so the action kept reporting the (already-deleted) fake key. Switched
+   to `gitleaks detect --no-git --source .`, which scans the merged working tree at
+   HEAD — the state that actually ships.
+
+2. **Don't let the installer pollute the scan tree.** The install step piped the
+   release tarball through `tar xz` in the repo root. That tarball also contains
+   gitleaks' own `README.md` / `LICENSE`, which clobbered the repo README; the
+   subsequent `--no-git` scan then flagged the example secret in gitleaks' README
+   (`sidekiq-secret`, `cafebabe:deadbeef` at `README.md:42`). Fixed by extracting to
+   `/tmp/gitleaks-install` and moving only the `gitleaks` binary.
+
+---
+
+## Preexisting, Unrelated Failures
+
+The `Test`, `TypeCheck`, `Workers Builds`, and `Vercel` checks fail on this PR, but
+they are **preexisting and unrelated** to these gates:
+
+- This PR does not modify `package.json` or `package-lock.json` (empty diff vs `main`).
+- All four checks fail at `npm ci` with `EUSAGE` / `lockfileVersion >= 1`, the known
+  broken-lockfile issue caused by `file:../packages/*` workspace references
+  (documented in `AGENTS.md` under the blocked Vercel deployment).
+- Reproduced locally on the pristine `main` package files → identical `npm ci` error.
+
 ---
 
 ## Summary
