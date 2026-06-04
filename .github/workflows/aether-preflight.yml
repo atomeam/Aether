@@ -143,28 +143,19 @@ jobs:
       # - Detect changes to Cloudflare-relevant surfaces
       # - If changes are present, require they pass the drift validator
       - The drift validator enforces contract ↔ wrangler.toml parity
-      - name: IaC drift check (contract-driven)
+      - name: Compute changed paths
+        id: changed
         shell: bash
         run: |
           set -euo pipefail
-
           BASE_REF="${{ github.base_ref }}"
           git fetch origin "${BASE_REF}" --depth=1
+          CHANGED="$(git diff --name-only "origin/${BASE_REF}...HEAD" || true)"
+          echo "changed<<EOF" >> $GITHUB_OUTPUT
+          echo "${CHANGED}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          # Tune these patterns to match your repo.
-          # Include anything that should be kept synchronized with aether-bridge infra state.
-          DRIFT_PATHS_REGEX='^(infra/contract\.json|apps/.*/wrangler\.toml|apps/.*/migrations/|packages/.*(d1|kv|r2|cloudflare).*)'
-
-          CHANGED="$(git diff --name-only "origin/${BASE_REF}...HEAD" | grep -E "${DRIFT_PATHS_REGEX}" || true)"
-
-          if [ -z "${CHANGED}" ]; then
-            echo "No Cloudflare/IaC-relevant changes detected vs origin/${BASE_REF}."
-            exit 0
-          fi
-
-          echo "Detected Cloudflare/IaC-relevant changes:"
-          echo "${CHANGED}"
-
-          # Run the deterministic, offline validator with changed files
-          export CHANGED_PATHS="${CHANGED}"
-          pnpm run iac:drift-check
+      - name: IaC drift check (contract-driven)
+        env:
+          CHANGED_PATHS: ${{ steps.changed.outputs.changed }}
+        run: pnpm run iac:drift-check

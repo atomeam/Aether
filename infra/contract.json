@@ -5,28 +5,36 @@
     {
       "name": "aether-verifier",
       "path": "apps/aether-verifier",
-      "has_d1": true
+      "wranglerToml": "apps/aether-verifier/wrangler.toml",
+      "d1": { "migrationsPath": "apps/aether-verifier/migrations" }
     },
     {
       "name": "aether-bridge",
       "path": "apps/bridge",
-      "has_d1": true,
-      "has_kv": true,
-      "has_r2": true,
-      "service_bindings": ["aether"]
+      "wranglerToml": "apps/bridge/wrangler.toml",
+      "d1": { "migrationsPath": "apps/bridge/migrations" },
+      "kv": true,
+      "r2": true,
+      "serviceBindings": [
+        { "binding": "DISPATCHER", "worker": "aether" },
+        { "binding": "AETHER", "worker": "aether" }
+      ]
     },
     {
       "name": "homebase",
-      "path": "apps/homebase"
+      "path": "apps/homebase",
+      "wranglerToml": "apps/homebase/wrangler.toml"
     },
     {
       "name": "notion-worker",
       "path": "apps/notion-worker",
-      "has_d1": true
+      "wranglerToml": "apps/notion-worker/wrangler.toml",
+      "d1": { "migrationsPath": "apps/notion-worker/migrations" }
     },
     {
       "name": "weekly-digest",
-      "path": "apps/weekly-digest"
+      "path": "apps/weekly-digest",
+      "wranglerToml": "apps/weekly-digest/wrangler.toml"
     }
   ],
   "external_workers": [
