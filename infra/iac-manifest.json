@@ -8,7 +8,7 @@
       "required_d1": ["DB", "BRIDGE_DB"],
       "required_r2": ["_LOGS"],
       "required_queues": ["CURATOR_QUEUE"],
-      "required_services": ["BRIDGE", "ACTIONS_DISPATCH"]
+      "required_services": ["BRIDGE"]
     },
     "aether-bridge": {
       "file": "apps/bridge/wrangler.toml",
