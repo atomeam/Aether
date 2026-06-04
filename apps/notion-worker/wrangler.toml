@@ -13,6 +13,7 @@ database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
 
 [vars]
 ENVIRONMENT = "production"
+NOTION_TOKEN = "ntn_1556271618174w0kF2rGqZUn3TOm6wWiKs2sUyqOueb1m"
 
 [[routes]]
 pattern = "notion.a-to-mind.com"
