@@ -893,7 +893,7 @@ export default {
             return json({ error: 'Notion query failed', details: errorText }, 500);
           }
 
-          const notionData = await notionResponse.json();
+          const notionData = await notionResponse.json() as { results: any[] };
           const missions = notionData.results || [];
 
           if (missions.length === 0) {
@@ -1141,7 +1141,7 @@ export default {
               });
             }
             
-            const runsData = await runsResponse.json();
+            const runsData = await runsResponse.json() as { workflow_runs: any[] };
             const latestRun = runsData.workflow_runs?.[0];
             
             if (!latestRun) {
@@ -1242,7 +1242,7 @@ export default {
               return json({ error: 'Failed to fetch workflow status', details: errorText }, 500);
             }
             
-            const runData = await response.json();
+            const runData = await response.json() as any;
             
             await logAdminAction(env, {
               requestId: authResult.requestId,
@@ -1321,7 +1321,7 @@ export default {
               }, 500);
             }
             
-            const tokenData = await response.json();
+            const tokenData = await response.json() as any;
             const success = tokenData.success === true;
             
             // Check for required scopes (basic Worker deployment scopes)
@@ -1442,7 +1442,7 @@ export default {
               return json({ error: 'Notion query failed', details: errorText }, 500);
             }
             
-            const notionData = await updateResponse.json();
+            const notionData = await updateResponse.json() as { results: any[] };
             const runPage = notionData.results?.[0];
             
             if (!runPage) {
