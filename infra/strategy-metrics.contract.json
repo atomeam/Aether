@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "name": "aether-strategy-metrics",
+  "description": "Contract for strategy performance validation - ensures rotation alpha meets quality gates",
+  "data": {
+    "inputPath": "apps/bridge/data/rotation-fixtures.parquet",
+    "outputPath": "artifacts/strategy/returns.csv",
+    "backtestScript": "scripts/strategy-backtest.mjs"
+  },
+  "metrics": {
+    "sharpeMin": 1.0,
+    "sharpeNetOfFees": true,
+    "denomination": "XBT-base",
+    "annualizationFrequency": "daily",
+    "tradingDaysPerYear": 365
+  },
+  "evaluation": {
+    "window": "full-fixture",
+    "windowDescription": "1-year rolling from fixture data",
+    "minDataPoints": 252
+  },
+  "bootstrap": {
+    "samples": 10000,
+    "seed": 409,
+    "pValueMax": 0.05,
+    "nullHypothesis": "rotation-indistinguishable-from-shadow-random-entry",
+    "nullDescription": "Rotation strategy returns are indistinguishable from paired shadow random-entry book"
+  }
+}

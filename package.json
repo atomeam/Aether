@@ -16,7 +16,8 @@
     "test": "turbo run test",
     "start": "npm run start -w @aether/backend",
     "clean": "turbo run clean",
-    "iac:drift-check": "node scripts/iac-drift-check.mjs"
+    "iac:drift-check": "node scripts/iac-drift-check.mjs",
+    "metrics:verify": "node scripts/strategy-metrics-verify.mjs"
   },
   "engines": {
     "node": ">=18.0.0"
