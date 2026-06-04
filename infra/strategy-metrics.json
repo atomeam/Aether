@@ -11,7 +11,8 @@
     "getHistory",
     "summary",
     "snapshot",
-    "reset"
+    "reset",
+    "percentile"
   ],
   "required_types": [
     "Metric"
