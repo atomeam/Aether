@@ -1,0 +1,16 @@
+# Gitleaks configuration for Aether
+# https://github.com/gitleaks/gitleaks
+
+title = "Aether gitleaks config"
+
+[extend]
+# Use the default gitleaks rules
+useDefault = true
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+  '''node_modules''',
+  '''\.lock$''',
+  '''package-lock\.json$''',
+]

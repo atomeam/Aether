@@ -1,0 +1,19 @@
+{
+  "$schema": "strategy-metrics-v1",
+  "description": "Required exports from @aether/metrics. CI verifies the package surface stays complete.",
+  "package": "packages/metrics/src/index.ts",
+  "required_exports": [
+    "record",
+    "increment",
+    "counter",
+    "gauge",
+    "getGauge",
+    "getHistory",
+    "summary",
+    "snapshot",
+    "reset"
+  ],
+  "required_types": [
+    "Metric"
+  ]
+}

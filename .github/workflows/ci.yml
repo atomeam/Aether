@@ -48,10 +48,44 @@ jobs:
       - run: npx turbo run typecheck --parallel
         working-directory: .
 
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  iac-drift-check:
+    name: IaC Drift Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate wrangler bindings against manifest
+        run: bash scripts/iac-drift-check.sh
+
+  strategy-metrics-verify:
+    name: Strategy Metrics Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify metrics package exports
+        run: node scripts/strategy-metrics-verify.mjs
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [test, typecheck]
+    needs: [test, typecheck, gitleaks, iac-drift-check, strategy-metrics-verify]
     steps:
       - uses: actions/checkout@v4
       

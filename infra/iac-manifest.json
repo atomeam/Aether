@@ -1,0 +1,22 @@
+{
+  "$schema": "iac-manifest-v1",
+  "description": "Expected Cloudflare bindings for Aether workers. Used by CI to detect IaC drift.",
+  "workers": {
+    "aether": {
+      "file": "wrangler.toml",
+      "required_kv": ["STATE", "STATE_CACHE", "METRICS"],
+      "required_d1": ["DB", "BRIDGE_DB"],
+      "required_r2": ["_LOGS"],
+      "required_queues": ["CURATOR_QUEUE"],
+      "required_services": ["BRIDGE"]
+    },
+    "aether-bridge": {
+      "file": "apps/bridge/wrangler.toml",
+      "required_kv": ["STATE", "STATE_CACHE", "METRICS"],
+      "required_d1": ["DB", "BRIDGE_DB"],
+      "required_r2": ["_LOGS"],
+      "required_queues": ["CURATOR_QUEUE"],
+      "required_services": ["DISPATCHER"]
+    }
+  }
+}
