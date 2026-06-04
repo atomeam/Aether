@@ -41,7 +41,7 @@
 
 ### METRICS
 - **Binding Name**: `METRICS`
-- **Namespace ID**: `60b673736ef943949cd8df154105e11e`
+- **Namespace ID**: `49202b2460a74d2dbd6d747d35dda5b7`
 - **Purpose**: Metrics storage
 - **Usage**: Latest metrics snapshots
 
