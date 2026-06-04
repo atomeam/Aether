@@ -3,21 +3,26 @@
   "name": "aether-monorepo",
   "workers": [
     {
-      "name": "aether-verifier",
-      "path": "apps/aether-verifier",
-      "wranglerToml": "apps/aether-verifier/wrangler.toml",
-      "d1": { "migrationsPath": "apps/aether-verifier/migrations" }
+      "name": "aether",
+      "path": "external",
+      "wranglerToml": "external/wrangler.toml",
+      "note": "External dispatcher worker not in this monorepo"
     },
     {
-      "name": "aether-bridge",
+      "name": "aether-verifier",
+      "path": "apps/aether-verifier",
+      "wranglerToml": "apps/aether-verifier/wrangler.toml"
+    },
+    {
+      "name": "bridge",
       "path": "apps/bridge",
       "wranglerToml": "apps/bridge/wrangler.toml",
       "d1": { "migrationsPath": "apps/bridge/migrations" },
       "kv": true,
       "r2": true,
       "serviceBindings": [
-        { "binding": "DISPATCHER", "worker": "aether" },
-        { "binding": "AETHER", "worker": "aether" }
+        { "binding": "AETHER", "worker": "aether" },
+        { "binding": "DISPATCHER", "worker": "aether" }
       ]
     },
     {
@@ -28,19 +33,12 @@
     {
       "name": "notion-worker",
       "path": "apps/notion-worker",
-      "wranglerToml": "apps/notion-worker/wrangler.toml",
-      "d1": { "migrationsPath": "apps/notion-worker/migrations" }
+      "wranglerToml": "apps/notion-worker/wrangler.toml"
     },
     {
       "name": "weekly-digest",
       "path": "apps/weekly-digest",
       "wranglerToml": "apps/weekly-digest/wrangler.toml"
-    }
-  ],
-  "external_workers": [
-    {
-      "name": "aether",
-      "note": "External dispatcher worker not in this monorepo"
     }
   ]
 }
