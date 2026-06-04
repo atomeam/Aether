@@ -1,9 +1,8 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2023"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,6 +15,7 @@
     "sourceMap": true,
     "isolatedModules": true,
     "noEmit": false,
+    "allowImportingTsExtensions": false,
     "types": ["@cloudflare/workers-types"]
   },
   "include": ["src/**/*"],
