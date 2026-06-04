@@ -4,7 +4,8 @@
   "description": "Contract for strategy performance validation - ensures rotation alpha meets quality gates",
   "data": {
     "inputPath": "apps/bridge/data/rotation-fixtures.parquet",
-    "outputPath": "artifacts/strategy/returns.csv",
+    "strategyReturnsPath": "artifacts/strategy/strategy_returns.csv",
+    "shadowReturnsPath": "artifacts/strategy/shadow_returns.csv",
     "backtestScript": "scripts/strategy-backtest.mjs"
   },
   "metrics": {

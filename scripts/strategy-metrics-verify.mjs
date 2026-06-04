@@ -16,63 +16,89 @@ if (!fs.existsSync(contractPath)) {
 const contract = JSON.parse(fs.readFileSync(contractPath, 'utf-8'));
 console.log('✅ Loaded strategy metrics contract.');
 
-// 2. Verify Returns File Exists
-const returnsPath = path.join(root, contract.data.outputPath);
-if (!fs.existsSync(returnsPath)) {
-  console.error('❌ Verification Failed: Returns file not found.');
-  console.error(`   Expected at: ${returnsPath}`);
+// 2. Verify Strategy Returns File Exists
+const strategyReturnsPath = path.join(root, contract.data.strategyReturnsPath);
+if (!fs.existsSync(strategyReturnsPath)) {
+  console.error('❌ Verification Failed: Strategy returns file not found.');
+  console.error(`   Expected at: ${strategyReturnsPath}`);
   console.error('   Run the backtest script first to generate returns.');
   process.exit(1);
 }
 
-console.log('✅ Returns file found.');
+console.log('✅ Strategy returns file found.');
 
-// 3. Parse Returns CSV
-const returnsContent = fs.readFileSync(returnsPath, 'utf-8');
-const lines = returnsContent.trim().split('\n');
-const headers = lines[0].split(',').map(h => h.trim());
-
-const timestampIndex = headers.indexOf('timestamp');
-const returnIndex = headers.indexOf('return');
-
-if (timestampIndex === -1 || returnIndex === -1) {
-  console.error('❌ Verification Failed: Returns CSV must have "timestamp" and "return" columns.');
+// 3. Verify Shadow Returns File Exists
+const shadowReturnsPath = path.join(root, contract.data.shadowReturnsPath);
+if (!fs.existsSync(shadowReturnsPath)) {
+  console.error('❌ Verification Failed: Shadow returns file not found.');
+  console.error(`   Expected at: ${shadowReturnsPath}`);
+  console.error('   Run the backtest script first to generate shadow returns.');
   process.exit(1);
 }
 
-const returns = [];
-for (let i = 1; i < lines.length; i++) {
-  const values = lines[i].split(',').map(v => v.trim());
-  const ret = parseFloat(values[returnIndex]);
-  if (isNaN(ret)) {
-    console.error(`❌ Verification Failed: Invalid return value at line ${i + 1}: ${values[returnIndex]}`);
+console.log('✅ Shadow returns file found.');
+
+// 4. Parse Strategy Returns CSV
+const parseReturnsCSV = (filePath) => {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+
+  const timestampIndex = headers.indexOf('timestamp');
+  const returnIndex = headers.indexOf('return');
+
+  if (timestampIndex === -1 || returnIndex === -1) {
+    console.error(`❌ Verification Failed: CSV must have "timestamp" and "return" columns in ${filePath}`);
     process.exit(1);
   }
-  returns.push(ret);
-}
 
-console.log(`✅ Parsed ${returns.length} return values.`);
+  const returns = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim());
+    const ret = parseFloat(values[returnIndex]);
+    if (isNaN(ret)) {
+      console.error(`❌ Verification Failed: Invalid return value at line ${i + 1} in ${filePath}: ${values[returnIndex]}`);
+      process.exit(1);
+    }
+    returns.push(ret);
+  }
 
-// 4. Validate Minimum Data Points
-if (returns.length < contract.evaluation.minDataPoints) {
-  console.error(`❌ Verification Failed: Insufficient data points.`);
-  console.error(`   Required: ${contract.evaluation.minDataPoints}, Found: ${returns.length}`);
+  return returns;
+};
+
+const strategyReturns = parseReturnsCSV(strategyReturnsPath);
+const shadowReturns = parseReturnsCSV(shadowReturnsPath);
+
+console.log(`✅ Parsed ${strategyReturns.length} strategy return values.`);
+console.log(`✅ Parsed ${shadowReturns.length} shadow return values.`);
+
+// 5. Validate Paired Data Length
+if (strategyReturns.length !== shadowReturns.length) {
+  console.error('❌ Verification Failed: Strategy and shadow returns must have same length for paired test.');
+  console.error(`   Strategy: ${strategyReturns.length}, Shadow: ${shadowReturns.length}`);
   process.exit(1);
 }
 
-console.log(`✅ Data points meet minimum requirement (${returns.length} >= ${contract.evaluation.minDataPoints}).`);
+// 6. Validate Minimum Data Points
+if (strategyReturns.length < contract.evaluation.minDataPoints) {
+  console.error(`❌ Verification Failed: Insufficient data points.`);
+  console.error(`   Required: ${contract.evaluation.minDataPoints}, Found: ${strategyReturns.length}`);
+  process.exit(1);
+}
 
-// 5. Calculate Sharpe Ratio
-const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+console.log(`✅ Data points meet minimum requirement (${strategyReturns.length} >= ${contract.evaluation.minDataPoints}).`);
+
+// 7. Calculate Sharpe Ratio for Strategy
+const mean = strategyReturns.reduce((a, b) => a + b, 0) / strategyReturns.length;
+const variance = strategyReturns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / strategyReturns.length;
 const stdDev = Math.sqrt(variance);
 
 const tradingDaysPerYear = contract.metrics.tradingDaysPerYear;
 const sharpe = (mean / stdDev) * Math.sqrt(tradingDaysPerYear);
 
-console.log(`   Mean return: ${mean.toFixed(6)}`);
-console.log(`   Std dev: ${stdDev.toFixed(6)}`);
-console.log(`   Sharpe ratio: ${sharpe.toFixed(4)}`);
+console.log(`   Strategy mean return: ${mean.toFixed(6)}`);
+console.log(`   Strategy std dev: ${stdDev.toFixed(6)}`);
+console.log(`   Strategy Sharpe ratio: ${sharpe.toFixed(4)}`);
 
 if (sharpe < contract.metrics.sharpeMin) {
   console.error(`❌ Verification Failed: Sharpe ratio below threshold.`);
@@ -82,7 +108,7 @@ if (sharpe < contract.metrics.sharpeMin) {
 
 console.log(`✅ Sharpe ratio meets threshold (${sharpe.toFixed(4)} >= ${contract.metrics.sharpeMin}).`);
 
-// 6. Bootstrap Test for Statistical Significance
+// 8. Paired Bootstrap Test for Statistical Significance
 const seed = contract.bootstrap.seed;
 const samples = contract.bootstrap.samples;
 const pValueMax = contract.bootstrap.pValueMax;
@@ -94,24 +120,30 @@ const seededRandom = () => {
   return rngState / 4294967296;
 };
 
-// Bootstrap test for null hypothesis: mean <= 0
-// Center the data at 0 (subtract observed mean) to simulate null distribution
-const centeredReturns = returns.map(r => r - mean);
+// Calculate observed difference in means
+const shadowMean = shadowReturns.reduce((a, b) => a + b, 0) / shadowReturns.length;
+const observedDiff = mean - shadowMean;
 
-const bootstrapMeans = [];
+console.log(`   Shadow mean return: ${shadowMean.toFixed(6)}`);
+console.log(`   Observed strategy-shadow difference: ${observedDiff.toFixed(6)}`);
+
+// Paired bootstrap: resample paired differences
+const pairedDiffs = strategyReturns.map((s, i) => s - shadowReturns[i]);
+
+const bootstrapDiffs = [];
 for (let i = 0; i < samples; i++) {
-  // Resample with replacement from centered data
+  // Resample paired differences with replacement
   const resampled = [];
-  for (let j = 0; j < centeredReturns.length; j++) {
-    const idx = Math.floor(seededRandom() * centeredReturns.length);
-    resampled.push(centeredReturns[idx]);
+  for (let j = 0; j < pairedDiffs.length; j++) {
+    const idx = Math.floor(seededRandom() * pairedDiffs.length);
+    resampled.push(pairedDiffs[idx]);
   }
   const resampledMean = resampled.reduce((a, b) => a + b, 0) / resampled.length;
-  bootstrapMeans.push(resampledMean);
+  bootstrapDiffs.push(resampledMean);
 }
 
-// Calculate p-value: proportion of bootstrap means >= observed mean
-const extremeCount = bootstrapMeans.filter(m => m >= mean).length;
+// Calculate p-value: proportion of bootstrap differences <= 0 (null: strategy not better than shadow)
+const extremeCount = bootstrapDiffs.filter(d => d <= 0).length;
 const pValue = extremeCount / samples;
 
 console.log(`   Bootstrap samples: ${samples}`);
@@ -130,3 +162,4 @@ console.log(`✅ Null hypothesis rejected: ${contract.bootstrap.nullDescription}
 console.log('\n🚀 Strategy Metrics Verification Passed: All gates satisfied.');
 console.log(`   Sharpe: ${sharpe.toFixed(4)} (min: ${contract.metrics.sharpeMin})`);
 console.log(`   P-value: ${pValue.toFixed(6)} (max: ${pValueMax})`);
+console.log(`   Strategy-shadow difference: ${observedDiff.toFixed(6)}`);
