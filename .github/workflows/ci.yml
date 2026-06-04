@@ -20,13 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          version: 9.15.0
 
-      - run: npm ci
-        working-directory: .
+      - run: pnpm install
 
       - run: npx turbo run test --parallel
         working-directory: .
@@ -37,13 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          version: 9.15.0
 
-      - run: npm ci
-        working-directory: .
+      - run: pnpm install
 
       - run: npx turbo run typecheck --parallel
         working-directory: .
@@ -55,13 +51,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          version: 9.15.0
 
-      - run: npm ci
-        working-directory: .
+      - run: pnpm install
 
       - run: npx turbo run build
         working-directory: .

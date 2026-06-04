@@ -1,6 +1,22 @@
 # Aether - ALPHA Stack Monorepo
 
-## Project State (Updated 2026-05-19)
+## Project State (Updated 2026-06-04)
+
+### ✅ Pnpm Migration Complete
+
+The project has been successfully migrated from npm to pnpm for better workspace dependency management.
+
+**Changes**:
+- Package manager: `pnpm@9.15.0` (set in root `package.json`)
+- Workspace protocol: All packages now use `workspace:*` instead of `file:` protocol
+- CI/CD workflows: Updated to use `pnpm/action-setup@v4` instead of `actions/setup-node@v4`
+- Lock file: `pnpm-lock.yaml` replaces `package-lock.json`
+
+**Benefits**:
+- Better dependency hoisting and workspace resolution
+- Faster install times with efficient caching
+- Strict workspace protocol prevents version conflicts
+- Better support for monorepo development
 
 ### 🚀 Vercel Deployment (BLOCKED - needs manual retry)
 
@@ -36,9 +52,9 @@ User Request → Curator (validates) → APPROVED → Executor (runs tools) → 
 
 ```bash
 cd Aether
-npm install
-npm run dev:backend  # Terminal 1 - port 3000
-npm run dev:frontend  # Terminal 2 - port 5173
+pnpm install
+pnpm run dev:backend  # Terminal 1 - port 3000
+pnpm run dev:frontend  # Terminal 2 - port 5173
 ```
 
 Then open http://localhost:5173
@@ -86,18 +102,19 @@ Default-deny security gate for generated UI:
 
 ```bash
 GEMINI_API_KEY=...  # Required for /api/build
+MCP_SERVER_URL=https://a-to-mind.com/mcp  # MCP server endpoint
 ```
 
 ## Testing
 
 ```bash
-npm run test -w @aether/contracts
-npm run test -w @aether/curator
+pnpm run test -w @aether/contracts
+pnpm run test -w @aether/curator
 
 # Or via Turbo
-npx turbo run test
-npx turbo run typecheck
-npx turbo run build
+pnpm run test
+pnpm run typecheck
+pnpm run build
 ```
 
 ## Turborepo
@@ -111,13 +128,13 @@ The monorepo uses Turborepo for build orchestration. Pipeline defined in `turbo.
 
 ```bash
 # Run full pipeline
-npx turbo run test typecheck build
+pnpm run test typecheck build
 ```
 
 ## Deprecation Notes
 
-- Root `server.ts` - DEPRECATED. Use `npm run dev:backend`
-- `src/server.ts` - DEPRECATED. Use `npm run dev:backend`
+- Root `server.ts` - DEPRECATED. Use `pnpm run dev:backend`
+- `src/server.ts` - DEPRECATED. Use `pnpm run dev:backend`
 - `frontend.legacy/` - Old frontend. Use `apps/frontend/`
 
 ---
