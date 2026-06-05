@@ -59,23 +59,32 @@ Use strong random tokens for each. For GITHUB_TOKEN, create a GitHub Personal Ac
 npx wrangler deploy
 ```
 
-### 6. Configure Custom Domain DNS
+## Custom Domain Setup (Manual DNS Update Required)
 
-**IMPORTANT:** For cockpit.a-to-mind.com to work, you must add DNS records in Cloudflare:
+**IMPORTANT:** cockpit.a-to-mind.com is currently pointing to an old site. You need to manually update the DNS record.
+
+### Option 1: Update Existing DNS Record (Recommended)
 
 1. Go to Cloudflare Dashboard → DNS → Records
-2. Add a CNAME record:
-   - **Name:** cockpit
-   - **Type:** CNAME
-   - **Target:** cockpit.atomicmoonbeam88.workers.dev
-   - **Proxy status:** Proxied (orange cloud)
-   - **TTL:** Auto
+2. Find the existing `cockpit` CNAME record
+3. **Update the target to:** `cockpit.atomicmoonbeam88.workers.dev`
+4. Ensure proxy status is: Proxied (orange cloud)
+5. Save changes
+6. Wait 5-15 minutes for DNS propagation
+7. Access: https://cockpit.a-to-mind.com
 
-3. Wait for DNS propagation (usually 5-15 minutes)
-4. Access: https://cockpit.a-to-mind.com
+### Option 2: Use Direct Worker URL (Immediate Access)
 
-**Alternative:** If you see the old site, you can access the worker directly at:
+**Access the cockpit directly right now:**
 https://cockpit.atomicmoonbeam88.workers.dev
+
+This bypasses DNS completely and goes straight to the Cloudflare worker with the complete mech system.
+
+### Option 3: Use Different Subdomain
+
+If you prefer not to update the existing DNS:
+- Use: devin.a-to-mind.com (requires enhanced API token permissions)
+- Or: mech.a-to-mind.com (requires enhanced API token permissions)
 
 ### 7. Start Local Uplink
 
