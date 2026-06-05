@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Hud from "./Hud";
 import GodButton from "./GodButton";
 import ShadowMetrics from "./ShadowMetrics";
+import ProdLogs from "./ProdLogs";
 
 type Status = {
   doctor?: { score: number; checks: { name: string; ok: boolean }[] };
@@ -88,6 +89,11 @@ export default function Cockpit() {
       <div style={{ marginTop: 32 }}>
         <h2 style={{ marginBottom: 16 }}>⚡ Shadow Branch Metrics</h2>
         <ShadowMetrics />
+      </div>
+
+      <div style={{ marginTop: 32 }}>
+        <h2 style={{ marginBottom: 16 }}>📊 Production Logs</h2>
+        <ProdLogs />
       </div>
     </div>
   );
