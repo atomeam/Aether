@@ -1,6 +1,0 @@
-{
-  "version": 2,
-  "buildCommand": "npx turbo run build --filter=@aether/backend",
-  "outputDirectory": "apps/backend/dist",
-  "framework": null
-}
