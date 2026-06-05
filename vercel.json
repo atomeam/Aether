@@ -1,10 +1,6 @@
 {
   "version": 2,
-  "installCommand": "pnpm install",
-  "buildCommand": "cd apps/backend && pnpm run build",
-  "outputDirectory": "dist",
-  "framework": null,
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
-  ]
+  "buildCommand": "npx turbo run build --filter=@aether/backend",
+  "outputDirectory": "apps/backend/dist",
+  "framework": null
 }
