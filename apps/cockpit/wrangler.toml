@@ -16,10 +16,10 @@ new_sqlite_classes = ["TelemetryHub"]
 binding = "MECH_STATE"
 id = "84088798790b496ca25f37a2c632b78b"
 
-# Routes (separate section)
-routes = [
-  { pattern = "devin.a-to-mind.com/*", zone_name = "a-to-mind.com" }
-]
+# Routes
+[[routes]]
+pattern = "cockpit.a-to-mind.com"
+custom_domain = true
 
 # Environment variables (set via wrangler secret put)
 # UPLINK_TOKEN - for Devin's local uplink agent

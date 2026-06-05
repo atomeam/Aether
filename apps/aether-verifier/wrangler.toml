@@ -31,3 +31,7 @@ binding = "AI"
 
 [vars]
 ENVIRONMENT = "production"
+
+[[routes]]
+pattern = "verifier.a-to-mind.com"
+custom_domain = true

@@ -22,3 +22,7 @@ bucket_name = "aether-logs"
 
 [vars]
 WORKER_ROLE = "dashboard"
+
+[[routes]]
+pattern = "homebase.a-to-mind.com"
+custom_domain = true

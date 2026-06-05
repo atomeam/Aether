@@ -24,5 +24,9 @@ id = "d22e703c3af9451a9942fa2a551a1aa8"
 [vars]
 ENVIRONMENT = "production"
 
+[[routes]]
+pattern = "weekly-digest.a-to-mind.com"
+custom_domain = true
+
 [triggers]
 crons = ["0 17 * * 5"]  # Friday 5pm ET (UTC 21:00)
