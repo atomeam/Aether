@@ -4,7 +4,7 @@ import { IntegrationManager } from './core/integration_manager';
 import { VictusBridge } from './core/victus_bridge';
 import { Orchestrator } from './core/orchestrator';
 
-const app = express();
+const app: express.Express = express();
 const PORT = 8080;
 
 // In-memory execution state for frontend polling

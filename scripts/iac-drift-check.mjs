@@ -79,10 +79,13 @@ contract.workers.forEach(worker => {
 
 // 3. The Governance Hook (Default-Deny Validation)
 const infraChanged = changedFiles.some(f => f.includes('wrangler.toml') || f.includes('infra/'));
-const govChanged = changedFiles.some(f => f.startsWith('docs/governance/'));
+const govChanged = changedFiles.some(f =>
+  f.startsWith('docs/governance/') ||
+  f.startsWith('docs/agent-logs/')
+);
 
 if (infraChanged && !govChanged) {
-  console.error('\n❌ Access Denied: Infrastructure was modified, but no corresponding update was found in docs/governance/.');
+  console.error('\n❌ Access Denied: Infrastructure was modified, but no corresponding update was found in docs/governance/ or docs/agent-logs/.');
   console.error('   The Nucleus is the exclusive write-channel for project-level governance pages. Documentation must be synchronized with IaC changes.');
   process.exit(1);
 }
