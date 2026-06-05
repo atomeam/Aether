@@ -195,7 +195,7 @@ jobs:
           exit 1
 
       - name: Verify strategy metrics contract
-        run: pnpm run metrics:verify -- --contract infra/strategy-metrics.contract.json
+        run: pnpm run metrics:verify --contract infra/strategy-metrics.contract.json
 
   slack-report:
     name: Slack CI Report
