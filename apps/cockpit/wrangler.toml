@@ -17,9 +17,12 @@ binding = "MECH_STATE"
 id = "84088798790b496ca25f37a2c632b78b"
 
 # Routes
-[[routes]]
-pattern = "cockpit.a-to-mind.com"
-custom_domain = true
+# Note: Custom domain requires enhanced API token permissions
+# Worker is accessible directly at: https://cockpit.atomicmoonbeam88.workers.dev
+# To enable custom domain, update token permissions and uncomment below:
+# [[routes]]
+# pattern = "devin.a-to-mind.com"
+# custom_domain = true
 
 # Environment variables (set via wrangler secret put)
 # UPLINK_TOKEN - for Devin's local uplink agent
