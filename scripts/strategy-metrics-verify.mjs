@@ -2,7 +2,16 @@ import fs from 'fs';
 import path from 'path';
 
 const root = process.cwd();
-const contractPath = process.argv[2] ? path.join(root, process.argv[2]) : path.join(root, 'infra', 'strategy-metrics.contract.json');
+
+// Parse command-line arguments to support --contract flag
+let contractPath = path.join(root, 'infra', 'strategy-metrics.contract.json');
+const args = process.argv.slice(2);
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--contract' && i + 1 < args.length) {
+    contractPath = path.join(root, args[i + 1]);
+    break;
+  }
+}
 
 console.log('Starting Strategy Metrics Verification...');
 
