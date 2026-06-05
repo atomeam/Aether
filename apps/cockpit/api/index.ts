@@ -1,6 +1,7 @@
 import { TelemetryHub } from "./telemetry-hub";
+import { default as webhook } from "./webhook";
 export { TelemetryHub };
-export interface Env { TELEMETRY_HUB: DurableObjectNamespace; MECH_STATE: KVNamespace; UPLINK_TOKEN: string; VIEWER_TOKEN: string; INGEST_TOKEN: string }
+export interface Env { TELEMETRY_HUB: DurableObjectNamespace; MECH_STATE: KVNamespace; UPLINK_TOKEN: string; VIEWER_TOKEN: string; INGEST_TOKEN: string; GITHUB_TOKEN: string; WEBHOOK_TOKEN: string }
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -10,6 +11,11 @@ export default {
     if (url.pathname.startsWith("/api/ws") || url.pathname.startsWith("/api/telemetry/ingest")) {
       const id = env.TELEMETRY_HUB.idFromName("global");
       return env.TELEMETRY_HUB.get(id).fetch(req);
+    }
+    
+    // Webhook routes (God Button)
+    if (url.pathname.startsWith("/api/webhook")) {
+      return webhook(req, env);
     }
     
     // Status API routes (KV-based)

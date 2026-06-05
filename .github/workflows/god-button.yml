@@ -1,0 +1,70 @@
+name: God Button - Execute via Cockpit
+
+on:
+  repository_dispatch:
+    types: [god-button-execute]
+
+jobs:
+  execute:
+    name: Execute God Button
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Request
+        run: |
+          echo "Payload: ${{ github.event.client_payload }}"
+          PR_NUMBER="${{ github.event.client_payload.pr_number }}"
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Error: pr_number required in payload"
+            exit 1
+          fi
+          echo "PR Number: $PR_NUMBER"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Run Mech Doctor
+        run: |
+          pwsh -File ./mech.ps1 -Cmd doctor
+          if ($LASTEXITCODE -ne 0) { throw "Mech doctor failed" }
+
+      - name: Run Guard Check
+        run: |
+          pwsh -File ./mech.ps1 -Cmd guard-check
+          if ($LASTEXITCODE -ne 0) { throw "Guard check failed" }
+
+      - name: Run Fastcheck
+        run: |
+          pwsh -File ./.devin/fastcheck.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Fastcheck failed" }
+
+      - name: Merge PR
+        run: |
+          PR_NUMBER="${{ github.event.client_payload.pr_number }}"
+          gh pr merge $PR_NUMBER --merge --delete-branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Notion Runs Ledger
+        run: |
+          echo "Would update Notion Runs ledger here"
+          echo "PR ${{ github.event.client_payload.pr_number }} merged"
+          # This requires Notion MCP write access (currently blocked by allowlist)
+
+      - name: Notify Cockpit
+        run: |
+          echo "Execution complete. Notify cockpit via telemetry."
+          # Send success status to cockpit via telemetry hub

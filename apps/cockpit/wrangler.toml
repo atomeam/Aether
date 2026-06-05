@@ -25,3 +25,5 @@ routes = [
 # UPLINK_TOKEN - for Devin's local uplink agent
 # VIEWER_TOKEN - for cockpit browser WebSocket authentication
 # INGEST_TOKEN - for KV state ingestion from mech.ps1
+# GITHUB_TOKEN - for GitHub Actions repository_dispatch
+# WEBHOOK_TOKEN - for God Button webhook authentication

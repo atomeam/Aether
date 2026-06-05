@@ -47,9 +47,11 @@ id = "abc123def456"  # Replace with actual ID from command output
 npx wrangler secret put UPLINK_TOKEN
 npx wrangler secret put VIEWER_TOKEN
 npx wrangler secret put INGEST_TOKEN
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put WEBHOOK_TOKEN
 ```
 
-Use strong random tokens for each.
+Use strong random tokens for each. For GITHUB_TOKEN, create a GitHub Personal Access Token with `repo` scope.
 
 ### 4. Deploy
 

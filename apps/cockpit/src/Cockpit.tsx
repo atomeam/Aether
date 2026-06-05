@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Hud from "./Hud";
+import GodButton from "./GodButton";
 
 type Status = {
   doctor?: { score: number; checks: { name: string; ok: boolean }[] };
@@ -15,6 +16,7 @@ const API = import.meta.env.VITE_COCKPIT_API ?? "/api";
 export default function Cockpit() {
   const [s, setS] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
+  const [prNumber, setPrNumber] = useState(0);
 
   async function load() { setS(await (await fetch(`${API}/status`)).json()); }
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, []);
@@ -28,10 +30,12 @@ export default function Cockpit() {
   const score = s?.doctor?.score ?? 0;
   const armorOk = (s?.guard?.alerts?.length ?? 0) === 0;
   const ejected = s?.ejector?.engaged ?? false;
+  const canExecute = score >= 80 && armorOk && !ejected;
 
   return (
     <div style={{ fontFamily: "ui-sans-serif", padding: 24, background: "#0b0d12", color: "#e6e8ee", minHeight: "100vh" }}>
       <h1>ðŸ¤– Devin Cockpit</h1>
+      
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 }}>
         <Card title="Readiness" value={`${score}%`} good={score >= 80} />
         <Card title="Armor" value={armorOk ? "INTACT" : `${s?.guard?.alerts?.length} ALERTS`} good={armorOk} />
@@ -57,8 +61,27 @@ export default function Cockpit() {
       )}
 
       <div style={{ marginTop: 32 }}>
-        <h2 style={{ marginBottom: 16 }}>🧠 Live Nervous System</h2>
+        <h2 style={{ marginBottom: 16 }}>ðŸ§  Live Nervous System</h2>
         <Hud />
+      </div>
+
+      <div style={{ marginTop: 32 }}>
+        <h2 style={{ marginBottom: 16 }}>ðŸ”¥ Execution</h2>
+        <div style={{ marginBottom: 16 }}>
+          <label>PR Number: </label>
+          <input
+            type="number"
+            value={prNumber}
+            onChange={(e) => setPrNumber(parseInt(e.target.value) || 0)}
+            style={{ background: "#151823", border: "1px solid #1f2430", color: "#e6e8ee", padding: 8, borderRadius: 4, width: 120 }}
+          />
+        </div>
+        <GodButton prNumber={prNumber} disabled={!canExecute || prNumber === 0} />
+        {!canExecute && (
+          <div style={{ marginTop: 8, color: "#fbbf24", fontSize: 13 }}>
+            God Button disabled: {score < 80 ? "Readiness < 80%" : ""} {!armorOk ? "Armor compromised" : ""} {ejected ? "Ejector engaged" : ""}
+          </div>
+        )}
       </div>
     </div>
   );
