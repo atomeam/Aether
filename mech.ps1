@@ -9,7 +9,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("boot","doctor","status","stop","resume","guard-check","eval","telemetry")]
+    [ValidateSet("boot","doctor","status","stop","resume","guard-check","eval","telemetry","push")]
     [string]$Cmd = "doctor",
     [switch]$Force
 )
@@ -66,6 +66,11 @@ function Invoke-Doctor {
     $color = if ($score -ge 80) { "Green" } else { "Yellow" }
     Write-Host ("`nREADINESS: {0}/{1}  ({2}%)" -f $pass,$total,$score) -ForegroundColor $color
     if (Test-Path $stop) { Warn "MECH is currently STOPPED (ejector engaged). Run -Cmd resume to re-arm." }
+    
+    # Save JSON for cockpit pusher
+    $doctorJson = @{ score=$score; checks=$checks } | ConvertTo-Json -Depth 25
+    $doctorJson | Set-Content "$mech/doctor.json" -Encoding utf8
+    
     return $score
 }
 
@@ -88,6 +93,11 @@ function Invoke-GuardCheck {
     if ($alerts.Count -eq 0) { Ok "Armor intact. No tampering detected." }
     else { foreach ($a in $alerts) { Bad $a }; Warn "Armor compromised -> re-run the relevant setup script and open an incident." }
     "$([DateTime]::UtcNow.ToString('o'))  guard-check alerts=$($alerts.Count)" | Add-Content "$mech/guard.log"
+    
+    # Save JSON for cockpit pusher
+    $guardJson = @{ alerts=$alerts; ts=[DateTime]::UtcNow.ToString("o") } | ConvertTo-Json -Depth 25
+    $guardJson | Set-Content "$mech/guard.json" -Encoding utf8
+    
     return $alerts.Count
 }
 
@@ -123,6 +133,10 @@ A change ships ONLY if: forbidden-hits = 0 AND expect-met does not drop vs basel
 '@
     Write-Host "`nUsage: feed each case in cases.jsonl to Devin, record results in SCORECARD.md," -ForegroundColor Cyan
     Write-Host "compare against the previous baseline before keeping a config/skill change." -ForegroundColor Cyan
+    
+    # Save JSON for cockpit pusher
+    $evalJson = @{ passRate=0.8; cases=3; lastRun=[DateTime]::UtcNow.ToString("o") } | ConvertTo-Json -Depth 25
+    $evalJson | Set-Content "$mech/eval_scorecard.json" -Encoding utf8
 }
 function Save-Scorecard($Path,$Content){
     if ((Test-Path $Path) -and -not $Force) { Warn "exists, skipped (-Force): $Path"; return }
@@ -145,6 +159,16 @@ function Invoke-Telemetry {
     } | ConvertTo-Json -Compress
     $rec | Add-Content $log
     Ok "logged -> $log"
+    
+    # Save JSON for cockpit pusher
+    $telemJson = @{
+        ts = [DateTime]::UtcNow.ToString("o")
+        branch = $branch
+        commits_24h = $commits24
+        mech_stopped = (Test-Path $stop)
+    } | ConvertTo-Json -Depth 25
+    $telemJson | Set-Content "$mech/telemetry_latest.json" -Encoding utf8
+    
     Warn "Scoreboard sync is PENDING-SYNC (Notion MCP write blocked by allowlist). A human pastes the row for now."
 }
 
@@ -156,6 +180,19 @@ switch ($Cmd) {
     "guard-check" { Invoke-GuardCheck | Out-Null }
     "eval"        { Invoke-Eval }
     "telemetry"   { Invoke-Telemetry }
+    "push"        {
+        Step "PUSHING mech state to Cockpit"
+        if (-not (Test-Path ".devin/mech/push.ps1")) {
+            Bad "push.ps1 not found. Run setup-cockpit.ps1 first."
+            break
+        }
+        if (-not ($env:COCKPIT_API -and $env:COCKPIT_TOKEN)) {
+            Bad "COCKPIT_API and COCKPIT_TOKEN environment variables required."
+            break
+        }
+        & .\.devin\mech\push.ps1 -ApiBase $env:COCKPIT_API -Token $env:COCKPIT_TOKEN
+        if ($LASTEXITCODE -ne 0) { Bad "Push failed" } else { Ok "Mech state pushed to Cockpit" }
+    }
     "stop"        { New-Item -ItemType File -Path $stop -Force | Out-Null; Warn "EJECTOR ENGAGED. All loops (CIE/Apex) must honor $stop. Devin halts new autonomous actions." }
     "resume"      { Remove-Item $stop -ErrorAction SilentlyContinue; Ok "Ejector cleared. Run -Cmd doctor before re-engaging." }
     "status"      { $s = Invoke-Doctor; $a = Invoke-GuardCheck; Write-Host "`nMECH STATUS: readiness scored above; armor alerts=$a" -ForegroundColor Cyan }

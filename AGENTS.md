@@ -1,4 +1,4 @@
-# Aether â€” Agent Rules (hotrod)
+# Aether — Agent Rules (hotrod)
 
 ## Stack
 Turborepo / TypeScript / React+Vite / Cloudflare Workers (wrangler) / D1, KV, Queues, R2.
@@ -19,6 +19,15 @@ Subdomains: aether, bridge, notion, billing, grants, crew, home.
 ## Superpackages (available)
 - Notion integration: Read-first workspace awareness (requires org allowlist)
 - Gemini uplink: Deep reasoning for complex infrastructure (requires GEMINI_API_KEY)
+
+## Mech System (exoskeleton)
+- Doctor: Readiness scoring across all subsystems
+- Guard-check: Tamper/drift detection on armor integrity
+- Eval harness: Regression testing for config changes
+- Telemetry: Black box recorder for run metrics
+- Ejector seat: Global kill-switch (mech.ps1 -Cmd stop)
+- Cockpit: Web dashboard for live mech monitoring
+- Canary lane: Bold deploy with auto-rollback
 
 ## Done =
 changed-file tests green + typecheck + lint clean (paste output) + PR opened.
