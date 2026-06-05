@@ -1,0 +1,27 @@
+name = "cockpit"
+main = "api/index.ts"
+compatibility_date = "2024-01-01"
+
+# Durable Object for telemetry hub
+[[durable_objects.bindings]]
+name = "TELEMETRY_HUB"
+class_name = "TelemetryHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TelemetryHub"]
+
+# KV namespace for mech state
+[[kv_namespaces]]
+binding = "MECH_STATE"
+id = "your-kv-namespace-id-here"  # Run: npx wrangler kv namespace create MECH_STATE
+
+# Routes (separate section)
+routes = [
+  { pattern = "devin.a-to-mind.com/*", zone_name = "a-to-mind.com" }
+]
+
+# Environment variables (set via wrangler secret put)
+# UPLINK_TOKEN - for Devin's local uplink agent
+# VIEWER_TOKEN - for cockpit browser WebSocket authentication
+# INGEST_TOKEN - for KV state ingestion from mech.ps1

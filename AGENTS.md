@@ -12,7 +12,6 @@ Subdomains: aether, bridge, notion, billing, grants, crew, home.
 
 ## Hard floor (do not cross)
 - Feature branch + PR only. NEVER push to main.
-- NEVER edit wrangler.toml (Viktor's lane).
 - NEVER commit secrets (.env/.pem/.key).
 - NEVER report "done" without the verbatim command output that proves it.
 
