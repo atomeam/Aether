@@ -1,13 +1,9 @@
 {
   "version": 2,
-  "framework": "express",
-  "builds": [
-    {
-      "src": "apps/backend/dist/server.cjs",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/apps/backend/dist/server.cjs" }
+  "buildCommand": "pnpm run build --filter=@aether/backend",
+  "outputDirectory": "apps/backend/dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
   ]
 }
