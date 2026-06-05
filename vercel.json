@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build --filter=@aether/backend",
+  "buildCommand": "npx turbo run build --filter=@aether/backend",
   "outputDirectory": "apps/backend/dist",
   "framework": null,
   "rewrites": [
