@@ -53,30 +53,49 @@ npx wrangler secret put WEBHOOK_TOKEN
 
 Use strong random tokens for each. For GITHUB_TOKEN, create a GitHub Personal Access Token with `repo` scope.
 
-### 4. Deploy
+### 5. Deploy
 
 ```powershell
 npx wrangler deploy
 ```
 
-### 5. Start Local Uplink
+### 6. Configure Custom Domain DNS
+
+**IMPORTANT:** For cockpit.a-to-mind.com to work, you must add DNS records in Cloudflare:
+
+1. Go to Cloudflare Dashboard → DNS → Records
+2. Add a CNAME record:
+   - **Name:** cockpit
+   - **Type:** CNAME
+   - **Target:** cockpit.atomicmoonbeam88.workers.dev
+   - **Proxy status:** Proxied (orange cloud)
+   - **TTL:** Auto
+
+3. Wait for DNS propagation (usually 5-15 minutes)
+4. Access: https://cockpit.a-to-mind.com
+
+**Alternative:** If you see the old site, you can access the worker directly at:
+https://cockpit.atomicmoonbeam88.workers.dev
+
+### 7. Start Local Uplink
 
 ```powershell
 # From repo root
-.\.devin\mech\uplink.ps1 -IngestUrl "https://devin.a-to-mind.com" -Token "<UPLINK_TOKEN>"
+.\.devin\mech\uplink.ps1 -IngestUrl "https://cockpit.a-to-mind.com" -Token "<UPLINK_TOKEN>"
 ```
 
-### 6. Access Cockpit
+### 8. Access Cockpit
 
-Open https://devin.a-to-mind.com in your browser.
+**Primary:** https://cockpit.a-to-mind.com (after DNS configuration)
+**Direct:** https://cockpit.atomicmoonbeam88.workers.dev (immediate access)
 
 ## Environment Variables for React Dashboard
 
 Set these in your `.env` or deployment platform:
 
 ```bash
-VITE_COCKPIT_API=https://devin.a-to-mind.com/api
-VITE_COCKPIT_WS=wss://devin.a-to-mind.com/api/ws
+VITE_COCKPIT_API=https://cockpit.a-to-mind.com/api
+VITE_COCKPIT_WS=wss://cockpit.a-to-mind.com/api/ws
 VITE_COCKPIT_TOKEN=<INGEST_TOKEN>
 VITE_COCKPIT_VIEWER_TOKEN=<VIEWER_TOKEN>
 ```
