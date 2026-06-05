@@ -10,7 +10,8 @@ function Push($key,$file){
     $val = Get-Content $file -Raw
     try {
         $body = @{ key=$key; value=($val | ConvertFrom-Json) } | ConvertTo-Json -Depth 25
-        Invoke-RestMethod -Method Post -Uri "$ApiBase/api/ingest" -Headers @{ Authorization = "Bearer $Token" } `
+        $url = "$ApiBase/api/kv/ingest"  # Use KV ingest endpoint for mech state
+        Invoke-RestMethod -Method Post -Uri $url -Headers @{ Authorization = "Bearer $Token" } `
             -ContentType "application/json" -Body $body
         Write-Host "pushed $key" -ForegroundColor Green
     } catch {

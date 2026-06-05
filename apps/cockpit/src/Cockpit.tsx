@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Hud from "./Hud";
 
 type Status = {
   doctor?: { score: number; checks: { name: string; ok: boolean }[] };
@@ -54,6 +55,11 @@ export default function Cockpit() {
           <ul>{s?.guard?.alerts?.map((a, i) => <li key={i}>{a}</li>)}</ul>
         </div>
       )}
+
+      <div style={{ marginTop: 32 }}>
+        <h2 style={{ marginBottom: 16 }}>🧠 Live Nervous System</h2>
+        <Hud />
+      </div>
     </div>
   );
 }

@@ -1,5 +1,4 @@
-// Devin Cockpit status API. Reads mech state from KV (binding: MECH_STATE).
-// mech.ps1 telemetry/doctor push JSON here via POST /api/ingest.
+// Status API - serves mech state from KV (for backward compatibility)
 export interface Env { MECH_STATE: KVNamespace; INGEST_TOKEN: string }
 
 const json = (d: unknown, s = 200) =>
