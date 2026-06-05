@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Hud from "./Hud";
 import GodButton from "./GodButton";
+import ShadowMetrics from "./ShadowMetrics";
 
 type Status = {
   doctor?: { score: number; checks: { name: string; ok: boolean }[] };
@@ -82,6 +83,11 @@ export default function Cockpit() {
             God Button disabled: {score < 80 ? "Readiness < 80%" : ""} {!armorOk ? "Armor compromised" : ""} {ejected ? "Ejector engaged" : ""}
           </div>
         )}
+      </div>
+
+      <div style={{ marginTop: 32 }}>
+        <h2 style={{ marginBottom: 16 }}>⚡ Shadow Branch Metrics</h2>
+        <ShadowMetrics />
       </div>
     </div>
   );
