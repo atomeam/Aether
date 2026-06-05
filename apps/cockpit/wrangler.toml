@@ -14,7 +14,7 @@ new_sqlite_classes = ["TelemetryHub"]
 # KV namespace for mech state
 [[kv_namespaces]]
 binding = "MECH_STATE"
-id = "your-kv-namespace-id-here"  # Run: npx wrangler kv namespace create MECH_STATE
+id = "84088798790b496ca25f37a2c632b78b"
 
 # Routes (separate section)
 routes = [
