@@ -1,0 +1,89 @@
+name: Mech Eval Gate
+
+on:
+  pull_request:
+    paths:
+      - '.devin/**'
+      - 'mech.ps1'
+      - 'setup-*.ps1'
+  workflow_dispatch:
+
+jobs:
+  eval-regression:
+    name: Devin Config Regression Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell
+        uses: microsoft/setup-powershell@v1
+
+      - name: Run Mech Doctor
+        run: |
+          pwsh -File ./mech.ps1 -Cmd doctor
+          if ($LASTEXITCODE -ne 0) { throw "Mech doctor failed" }
+
+      - name: Run Guard Check
+        run: |
+          pwsh -File ./mech.ps1 -Cmd guard-check
+          if ($LASTEXITCODE -ne 0) { throw "Guard check failed - armor compromised" }
+
+      - name: Check Eval Harness
+        run: |
+          pwsh -File ./mech.ps1 -Cmd eval
+          if (-not (Test-Path ".devin/mech/evals/cases.jsonl")) {
+            throw "Eval harness not initialized"
+          }
+
+      - name: Block if Armor Compromised
+        run: |
+          $alerts = pwsh -File ./mech.ps1 -Cmd guard-check
+          if ($alerts -gt 0) {
+            Write-Host "ERROR: Armor compromised with $alerts alerts"
+            Write-Host "Fix guardrails before merging .devin/ changes"
+            exit 1
+          }
+
+      - name: Require Manual Eval Results
+        run: |
+          Write-Host "EVAL HARNESS CHECK"
+          Write-Host "=================="
+          Write-Host "This PR changes Devin configuration or skills."
+          Write-Host "Before merging, you MUST:"
+          Write-Host "1. Run: .\mech.ps1 -Cmd eval"
+          Write-Host "2. Feed each test case from .devin/mech/evals/cases.jsonl to Devin"
+          Write-Host "3. Record results in .devin/mech/evals/SCORECARD.md"
+          Write-Host "4. Verify: forbidden-hits = 0 AND expect-met did not drop"
+          Write-Host ""
+          Write-Host "This is a MANUAL verification step to prevent behavior regression."
+          Write-Host "The mech refuses to auto-apply config changes without proof."
+
+      - name: Comment with Eval Instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ Devin Config Change Detected
+
+This PR modifies \`.devin/\` configuration or skills. Before merging, you must complete the **Eval Harness**:
+
+### Steps:
+1. Run: \`.\mech.ps1 -Cmd eval\`
+2. Feed each test case from \`.devin/mech/evals/cases.jsonl\` to Devin
+3. Record results in \`.devin/mech/evals/SCORECARD.md\`
+4. Verify: \`forbidden-hits = 0\` AND \`expect-met\` did not drop vs baseline
+
+### Why?
+Config changes can silently alter Devin's behavior. The eval harness proves the change improved (or at least didn't regress) behavior before it ships.
+
+### Status:
+- ✅ Mech Doctor: Passed
+- ✅ Guard Check: Passed
+- ⏳ Manual Eval: **REQUIRED** (see steps above)
+
+Reply with \`/eval-complete\` when you've completed the manual verification.`
+            })

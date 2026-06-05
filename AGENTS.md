@@ -1,168 +1,24 @@
-# Aether - ALPHA Stack Monorepo
+# Aether â€” Agent Rules (hotrod)
 
-## Project State (Updated 2026-05-19)
+## Stack
+Turborepo / TypeScript / React+Vite / Cloudflare Workers (wrangler) / D1, KV, Queues, R2.
+Subdomains: aether, bridge, notion, billing, grants, crew, home.
 
-### 🚀 Vercel Deployment (BLOCKED - needs manual retry)
+## Speed rules
+- Grep before reading whole files. Read only what you'll edit.
+- Smallest diff that satisfies the task. No drive-by refactors.
+- typecheck + lint on changed files first; full test suite only before opening the PR.
+- Parallelize independent reads/edits.
 
-| Commit | Fix |
-|--------|-----|
-| `115d36d` | package.json uses `file:../packages/*` |
-| `ebb0530` | Regenerated lockfile with file references |
+## Hard floor (do not cross)
+- Feature branch + PR only. NEVER push to main.
+- NEVER edit wrangler.toml (Viktor's lane).
+- NEVER commit secrets (.env/.pem/.key).
+- NEVER report "done" without the verbatim command output that proves it.
 
-**Problem**: npm workspaces can't resolve `@aether/*` packages on Vercel (404 error)
-**Solution**: Use `file:` dependency links (pushed, waiting for user to deploy)
+## Superpackages (available)
+- Notion integration: Read-first workspace awareness (requires org allowlist)
+- Gemini uplink: Deep reasoning for complex infrastructure (requires GEMINI_API_KEY)
 
----
-
-### 🤖 Two-Agent System (DONE)
-
-```
-User Request → Curator (validates) → APPROVED → Executor (runs tools) → Ledger
-                                      → REJECTED → 422 error
-```
-
-**Implemented**:
-1. ✅ MCP Tool Registry (`packages/mcp-tools`)
-   - `file_read`, `file_write`
-   - `git_status`, `git_commit`
-   - `http_request` (GET/HEAD only)
-2. ✅ Executor Agent (`apps/backend/src/agents/executor.ts`)
-3. ✅ Evaluator Agent (`apps/backend/src/agents/evaluator.ts`)
-4. ✅ API endpoints:
-   - `GET /api/agents` — Agent health
-   - `GET /api/agents/evaluate` — Ledger pattern suggestions
-
-## Quick Start
-
-```bash
-cd Aether
-npm install
-npm run dev:backend  # Terminal 1 - port 3000
-npm run dev:frontend  # Terminal 2 - port 5173
-```
-
-Then open http://localhost:5173
-
-## Workspace Structure
-
-```
-aether/
-├── apps/
-│   ├── backend/        # @aether/backend (port 3000)
-│   ├── frontend/     # @aether/frontend (port 5173)
-│   └── bridge/      # @aether/bridge
-├── packages/
-│   ├── contracts/   # Zod schemas for FE↔BE↔Bridge
-│   └── curator/    # Default-deny security gate
-├── frontend.legacy/  # DEPRECATED - do not use
-└── tests/         # Integration tests
-```
-
-## Packages
-
-### @aether/contracts
-Shared Zod schemas for boundary validation:
-- `BuildRequestSchema` - Frontend → Backend prompt payload
-- `ComponentSchema` - UI component shapes
-- `BuildResponseSchema` - Backend → Frontend response
-- `ComponentActionSchema` - ADD/REMOVE/MODIFY actions
-
-### @aether/curator
-Default-deny security gate for generated UI:
-- Allow-list: `['stat', 'chart', 'list', 'status', 'gauge']`
-- Rate limit: max 10 actions per response
-- Returns 422 on denial
-
-## Key Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/build` | POST | Generate UI components |
-| `/api/test/curator` | POST | Direct curator test |
-| `/api/stack` | GET | Backend health |
-| `/api/nexus/*` | * | Integration proxy |
-
-## Environment Variables
-
-```bash
-GEMINI_API_KEY=...  # Required for /api/build
-```
-
-## Testing
-
-```bash
-npm run test -w @aether/contracts
-npm run test -w @aether/curator
-
-# Or via Turbo
-npx turbo run test
-npx turbo run typecheck
-npx turbo run build
-```
-
-## Turborepo
-
-The monorepo uses Turborepo for build orchestration. Pipeline defined in `turbo.json`:
-
-- **test** - runs vitest in packages
-- **typecheck** - runs tsc --noEmit  
-- **build** - builds packages with dependencies
-- **dev** - runs in parallel with no cache
-
-```bash
-# Run full pipeline
-npx turbo run test typecheck build
-```
-
-## Deprecation Notes
-
-- Root `server.ts` - DEPRECATED. Use `npm run dev:backend`
-- `src/server.ts` - DEPRECATED. Use `npm run dev:backend`
-- `frontend.legacy/` - Old frontend. Use `apps/frontend/`
-
----
-
-## Devin Self-Audit: Commit a3c134e (2026-05-28)
-
-### Context
-I was operating in autonomous "hyperproductive" mode after successfully fixing TypeScript build errors and deployment workflow issues. The user had requested I take charge of the project and be productive. Viktor had identified missing Cloudflare bindings (METRICS KV, ACTIONS queue, DISPATCHER service) that needed to be created.
-
-### What Happened
-I attempted to create the `bridge-actions` queue using `npx wrangler queues create bridge-actions`, which failed with "The specified queue settings are invalid." I then upgraded wrangler from v3 to v4 and retried, which failed with "Queue name 'bridge-actions' is already taken."
-
-I then ran `npx wrangler queues list` and misinterpreted the output. The list showed several queues but did NOT include `bridge-actions`. However, I incorrectly claimed that the queue already existed with ID `17063bafa16e4f5d8b2c88a9e0fed397` and proceeded to update both wrangler.toml files with this fabricated ID.
-
-### Why I Was Confident
-- The wrangler error message "Queue name 'bridge-actions' is already taken" led me to believe the queue existed
-- I saw queue names in the list output and made an incorrect association
-- I was in "hyperproductive" mode and moving quickly, skipping verification steps
-- I did not cross-reference the actual IDs in the list output with the ID I claimed
-
-### Missing Guardrails
-1. **No ID verification**: I should have checked that the specific ID `17063bafa16e4f5d8b2c88a9e0fed397` actually appeared in the wrangler list output
-2. **No deployment test**: I should have attempted a deployment immediately to verify the bindings would work
-3. **No cross-check**: I should have compared the wrangler list output line-by-line with my claimed ID
-4. **No pause on failure**: When the queue creation failed, I should have stopped and investigated rather than assuming it already existed
-
-### What Would Have Caught It
-1. **Reading the actual wrangler output carefully**: The list output clearly showed only 5 queues, none named "bridge-actions"
-2. **Attempting deployment immediately**: The deployment would have failed with a binding error
-3. **Manual ID verification**: Checking if the claimed ID existed in the actual output
-4. **Slower pace**: Taking time to verify each step rather than rushing to be "hyperproductive"
-
-### Lessons Learned
-- **Never assume resource existence based on error messages alone** - "already taken" doesn't mean "already exists with this specific ID"
-- **Always verify IDs against actual command output** - don't fabricate or assume IDs
-- **Test infrastructure changes immediately** - deploy or validate bindings before committing
-- **Slow down on infrastructure changes** - speed is the enemy of accuracy in infra work
-- **Cross-check all assumptions** - if I claim a resource exists, I must point to the exact evidence
-
-### Root Cause
-The root cause was a combination of:
-1. Misinterpreting a Cloudflare API error message
-2. Moving too quickly in "autonomous mode" without proper verification
-3. Lack of immediate testing/deployment to catch the error
-4. Overconfidence from previous successful infrastructure changes
-
-This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
-This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
+## Done =
+changed-file tests green + typecheck + lint clean (paste output) + PR opened.

@@ -1,0 +1,29 @@
+{
+  "model": "swe-1-6-fast",
+  "mode": "accept-edits",
+  "performance": {
+    "parallelToolCalls": true,
+    "maxParallelTools": 6,
+    "streaming": true,
+    "cachePromptPrefix": true,
+    "skipRedundantFileReads": true,
+    "earlyExitOnGreen": true
+  },
+  "context": {
+    "leanMode": true,
+    "maxFilesPerRead": 8,
+    "autoCompactAtPercent": 55,
+    "preferGrepOverFullRead": true
+  },
+  "verify": {
+    "fastChecksFirst": ["typecheck", "lint"],
+    "testScope": "changed-only",
+    "fullSuiteOnlyBeforePR": true
+  },
+  "guardrails": {
+    "noPushToMain": true,
+    "noWranglerEdits": true,
+    "blockSecrets": true,
+    "evidenceForDone": true
+  }
+}
