@@ -199,36 +199,16 @@ jobs:
 
   slack-report:
     name: Slack CI Report
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_slack-run-report.yml
     needs: [test, typecheck, build, strategy-metrics]
     if: always()
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate run_id
-        id: run_id
-        run: echo "run_id=$(uuidgen)" >> $GITHUB_OUTPUT
-
-      - name: Determine CI status
-        id: status
-        run: |
-          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.typecheck.result }}" == "success" ] && [ "${{ needs.build.result }}" == "success" ] && [ "${{ needs.strategy-metrics.result }}" == "success" ]; then
-            echo "state=succeeded" >> $GITHUB_OUTPUT
-            echo "result=All checks passed" >> $GITHUB_OUTPUT
-          else
-            echo "state=failed" >> $GITHUB_OUTPUT
-            echo "result=Test: ${{ needs.test.result }}, TypeCheck: ${{ needs.typecheck.result }}, Build: ${{ needs.build.result }}, Strategy-Metrics: ${{ needs.strategy-metrics.result }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Post CI result to Slack
-        uses: ./.github/workflows/_slack-run-report.yml
-        with:
-          run_id: ${{ steps.run_id.outputs.run_id }}
-          task_id: https://github.com/atomeam/Aether/pull/75
-          type: ci_validation
-          repo: ${{ github.repository }}
-          actor: ${{ github.actor }}
-          commit_sha: ${{ github.sha }}
-          ci_run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          state: ${{ steps.status.outputs.state }}
-          result: ${{ steps.status.outputs.result }}
+    with:
+      run_id: ${{ github.run_id }}
+      task_id: https://github.com/atomeam/Aether/pull/75
+      type: ci_validation
+      repo: ${{ github.repository }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      ci_run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      state: ${{ job.status }}
+      result: ${{ needs.test.result }}, ${{ needs.typecheck.result }}, ${{ needs.build.result }}, ${{ needs.strategy-metrics.result }}

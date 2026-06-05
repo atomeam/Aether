@@ -49,7 +49,7 @@ ACTOR: ${{ inputs.actor }}
 STATE: ${{ inputs.state }}
 STARTED: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 ENDED: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-PR: ${{ github.server_url }}/${{ github.repository }}/pull/new/${{ inputs.run_id }}
+PR: ${{ inputs.task_id }}
 CI: ${{ inputs.ci_run_url }}
 EVIDENCE: See CI run"
 
