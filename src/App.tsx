@@ -1346,6 +1346,53 @@ export default function App() {
                   </div>
                 </div>
                 
+                {/* 20 Subsystems Status */}
+                <div className="col-span-2 p-6 border border-white/5 bg-white/[0.01] rounded-2xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Layers className="w-4 h-4 text-blue-400 animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400">20 Subsystems Status</h3>
+                      <p className="text-[6px] text-white/30 uppercase tracking-wider">Complete UAP Detection System</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { name: 'Sensor Integration', status: 'ONLINE', color: 'green' },
+                      { name: 'ML Engine', status: 'TRAINING', color: 'yellow' },
+                      { name: 'Geospatial Viz', status: 'ONLINE', color: 'green' },
+                      { name: 'Sensor Fusion', status: 'ACTIVE', color: 'green' },
+                      { name: 'Alert System', status: 'STANDBY', color: 'blue' },
+                      { name: 'Historical Analysis', status: 'PROCESSING', color: 'yellow' },
+                      { name: 'Auto Response', status: 'READY', color: 'green' },
+                      { name: 'Reporting', status: 'ONLINE', color: 'green' },
+                      { name: 'External API', status: 'ONLINE', color: 'green' },
+                      { name: 'Collaboration', status: 'ACTIVE', color: 'green' },
+                      { name: 'Mobile Apps', status: 'CONNECTED', color: 'green' },
+                      { name: 'Satellite', status: 'LINKED', color: 'green' },
+                      { name: 'Government DB', status: 'CONNECTED', color: 'green' },
+                      { name: 'Advanced Analytics', status: 'PROCESSING', color: 'yellow' },
+                      { name: 'Security', status: 'SECURE', color: 'green' },
+                      { name: 'Hardware Layer', status: 'ONLINE', color: 'green' },
+                      { name: 'Processing Pipeline', status: 'RUNNING', color: 'green' },
+                      { name: 'Data Quality', status: 'VALIDATING', color: 'yellow' },
+                      { name: 'Knowledge Base', status: 'SYNCED', color: 'green' },
+                      { name: 'Simulation', status: 'IDLE', color: 'blue' }
+                    ].map((sub, i) => (
+                      <div key={i} className="p-2 border border-white/5 bg-white/[0.01] rounded flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          sub.color === 'green' ? 'bg-green-400' : 
+                          sub.color === 'yellow' ? 'bg-yellow-400' : 
+                          sub.color === 'blue' ? 'bg-blue-400' : 'bg-gray-400'
+                        } ${sub.status === 'RUNNING' || sub.status === 'PROCESSING' || sub.status === 'VALIDATING' ? 'animate-pulse' : ''}`} />
+                        <div className="text-[6px] text-white/60 uppercase tracking-wider truncate">{sub.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
                 {components.filter(c => c.props?.discoveryHash).map(spec => (
                   <div key={spec.id} className="relative group">
                     <PrimitiveRenderer spec={spec} theme={theme} onAction={handleNodeAction} />
