@@ -88,6 +88,47 @@ Default-deny security gate for generated UI:
 GEMINI_API_KEY=...  # Required for /api/build
 ```
 
+## Data Integrity (MANDATORY)
+
+**Rule:** Distinguish between fake data, simulated data, and algorithmic randomness.
+
+**Documentation:** See [DATA_INTEGRITY.md](./DATA_INTEGRITY.md) for comprehensive guidelines.
+
+**The Three Types of Randomness:**
+
+1. **Fake Data (NEVER ALLOWED)**
+   - Pretending to have real data when you don't
+   - Fake user counts, fake revenue numbers, fake API responses
+   - Hardcoded values that should come from APIs
+   - Use real external APIs instead
+
+2. **Simulated Data (OK - it's the feature)**
+   - Generating data for a purpose
+   - UAP detection system simulating UAP anomalies (that's the whole point!)
+   - Game physics, particle systems, procedural generation
+   - This is not "fake" - it's the actual feature
+
+3. **Algorithmic Randomness (OK - it's math)**
+   - Bootstrap resampling for statistics
+   - P-value calculations
+   - Monte Carlo simulations
+   - Random sampling, shuffling
+   - This is legitimate mathematics
+
+**Pre-commit check:**
+```bash
+.\.devin\skills\real-vs-simulated\skill.ps1 -Audit
+```
+
+**Guardrails:**
+- Never use fake data when real data is available
+- Always ask: "What is the purpose of this randomness?"
+- Context matters - distinguish purpose before judging
+- Use real external APIs (USGS, NOAA, Open-Meteo, etc.)
+
+**The Mantra:**
+Real work is easier than simulated work. Just do it.
+
 ## Frontend-Backend Sync (MANDATORY)
 
 **Rule**: NEVER commit backend APIs without corresponding frontend UI components.
@@ -127,24 +168,29 @@ GEMINI_API_KEY=...  # Required for /api/build
 
 All commits must pass the following checks:
 
-1. **Frontend-Backend Sync** (MANDATORY)
+1. **Data Integrity** (MANDATORY)
+   - Distinguishes between fake data, simulated data, and algorithmic randomness
+   - Blocks commits with fake data when real data is available
+   - Allows legitimate feature simulations and statistical algorithms
+
+2. **Frontend-Backend Sync** (MANDATORY)
    - Ensures UI matches backend APIs
    - Auto-generates components for missing endpoints
    - Blocks commits if frontend is out of sync
 
-2. **Lint** (when available)
+3. **Lint** (when available)
    - Code style checks
    - TypeScript/ESLint rules
 
-3. **Typecheck** (when available)
+4. **Typecheck** (when available)
    - TypeScript type checking
    - Build type validation
 
-4. **Test** (when available)
+5. **Test** (when available)
    - Unit tests
    - Integration tests
 
-5. **Secret Detection** (when available)
+6. **Secret Detection** (when available)
    - Prevents committing secrets
    - Scans for API keys, tokens, passwords
 

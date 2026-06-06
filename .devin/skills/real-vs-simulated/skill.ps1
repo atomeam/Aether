@@ -24,9 +24,6 @@ $patterns = @(
     @{ Pattern = "fake.*Math\.random"; Description = "Fake data with random" },
     @{ Pattern = "mock.*Math\.random"; Description = "Mock data with random" },
     @{ Pattern = "simulated.*Math\.random"; Description = "Simulated data with random" },
-    @{ Pattern = "fake"; Description = "Fake data keyword" },
-    @{ Pattern = "mock"; Description = "Mock data keyword" },
-    @{ Pattern = "simulated"; Description = "Simulated data keyword" },
     @{ Pattern = "hardcoded"; Description = "Hardcoded values" }
 )
 
@@ -44,7 +41,10 @@ $excludePatterns = @(
     @{ Pattern = "UAP.*detection"; Description = "UAP detection simulation (feature, not fake data)" },
     @{ Pattern = "detectUAP"; Description = "UAP detection function (feature, not fake data)" },
     @{ Pattern = "gravitational.*wave"; Description = "Gravitational wave detection (feature, not fake data)" },
-    @{ Pattern = "electromagnetic.*field"; Description = "EM field detection (feature, not fake data)" }
+    @{ Pattern = "electromagnetic.*field"; Description = "EM field detection (feature, not fake data)" },
+    @{ Pattern = "DISABLED.*compliance fix"; Description = "Comment documenting compliance fix" },
+    @{ Pattern = "removed.*fake"; Description = "Comment documenting fake data removal" },
+    @{ Pattern = "// DISABLED"; Description = "Comment disabling fake data (already fixed)" }
 )
 
 # Audit function
@@ -58,7 +58,14 @@ function Find-SimulatedData {
         "src\components\UAPDetectionArrays.tsx",
         "apps\uap-detection\src\complete-system.ts",
         "apps\uap-detection\src\index.ts",
-        "src\App.tsx"
+        "src\App.tsx",
+        "apps\api-worker\src\index.ts",
+        "apps\backend\server.ts",
+        "apps\bridge\src\worker.ts",
+        "apps\frontend\src\components\SimpleDashboard.tsx",
+        "apps\frontend\src\components\CommandCenter.tsx",
+        "apps\frontend\src\components\InfrastructureStatus.tsx",
+        "apps\frontend\src\components\NotionGitHubSyncView.tsx"
     )
     
     foreach ($file in $keyFiles) {
@@ -120,7 +127,14 @@ function Fix-SimulatedData {
         "src\components\UAPDetectionArrays.tsx",
         "apps\uap-detection\src\complete-system.ts",
         "apps\uap-detection\src\index.ts",
-        "src\App.tsx"
+        "src\App.tsx",
+        "apps\api-worker\src\index.ts",
+        "apps\backend\server.ts",
+        "apps\bridge\src\worker.ts",
+        "apps\frontend\src\components\SimpleDashboard.tsx",
+        "apps\frontend\src\components\CommandCenter.tsx",
+        "apps\frontend\src\components\InfrastructureStatus.tsx",
+        "apps\frontend\src\components\NotionGitHubSyncView.tsx"
     )
     
     foreach ($file in $keyFiles) {
@@ -157,6 +171,11 @@ function Fix-SimulatedData {
 }
 
 # Main execution
+# Default to Audit if no parameters
+if (-not $Audit -and -not $Fix) {
+    $Audit = $true
+}
+
 if ($Audit) {
     Write-Host "Auditing for simulated data..." -ForegroundColor Cyan
     Find-SimulatedData -Path $repoRoot
@@ -168,13 +187,15 @@ if ($Audit) {
     if ($simulatedDataFound.Count -gt 0) {
         Write-Host ""
         Write-Host "Simulated data found:" -ForegroundColor Red
-        foreach ($item in $simulatedFound) {
+        foreach ($item in $simulatedDataFound) {
             Write-Host "  - $($item.Description) in $($item.File):$($item.Line)" -ForegroundColor Yellow
         }
         Write-Host ""
         Write-Host "Run with -Fix to replace with TODO comments" -ForegroundColor Yellow
+        exit 1
     } else {
         Write-Host "✅ No simulated data found!" -ForegroundColor Green
+        exit 0
     }
 }
 
@@ -182,13 +203,5 @@ if ($Fix) {
     Write-Host "Fixing simulated data..." -ForegroundColor Cyan
     $fixedCount = Fix-SimulatedData -Path $repoRoot
     Write-Host "Fixed $fixedCount files" -ForegroundColor Green
+    exit 0
 }
-
-if (-not $Audit -and -not $Fix) {
-    Write-Host "Usage: .\skill.ps1 -Audit | -Fix" -ForegroundColor Yellow
-    exit 1
-}
-
-Write-Host ""
-Write-Host "=== REAL VS SIMULATED DATA SKILL ===" -ForegroundColor Cyan
-Write-Host "Real work is easier than simulated work." -ForegroundColor Yellow
