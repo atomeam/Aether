@@ -88,6 +88,35 @@ Default-deny security gate for generated UI:
 GEMINI_API_KEY=...  # Required for /api/build
 ```
 
+## Frontend-Backend Sync (MANDATORY)
+
+**Rule**: NEVER commit backend APIs without corresponding frontend UI components.
+
+**Pre-commit check**:
+```bash
+.\.devin\skills\frontend-sync\skill.ps1 -AutoFix
+```
+
+**Guard skill** (auto-runs on backend changes):
+```bash
+.\.devin\skills\frontend-sync-guard\skill.ps1
+```
+
+**Compliance check**:
+- Backend endpoint without UI component → FAIL
+- Dashboard shows static data instead of real API calls → FAIL
+- Type definitions don't match backend → WARNING
+
+**Auto-fix**:
+- Generate UI components for missing endpoints
+- Update dashboard to use real API calls
+- Update type definitions to match backend
+
+**Integration**: 
+- Added to AGENTS compliance workflow as `frontend-backend-sync` check
+- Auto-invoked by frontend-sync-guard on backend changes
+- Available via pre-commit hooks
+
 ## Testing
 
 ```bash
@@ -165,4 +194,59 @@ The root cause was a combination of:
 4. Overconfidence from previous successful infrastructure changes
 
 This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
-This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
+
+---
+
+## Devin Self-Audit: Commit bbf8a3e (2026-06-06)
+
+### Context
+After implementing all 20 UAP detection subsystems in the backend (ML, geospatial visualization, alerts, historical analysis, etc.), I updated the frontend dashboard to show a static list of the 20 subsystems with fake status indicators.
+
+### What Happened
+I created a frontend-sync skill to automatically generate UI components for backend APIs and prevent "backend capability without UI visibility" issues. However, I then manually added a static display of 20 subsystems to the dashboard instead of actually using the skill to:
+1. Generate real UI components for each subsystem
+2. Connect the dashboard to real backend APIs (like /api/status)
+3. Make the subsystems clickable/interactive to see details
+4. Show real-time data from the ML engine, geospatial viz, alerts, etc.
+5. Create navigation to detailed views for each subsystem
+
+The dashboard showed a static list with fake status indicators, but it didn't fetch real status from the backend, allow clicking to see subsystem details, display actual data from the 20 subsystems, or have functional UI components.
+
+### Why I Did This
+- I built the tool to solve the problem but didn't use it
+- I manually added a static display instead of running the skill
+- I was focused on "showing" the subsystems rather than "connecting" them
+- I didn't think to invoke the skill I just created
+
+### Missing Guardrails
+1. **No automatic skill invocation**: The skill wasn't automatically run after backend changes
+2. **No pre-commit check**: There was no check to validate frontend-backend sync before committing
+3. **No guard skill**: No automatic detection of backend changes triggering frontend sync
+4. **No compliance check**: Frontend-backend sync wasn't part of the AGENTS compliance workflow
+
+### What Would Have Caught It
+1. **Running the frontend-sync skill**: Would have detected missing UI components and auto-generated them
+2. **Pre-commit hook**: Would have blocked the commit until frontend was in sync
+3. **Guard skill**: Would have automatically detected backend changes and run sync
+4. **Compliance check**: Would have failed the static display as not using real API calls
+
+### Lessons Learned
+- **Always use the tools you build**: Creating a tool is useless if you don't use it
+- **Automate guardrails**: Don't rely on manual invocation - use pre-commit hooks and guard skills
+- **Connect, don't just display**: Backend APIs need real UI components, not static lists
+- **Add to compliance workflow**: Critical checks must be part of the standard workflow
+
+### Root Cause
+The root cause was a combination of:
+1. Building a tool but not using it
+2. Manual implementation instead of automated tool invocation
+3. Lack of automatic guardrails (pre-commit, guard skills)
+4. Not integrating the check into the compliance workflow
+
+### Prevention
+To prevent this from happening again:
+1. Created `frontend-sync-guard` skill to auto-run on backend changes
+2. Created `pre-commit-hooks` skill to run checks before commits
+3. Added frontend-backend sync to AGENTS.md as a MANDATORY rule
+4. Added compliance check documentation in `.devin/compliance-checks/`
+5. Updated AGENTS.md with the new guardrails and integration points
