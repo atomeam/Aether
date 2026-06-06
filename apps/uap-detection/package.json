@@ -1,0 +1,17 @@
+{
+  "name": "uap-detection",
+  "version": "1.0.0",
+  "description": "Advanced UAP/UFO Detection System - Full Spectrum Monitoring",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

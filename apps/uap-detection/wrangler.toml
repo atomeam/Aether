@@ -1,0 +1,28 @@
+name = "uap-detection"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# D1 Database for anomaly storage
+[[d1_databases]]
+binding = "DB"
+database_name = "uap_anomalies"
+database_id = "your-database-id"
+
+# KV for real-time alerts
+[[kv_namespaces]]
+binding = "ALERTS"
+id = "your-kv-id"
+
+# R2 for sensor data storage
+[[r2_buckets]]
+binding = "SENSOR_DATA"
+bucket_name = "uap-sensor-data"
+
+# Queue for anomaly processing
+[[queues.producers]]
+binding = "ANOMALY_QUEUE"
+queue = "uap-anomaly-processing"
+
+# Scheduled triggers for continuous monitoring
+[triggers]
+crons = ["* * * * *"]
