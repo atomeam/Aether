@@ -32,32 +32,14 @@ function Log-Message {
 function Scan-Improvements {
     Log-Message "Scanning for improvements..."
     
-    # Check for duplicate environment variables
-    if (Test-Path "$repoRoot\.env") {
-        $envContent = Get-Content "$repoRoot\.env"
-        $envVars = @{}
-        $duplicates = @()
-        
-        foreach ($line in $envContent) {
-            # Skip comments and empty lines
-            if ($line -match "^\s*#" -or $line -match "^\s*$") {
-                continue
-            }
-            
-            if ($line -match "^([^=]+)=") {
-                $varName = $matches[1]
-                if ($envVars.ContainsKey($varName)) {
-                    $duplicates += $varName
-                } else {
-                    $envVars[$varName] = $true
-                }
-            }
-        }
-        
-        if ($duplicates.Count -gt 0) {
-            Log-Message "Duplicate environment variables found: $($duplicates -join ', ')"
-            return $true
-        }
+    # Run .env validation
+    $envValidationResult = & "$repoRoot\.devin\skills\env-validation\skill.ps1" -Audit 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Log-Message "Environment validation issues found"
+        # Try to fix automatically
+        & "$repoRoot\.devin\skills\env-validation\skill.ps1" -Fix 2>&1 | Out-Null
+        Log-Message "Attempted to fix environment issues"
+        return $true
     }
     
     # Run data integrity check

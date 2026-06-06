@@ -310,6 +310,13 @@ function Trigger-Improvement {
 function Run-LearningCycle {
     Log-Message "=== Starting learning cycle ==="
     
+    # Validate environment before learning
+    $envValidation = & "$repoRoot\.devin\skills\env-validation\skill.ps1" -Audit 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Log-Message "Environment validation failed, attempting fix"
+        & "$repoRoot\.devin\skills\env-validation\skill.ps1" -Fix 2>&1 | Out-Null
+    }
+    
     # Learn all areas
     Learn-Frontend
     Learn-Backend
@@ -360,6 +367,7 @@ $((Get-ChildItem "$learningDir\architecture\projects" -Directory).Count) practic
 - Victus (orchestration)
 - Improvement System (application)
 - Codebase (target)
+- Environment Validation (integrity)
 "@
     
     $progress | Out-File -FilePath $progressFile -Encoding UTF8
