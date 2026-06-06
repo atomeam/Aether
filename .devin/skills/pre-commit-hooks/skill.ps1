@@ -16,7 +16,8 @@ $repoRoot = "C:\Users\adamm\Aether"
 
 # Define checks
 $checks = @(
-    @{ Name = "Real vs Simulated Data"; Script = "$scriptDir\..\real-vs-simulated\skill.ps1"; Critical = $true }
+    @{ Name = "Real vs Simulated Data"; Script = "$scriptDir\..\real-vs-simulated\skill.ps1"; Critical = $true },
+    @{ Name = "Autonomous Improvement"; Script = "$scriptDir\..\autonomous-improvement\skill.ps1"; Args = @("-Scan"); Critical = $false }
 )
 
 # Install hooks
@@ -64,7 +65,13 @@ if ($Run) {
         Write-Host "Running: $($check.Name)..." -ForegroundColor Cyan
         
         try {
-            & $check.Script
+            if ($check.Args) {
+                $scriptPath = $check.Script
+                $argString = $check.Args -join ' '
+                & $scriptPath $argString
+            } else {
+                & $check.Script
+            }
             $exitCode = $LASTEXITCODE
             
             if ($exitCode -eq 0) {

@@ -1,0 +1,73 @@
+{
+  "mcpServers": {
+    "cloudflare": {
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "CLOUDFLARE_API_TOKEN"
+      },
+      "serverUrl": "https://mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-observability": {
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "CLOUDFLARE_API_TOKEN"
+      },
+      "serverUrl": "https://observability.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-bindings": {
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "CLOUDFLARE_API_TOKEN"
+      },
+      "serverUrl": "https://bindings.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-builds": {
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "CLOUDFLARE_API_TOKEN"
+      },
+      "serverUrl": "https://builds.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-docs": {
+      "serverUrl": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\adamm\\Aether"]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_TOKEN"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://user:password@localhost:5432/dbname"
+      }
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "C:\\Users\\adamm\\Aether\\aether.db"]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  }
+}

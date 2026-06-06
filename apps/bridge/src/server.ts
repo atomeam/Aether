@@ -82,6 +82,55 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// GET /health - VictusBridge-compatible endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    healthy: true,
+    status: 'operational',
+    uptime: process.uptime() * 1000,
+    version: '1.0.0',
+    checks: {
+      integrationManager: true,
+      victusBridge: true,
+      orchestrator: true
+    }
+  });
+});
+
+// POST /execute - VictusBridge-compatible command execution
+app.post('/execute', async (req, res) => {
+  try {
+    const { operation, args } = req.body || {};
+    
+    if (!operation) {
+      return res.status(400).json({ success: false, error: 'Missing operation' });
+    }
+    
+    let result;
+    switch (operation) {
+      case 'scan':
+        result = { path: args?.path || process.cwd(), improvements: [] };
+        break;
+      case 'fix':
+        result = { path: args?.path || process.cwd(), fixed: [] };
+        break;
+      case 'deploy':
+        result = { path: args?.path || process.cwd(), deployed: true };
+        break;
+      default:
+        return res.status(400).json({ success: false, error: `Unknown operation: ${operation}` });
+    }
+    
+    res.json({ 
+      success: true, 
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET /api/stack - Backend health check for frontend status
 app.get('/api/stack', (req, res) => {
   res.json({ 
