@@ -1,6 +1,47 @@
 // UAP Detection System - Full Spectrum Monitoring
 // All 15 UAP/UFO Technologies Implementation
 
+// ============================================================================
+// REAL EXTERNAL API INTEGRATIONS
+// ============================================================================
+
+// Real-time earthquake data from USGS
+async function fetchEarthquakeData(): Promise<number> {
+  try {
+    const response = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
+    const data = await response.json();
+    return data.features?.length || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time solar activity from NOAA
+async function fetchSolarActivity(): Promise<number> {
+  try {
+    const response = await fetch('https://services.swpc.noaa.gov/json/solar-wind.json');
+    const data = await response.json();
+    return data[1]?.speed || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time weather data from Open-Meteo
+async function fetchWeatherData(lat: number, lon: number): Promise<number> {
+  try {
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`);
+    const data = await response.json();
+    return data.current?.temperature_2m || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ============================================================================
+// UAP DETECTION INTERFACES
+// ============================================================================
+
 export interface GravitationalWaveData {
   strain: number;
   frequency: number;
@@ -142,6 +183,11 @@ export interface UAPAnomaly {
     latitude: number;
     longitude: number;
     altitude: number;
+  };
+  externalData?: {
+    earthquakes: number;
+    solarActivity: number;
+    weather: number;
   };
 }
 
@@ -404,8 +450,49 @@ export function detectUAPAnomaly(sensorData: number[]): UAPAnomaly {
       latitude: (Math.random() - 0.5) * 180,
       longitude: (Math.random() - 0.5) * 360,
       altitude: Math.random() * 100000
+    },
+    // Add real-world correlation data
+    externalData: {
+      earthquakes: 0, // Will be populated by Promise.all
+      solarActivity: 0,
+      weather: 0
     }
   };
+}
+
+// Enhanced anomaly detection with real external data correlation
+export async function detectUAPAnomalyWithRealData(sensorData: number[]): Promise<UAPAnomaly> {
+  const anomaly = detectUAPAnomaly(sensorData);
+  
+  // Fetch real external data in parallel
+  const [earthquakes, solarActivity, weather] = await Promise.all([
+    fetchEarthquakeData(),
+    fetchSolarActivity(),
+    fetchWeatherData(anomaly.location.latitude, anomaly.location.longitude)
+  ]);
+  
+  // Correlate with real-world events
+  anomaly.externalData = {
+    earthquakes,
+    solarActivity,
+    weather
+  };
+  
+  // Boost confidence if real-world anomalies detected
+  if (earthquakes > 10) anomaly.confidence += 0.1;
+  if (solarActivity > 500) anomaly.confidence += 0.1;
+  if (Math.abs(weather - 288) > 20) anomaly.confidence += 0.05;
+  
+  // Cap confidence at 1.0
+  anomaly.confidence = Math.min(anomaly.confidence, 1.0);
+  
+  // Recalculate severity based on real data
+  if (anomaly.confidence >= 0.9) anomaly.severity = 'CRITICAL';
+  else if (anomaly.confidence >= 0.6) anomaly.severity = 'HIGH';
+  else if (anomaly.confidence >= 0.3) anomaly.severity = 'MEDIUM';
+  else anomaly.severity = 'LOW';
+  
+  return anomaly;
 }
 
 export default {
@@ -415,7 +502,7 @@ export default {
     if (url.pathname === '/api/detect' && request.method === 'POST') {
       try {
         const { sensorData } = await request.json();
-        const anomaly = detectUAPAnomaly(sensorData || Array.from({ length: 100 }, () => Math.random()));
+        const anomaly = await detectUAPAnomalyWithRealData(sensorData || Array.from({ length: 100 }, () => Math.random()));
         
         // Store in database
         await env.DB.prepare(
@@ -453,6 +540,33 @@ export default {
       return new Response(JSON.stringify({ success: true, anomalies: anomalies.results }), {
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+    
+    if (url.pathname === '/api/external-data' && request.method === 'GET') {
+      try {
+        const [earthquakes, solarActivity, weather] = await Promise.all([
+          fetchEarthquakeData(),
+          fetchSolarActivity(),
+          fetchWeatherData(40.7128, -74.0060) // New York coordinates
+        ]);
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          externalData: {
+            earthquakes,
+            solarActivity,
+            weather,
+            timestamp: new Date().toISOString()
+          }
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
     
     return new Response('UAP Detection System Online', { status: 200 });
