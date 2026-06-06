@@ -17,7 +17,8 @@ $repoRoot = "C:\Users\adamm\Aether"
 # Define checks
 $checks = @(
     @{ Name = "Frontend-Backend Sync"; Script = "$scriptDir\frontend-sync\skill.ps1"; Critical = $true },
-    @{ Name = "Frontend-Sync Guard"; Script = "$scriptDir\frontend-sync-guard\skill.ps1"; Critical = $true }
+    @{ Name = "Frontend-Sync Guard"; Script = "$scriptDir\frontend-sync-guard\skill.ps1"; Critical = $true },
+    @{ Name = "Real vs Simulated Data"; Script = "$scriptDir\real-vs-simulated\skill.ps1 -Audit"; Critical = $true }
 )
 
 # Install hooks
