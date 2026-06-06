@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, Sparkles, Bell, Shield, Crown } from 'lucide-react';
+import { ArrowUpRight, Sparkles, Bell, Shield, Crown, Server, Zap, RefreshCw, Activity } from 'lucide-react';
 import ProfitEngine from './ProfitEngine';
 import StatsCard from './dashboard/StatsCard';
 import Leaderboard from './dashboard/Leaderboard';
@@ -8,16 +8,176 @@ import ShareCard from './dashboard/ShareCard';
 import HowItWorks from './dashboard/HowItWorks';
 import AuthModal from './dashboard/AuthModal';
 import PaymentWall from './dashboard/PaymentWall';
-import CouncilTelemetry from './dashboard/CouncilTelemetry';
-import SystemStatus from './dashboard/SystemStatus';
-import PipelineVisibility from './dashboard/PipelineVisibility';
 import DemoBanner from './ui/DemoBanner';
 import PaymentCalculationPanel from './admin/PaymentCalculationPanel';
-import { TrendingUp, Users, Shield as ShieldIcon, Zap, Lock } from 'lucide-react';
+import { UAPSystemStatus } from './UAPSystemStatus';
+import AutomationDashboard from './AutomationDashboard';
+import { TrendingUp, Users, Shield as ShieldIcon, Lock } from 'lucide-react';
 import { createVerifiedData, createUnverifiedData, VerifiedData } from '../types/verifiedData';
 
+// Inline System Status Component
+function InlineSystemStatus() {
+  const [systemStatus, setSystemStatus] = React.useState<any>(null);
+  const [agentStatus, setAgentStatus] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const stackRes = await fetch('http://localhost:3000/api/stack');
+      const stackData = await stackRes.json();
+      setSystemStatus(stackData);
+
+      const agentsRes = await fetch('http://localhost:3000/api/agents');
+      const agentsData = await agentsRes.json();
+      setAgentStatus(agentsData);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchAllData();
+    const interval = setInterval(fetchAllData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6 border border-white/5 bg-white/[0.01] rounded-lg">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-blue-400 animate-pulse" />
+          <span className="text-sm text-white/60">Loading system status...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 border border-red-500/20 bg-red-500/[0.02] rounded-lg">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-red-400 text-sm">Error: {error}</div>
+          <button 
+            onClick={fetchAllData}
+            className="text-red-400 hover:text-red-300"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <Server className="w-5 h-5 text-[#c4a661]" />
+          System Status
+        </h2>
+        <button 
+          onClick={fetchAllData}
+          className="text-white/60 hover:text-white/90 transition-colors"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 border border-white/5 bg-white/[0.01] rounded-lg">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-white/90 mb-3 flex items-center gap-2">
+            <Server className="w-4 h-4" />
+            Backend
+          </h3>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-white/40 text-xs">Status</span>
+              <span className={`text-xs font-medium ${systemStatus?.status === 'online' ? 'text-green-400' : 'text-red-400'}`}>
+                {systemStatus?.status || 'Unknown'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/40 text-xs">Backend</span>
+              <span className="text-xs font-medium text-white/90">
+                {systemStatus?.backend || 'Unknown'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border border-white/5 bg-white/[0.01] rounded-lg">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-white/90 mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            Agents
+          </h3>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-white/40 text-xs">Curator</span>
+              <span className={`text-xs font-medium ${agentStatus?.curator === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>
+                {agentStatus?.curator || 'Unknown'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/40 text-xs">Executor</span>
+              <span className={`text-xs font-medium ${agentStatus?.executor === 'ready' ? 'text-green-400' : 'text-yellow-400'}`}>
+                {agentStatus?.executor || 'Unknown'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/40 text-xs">MCP Server</span>
+              <span className={`text-xs font-medium ${agentStatus?.mcpServer === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>
+                {agentStatus?.mcpServer || 'Unknown'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 border border-white/5 bg-white/[0.01] rounded-lg">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/90 mb-3 flex items-center gap-2">
+          <Server className="w-4 h-4" />
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button 
+            onClick={() => window.open('http://localhost:3000/api/stack', '_blank')}
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white/80 transition-colors"
+          >
+            View Stack
+          </button>
+          <button 
+            onClick={() => window.open('http://localhost:3000/api/agents', '_blank')}
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white/80 transition-colors"
+          >
+            View Agents
+          </button>
+          <button 
+            onClick={() => window.open('http://localhost:3000/api/health', '_blank')}
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white/80 transition-colors"
+          >
+            Health Check
+          </button>
+          <button 
+            onClick={() => window.open('http://localhost:3000/api/nexus/registry', '_blank')}
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white/80 transition-colors"
+          >
+            Nexus Registry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SimpleDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'profit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'profit' | 'automations'>('overview');
   const [copied, setCopied] = useState(false);
   const [userEarnings, setUserEarnings] = useState<VerifiedData<number>>(createUnverifiedData(0, 'Stripe: payments table'));
   const [totalUsers, setTotalUsers] = useState<VerifiedData<number>>(createUnverifiedData(0, 'D1: users table'));
@@ -34,14 +194,7 @@ export default function SimpleDashboard() {
     const hasDemoData = totalUsers.is_demo || autonomousActions.is_demo;
     setShowDemoBanner(hasDemoData);
   }, [totalUsers, autonomousActions]);
-  // const [optimizationResults, setOptimizationResults] = useState<any[]>([]);
-  // DISABLED - compliance fix: removed fake financial data
-  // const [financialData, setFinancialData] = useState<any[]>([]);
-  // const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
-  // const [showFinancialPanel, setShowFinancialPanel] = useState(false);
-  // DISABLED - compliance fix: removed fake revenue summary
-  // const [revenueSummary, setRevenueSummary] = useState<any>(null);
-  // const [showRevenuePanel, setShowRevenuePanel] = useState(false);
+  
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
@@ -60,14 +213,12 @@ export default function SimpleDashboard() {
 
   // Check for existing authentication session
   useEffect(() => {
-    // Remove any automatic owner/enterprise access
     localStorage.removeItem('aether_owner_secret');
 
     const storedToken = localStorage.getItem('session_token');
     const storedName = localStorage.getItem('user_name');
 
     if (storedToken && storedName) {
-      // Returning user with real session - validate with API
       fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/user/dashboard', {
         headers: { 'Authorization': `Bearer ${storedToken}` }
       })
@@ -77,7 +228,6 @@ export default function SimpleDashboard() {
             setIsEnterprise(false);
             setUserName(storedName);
           } else {
-            // Invalid token, clear and show auth modal
             localStorage.removeItem('session_token');
             localStorage.removeItem('user_name');
             localStorage.removeItem('user_id');
@@ -85,15 +235,12 @@ export default function SimpleDashboard() {
           }
         })
         .catch(() => {
-          // API error, show auth modal
           setShowAuthModal(true);
         });
     } else {
-      // New user - show auth modal
       setShowAuthModal(true);
     }
     
-    // Secret function to set owner mode - only Adam knows this
     (window as any).setOwnerMode = (secret: string) => {
       if (secret === 'ADAM_OWNER_2026_ATOMIC_MOONBEAM') {
         localStorage.setItem('aether_owner_secret', secret);
@@ -103,7 +250,6 @@ export default function SimpleDashboard() {
       }
     };
     
-    // Allow user to logout: window.logout()
     (window as any).logout = () => {
       localStorage.removeItem('session_token');
       localStorage.removeItem('user_name');
@@ -112,7 +258,6 @@ export default function SimpleDashboard() {
       location.reload();
     };
     
-    // Allow owner to view all users: window.viewUsers()
     (window as any).viewUsers = async () => {
       console.log('Loading users...');
       try {
@@ -137,76 +282,6 @@ export default function SimpleDashboard() {
       }
     };
 
-    // DISABLED - compliance fix: removed fake optimization results
-    // (window as any).viewOptimizations = async () => {
-    //   console.log('Loading optimizations...');
-    //   try {
-    //     const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/optimization/results', {
-    //       headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
-    //     });
-    //     const data = await response.json();
-
-    //     if (response.ok) {
-    //       setOptimizationResults(data.optimizations);
-    //       setShowOptimizationPanel(true);
-    //       console.log('Optimizations loaded:', data.optimizations.length);
-    //     } else {
-    //       console.error('Failed to load optimizations:', data.error);
-    //       alert('Failed to load optimizations: ' + data.error);
-    //     }
-    //   } catch (e) {
-    //     console.error('Error loading optimizations:', e);
-    //     alert('Error loading optimizations: ' + e);
-    //   }
-    // };
-
-    // DISABLED - compliance fix: removed fake financial data
-    // (window as any).viewFinancialData = async () => {
-    //   console.log('Loading financial data...');
-    //   try {
-    //     const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/financial/summary', {
-    //       headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
-    //     });
-    //     const data = await response.json();
-
-    //     if (response.ok) {
-    //       setFinancialData(data.financialData);
-    //       setShowFinancialPanel(true);
-    //       console.log('Financial data loaded:', data.financialData.length, 'data types');
-    //     } else {
-    //       console.error('Failed to load financial data:', data.error);
-    //       alert('Failed to load financial data: ' + data.error);
-    //     }
-    //   } catch (e) {
-    //     console.error('Error loading financial data:', e);
-    //     alert('Error loading financial data: ' + e);
-    //   }
-    // };
-
-    // DISABLED - compliance fix: removed fake revenue summary
-    // (window as any).viewRevenueSummary = async () => {
-    //   console.log('Loading revenue summary...');
-    //   try {
-    //     const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/revenue/summary', {
-    //       headers: { 'Authorization': 'Bearer ADAM_OWNER_2026_ATOMIC_MOONBEAM' }
-    //     });
-    //     const data = await response.json();
-
-    //     if (response.ok) {
-    //       setRevenueSummary(data);
-    //       setShowRevenuePanel(true);
-    //       console.log('Revenue summary loaded:', data);
-    //     } else {
-    //       console.error('Failed to load revenue summary:', data.error);
-    //       alert('Failed to load revenue summary: ' + data.error);
-    //     }
-    //   } catch (e) {
-    //     console.error('Error loading revenue summary:', e);
-    //     alert('Error loading revenue summary: ' + e);
-    //   }
-    // };
-
-    // Allow owner to trigger manual optimization: window.runOptimization()
     (window as any).runOptimization = async () => {
       if (optimizingRef.current) {
         showToastMessage('Optimization already in progress', 'info');
@@ -225,8 +300,6 @@ export default function SimpleDashboard() {
         
         if (response.ok) {
           showToastMessage(`Optimization complete! ${data.tasksExecuted} tasks executed`, 'success');
-          // DISABLED - compliance fix: removed fake optimization results refresh
-          // setTimeout(() => (window as any).viewOptimizations(), 1000);
         } else {
           showToastMessage('Optimization failed: ' + data.error, 'error');
         }
@@ -238,25 +311,6 @@ export default function SimpleDashboard() {
       }
     };
   }, []);
-
-  // Real-time earnings animation (DISABLED - compliance fix: no fake data)
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     if (isAuthenticated && isEnterprise) {
-  //       // Only show fake notifications for owner mode
-  //       if (Math.random() > 0.95) {
-  //         const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley'];
-  //         const amounts = [23, 45, 67, 89, 112, 156];
-  //         const randomName = names[Math.floor(Math.random() * names.length)];
-  //         const randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
-  //         setNotificationText(`${randomName} just earned $${randomAmount}!`);
-  //         setShowNotification(true);
-  //         setTimeout(() => setShowNotification(false), 3000);
-  //       }
-  //     }
-  //   }, 2000);
-  //   return () => clearInterval(interval);
-  // }, [isAuthenticated, isEnterprise]);
 
   // Fetch real user count
   useEffect(() => {
@@ -270,7 +324,7 @@ export default function SimpleDashboard() {
       .catch(err => console.error('Failed to fetch user count:', err));
   }, []);
 
-  // Fetch real user earnings (Net cash received from Stripe)
+  // Fetch real user earnings
   useEffect(() => {
     const token = localStorage.getItem('session_token');
     if (token && isAuthenticated && !isEnterprise) {
@@ -280,7 +334,6 @@ export default function SimpleDashboard() {
         .then(res => res.json())
         .then(data => {
           if (data.earnings !== undefined) {
-            // Use VerifiedData with definition for real money
             setUserEarnings(createVerifiedData(
               data.earnings,
               'Stripe: payments table',
@@ -292,7 +345,6 @@ export default function SimpleDashboard() {
         })
         .catch(err => {
           console.error('Failed to fetch earnings:', err);
-          // Keep unverified state on error
         });
     }
   }, [isAuthenticated, isEnterprise]);
@@ -337,7 +389,6 @@ export default function SimpleDashboard() {
         })
         .catch(err => console.error('Failed to fetch actions:', err));
     } else {
-      // For owner mode, count all profit_engine actions
       fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/actions/recent')
         .then(res => res.json())
         .then(data => {
@@ -356,7 +407,6 @@ export default function SimpleDashboard() {
         .then(res => res.json())
         .then(data => {
           if (data.needsUpdate) {
-            // Refresh all data when update signal detected
             fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/stats/users')
               .then(res => res.json())
               .then(userData => {
@@ -373,7 +423,6 @@ export default function SimpleDashboard() {
                 }
               });
             
-            // Refresh earnings for authenticated users
             const token = localStorage.getItem('session_token');
             if (token && isAuthenticated && !isEnterprise) {
               fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/user/earnings', {
@@ -390,7 +439,7 @@ export default function SimpleDashboard() {
           }
         })
         .catch(err => console.error('Failed to check for updates:', err));
-    }, 30000); // Check every 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated, isEnterprise]);
@@ -437,7 +486,6 @@ export default function SimpleDashboard() {
         setUserName(result.name || data.name || data.email.split('@')[0]);
         setShowAuthModal(false);
         
-        // Store real session token
         if (result.sessionToken) {
           localStorage.setItem('session_token', result.sessionToken);
         }
@@ -449,7 +497,6 @@ export default function SimpleDashboard() {
           setCurrentEarnings(prev => prev + result.welcomeBonus);
         }
         
-        // Show payment wall for non-enterprise users
         if (!result.isEnterprise) {
           setTimeout(() => {
             setShowPaymentWall(true);
@@ -479,7 +526,6 @@ export default function SimpleDashboard() {
       });
       const result = await response.json();
       if (response.ok && result.checkoutUrl) {
-        // Redirect to Stripe checkout
         window.location.href = result.checkoutUrl;
       } else {
         alert('Failed to create checkout session');
@@ -491,221 +537,101 @@ export default function SimpleDashboard() {
   };
 
   const connectBankAccount = () => {
-    console.log('Connect bank account clicked');
+    showToastMessage('Bank account connection coming soon!', 'info');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#0f0f0f] text-white">
-      {/* Demo Banner - 0 Lies Mode */}
+    <div className="min-h-screen bg-black text-white">
       {showDemoBanner && <DemoBanner />}
-
-      {/* Social Proof Notification */}
-      {showNotification && (
-        <div className="fixed top-4 right-4 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-xl rounded-xl p-4 flex items-center gap-3 z-50 animate-in slide-in-from-right">
-          <Bell className="w-5 h-5 text-emerald-400" />
-          <span className="text-sm font-medium">{notificationText}</span>
-        </div>
-      )}
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        mode={authMode}
-        onClose={() => setShowAuthModal(false)}
-        onModeChange={setAuthMode}
-        onSubmit={handleAuth}
-        formData={formData}
-        onFormDataChange={setFormData}
-      />
-
-      {/* DISABLED - compliance fix: removed fake panels */}
-      {/* - Optimization Results panel (fake metrics) */}
-      {/* - Revenue Summary panel (fake metrics) */}
-      {/* - Financial Data panel (fake metrics) */}
-
-      {/* Users Panel (Owner Only) */}
-      {showUsersPanel && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">All Users ({allUsers.length})</h2>
-              <button
-                onClick={() => setShowUsersPanel(false)}
-                className="text-white/60 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {allUsers.map((user, index) => (
-                <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{user.name || 'Unknown'}</div>
-                      <div className="text-sm text-white/60">{user.email}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-white/60">Referral: {user.referral_code}</div>
-                      <div className="text-xs text-white/40">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
+      
       {showToast && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-          toastType === 'success' ? 'bg-emerald-500' : 
-          toastType === 'error' ? 'bg-red-500' : 'bg-blue-500'
-        } text-white font-medium animate-pulse`}>
+        <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+          toastType === 'success' ? 'bg-green-500' : toastType === 'error' ? 'bg-red-500' : 'bg-blue-500'
+        }`}>
           {toastMessage}
         </div>
       )}
 
-      {/* Payment Wall */}
-      <PaymentWall
-        isOpen={showPaymentWall}
-        onClose={() => setShowPaymentWall(false)}
-        onSubscribe={handleSubscribe}
-      />
+      {showNotification && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-[#c4a661] text-black rounded-lg shadow-lg z-50">
+          {notificationText}
+        </div>
+      )}
 
-      {/* Hero Header */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#c4a661]/20 to-emerald-500/20 blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-8 py-16">
-          <div className="text-center">
-            <div className="flex items-center gap-2 bg-[#c4a661]/10 border border-[#c4a661]/30 rounded-full px-4 py-2 mb-6">
-              <Sparkles className="w-4 h-4 text-[#c4a661]" />
-              <span className="text-sm font-medium text-[#c4a661]">Autonomous Intelligence</span>
-              {isEnterprise && (
-                <>
-                  <button
-                    onClick={() => (window as any).runOptimization()}
-                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
-                    title="Run optimization now (Owner only)"
-                    disabled={isOptimizing}
-                  >
-                    {isOptimizing ? '⏳' : '🚀'}
-                  </button>
-                  <button
-                    onClick={() => (window as any).viewUsers()}
-                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
-                    title="View all users (Owner only)"
-                  >
-                    👥
-                  </button>
-                  {/* DISABLED - compliance fix: removed fake optimization results button */}
-                  {/* <button
-                    onClick={() => (window as any).viewOptimizations()}
-                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
-                    title="View optimization results (Owner only)"
-                  >
-                    ⚡
-                  </button> */}
-                  {/* DISABLED - compliance fix: removed fake financial data button */}
-                  {/* <button
-                    onClick={() => (window as any).viewFinancialData()}
-                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
-                    title="View financial data (Owner only)"
-                  >
-                    💰
-                  </button> */}
-                  {/* DISABLED - compliance fix: removed fake revenue summary button */}
-                  {/* <button
-                    onClick={() => (window as any).viewRevenueSummary()}
-                    className="ml-2 text-xs text-white/60 hover:text-white cursor-pointer"
-                    title="View revenue summary (Owner only)"
-                  >
-                    📊
-                  </button> */}
-                </>
-              )}
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-8 py-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#c4a661] to-[#8b7355] rounded-lg flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-white via-[#c4a661] to-emerald-400 bg-clip-text text-transparent">
-              Loxa
-            </h1>
-            <p className="text-xl md:text-2xl text-white/70 mb-8 max-w-2xl mx-auto">
-              The World's First Autonomous Business Engine. Aether's S1-S5 agent council builds infrastructure, scales revenue, and optimizes growth while you focus on what matters.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              {!isAuthenticated ? (
-                <button 
-                  onClick={() => setShowAuthModal(true)}
-                  className="group bg-gradient-to-r from-[#c4a661] to-[#d4b671] text-black font-bold px-8 py-4 rounded-full text-lg hover:shadow-lg hover:shadow-[#c4a661]/30 transition-all flex items-center gap-2"
-                >
-                  Start Autonomous Growth
-                  <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </button>
-              ) : (
-                <div className={`rounded-full px-6 py-3 flex items-center gap-2 ${
-                  isEnterprise 
-                    ? 'bg-[#c4a661]/20 border border-[#c4a661]/50' 
-                    : 'bg-emerald-500/20 border border-emerald-500/30'
-                }`}>
-                  {isEnterprise ? (
-                    <>
-                      <Crown className="w-5 h-5 text-[#c4a661]" />
-                      <span className="text-[#c4a661] font-medium">Enterprise Admin</span>
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="w-5 h-5 text-emerald-400" />
-                      <span className="text-emerald-400 font-medium">Welcome, {userName}!</span>
-                    </>
-                  )}
-                </div>
-              )}
-              <button className="bg-white/5 border border-white/20 text-white font-medium px-8 py-4 rounded-full text-lg hover:bg-white/10 transition-all">
-                See How It Works
-              </button>
+            <div>
+              <h1 className="text-xl font-bold">Aether</h1>
+              <p className="text-xs text-white/60">Autonomous Business Engine</p>
             </div>
           </div>
+          
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-sm font-medium">{userName}</div>
+                <div className="text-xs text-white/60">
+                  {isEnterprise ? 'Enterprise' : 'Free Plan'}
+                </div>
+              </div>
+              <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
+                <Crown className="w-5 h-5 text-[#c4a661]" />
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="px-6 py-2 bg-[#c4a661] text-black rounded-lg font-medium hover:bg-[#d4b671] transition-colors"
+            >
+              Get Started
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Live Stats */}
-      <div className="max-w-7xl mx-auto px-8 -mt-8">
+      {/* Stats Cards */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard
-            icon={Users}
-            label="Total Users"
-            data={totalUsers}
-            color="emerald"
+            title="Total Users"
+            value={totalUsers.value}
+            icon={<Users className="w-5 h-5" />}
+            source={totalUsers.source}
+            isDemo={totalUsers.is_demo}
           />
           <StatsCard
-            icon={Zap}
-            label="Autonomous Actions"
-            data={autonomousActions}
-            color="gold"
+            title="Autonomous Actions"
+            value={autonomousActions.value}
+            icon={<Zap className="w-5 h-5" />}
+            source={autonomousActions.source}
+            isDemo={autonomousActions.is_demo}
           />
-          <StatsCard
-            icon={TrendingUp}
-            label="Your Earnings"
-            data={userEarnings}
-            color="purple"
-            showDefinition={true}
-            showRawLink={userEarnings.verified}
-            onViewCalculation={() => setShowPaymentCalculationPanel(true)}
-          />
+          {isAuthenticated && (
+            <StatsCard
+              title="Your Earnings"
+              value={userEarnings.value}
+              icon={<TrendingUp className="w-5 h-5" />}
+              source={userEarnings.source}
+              isDemo={userEarnings.is_demo}
+              definition={userEarnings.definition}
+            />
+          )}
         </div>
       </div>
 
       {/* System Status */}
       <div className="max-w-7xl mx-auto px-8 py-8">
-        <SystemStatus />
+        <InlineSystemStatus />
       </div>
 
-      {/* Pipeline Visibility */}
+      {/* UAP Detection System - 20 Subsystems */}
       <div className="max-w-7xl mx-auto px-8 py-8">
-        <PipelineVisibility />
+        <UAPSystemStatus />
       </div>
 
       {/* Share Earnings CTA */}
@@ -755,6 +681,16 @@ export default function SimpleDashboard() {
           >
             Profit Engine
           </button>
+          <button
+            onClick={() => setActiveTab('automations')}
+            className={`px-6 py-3 rounded-xl font-medium transition-all ${
+              activeTab === 'automations'
+                ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
+                : 'bg-white/5 text-white/60 hover:bg-white/10'
+            }`}
+          >
+            Automations
+          </button>
         </div>
 
         {activeTab === 'overview' && (
@@ -789,20 +725,63 @@ export default function SimpleDashboard() {
               isAuthenticated={isAuthenticated}
               onConnectBank={connectBankAccount}
             />
-
-            <CouncilTelemetry />
           </div>
         )}
 
         {activeTab === 'profit' && <ProfitEngine />}
+
+        {activeTab === 'automations' && <AutomationDashboard />}
       </div>
 
       {/* Payment Calculation Panel (Admin) */}
       <PaymentCalculationPanel
         isOpen={showPaymentCalculationPanel}
         onClose={() => setShowPaymentCalculationPanel(false)}
-        calculation={null}
       />
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          mode={authMode}
+          onClose={() => setShowAuthModal(false)}
+          onAuth={handleAuth}
+          onModeChange={setAuthMode}
+        />
+      )}
+
+      {/* Payment Wall */}
+      {showPaymentWall && (
+        <PaymentWall
+          onClose={() => setShowPaymentWall(false)}
+          onSubscribe={handleSubscribe}
+        />
+      )}
+
+      {/* Users Panel (Admin) */}
+      {showUsersPanel && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">All Users</h2>
+              <button
+                onClick={() => setShowUsersPanel(false)}
+                className="text-white/60 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+            <div className="space-y-2">
+              {allUsers.map((user, index) => (
+                <div key={index} className="p-3 bg-white/5 rounded-lg">
+                  <div className="font-medium">{user.name || user.email}</div>
+                  <div className="text-sm text-white/60">{user.email}</div>
+                  <div className="text-xs text-white/40">Joined: {new Date(user.created_at).toLocaleDateString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,10 +9,11 @@
     "build": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs"
   },
   "dependencies": {
-    "@aether/contracts": "file:../packages/contracts",
-    "@aether/curator": "file:../packages/curator",
-    "@aether/env": "file:../packages/env",
-    "@aether/logger": "file:../packages/logger",
+    "@aether/contracts": "file:../../packages/contracts",
+    "@aether/curator": "file:../../packages/curator",
+    "@aether/env": "file:../../packages/env",
+    "@aether/github-automation": "file:../../packages/github-automation",
+    "@aether/logger": "file:../../packages/logger",
     "@google/genai": "^1.29.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
@@ -21,7 +22,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "@types/node": "^22.14.0",
+    "@types/node": "^25.9.2",
     "esbuild": "^0.25.0",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",

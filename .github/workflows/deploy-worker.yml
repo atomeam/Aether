@@ -1,4 +1,4 @@
-name: Deploy Worker
+name: Deploy Worker 💚
 
 on:
   push:
@@ -9,8 +9,7 @@ on:
       - 'apps/*/wrangler.toml'
       - 'wrangler.toml'
 
-# No environment approval gate - automatic deployment on successful build
-# CI/CD is the sole deployment mechanism with zero human blockers
+# Automatic deployment with love - making deployment smooth for everyone 🌟
 
 jobs:
   deploy:
@@ -18,20 +17,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node 💚
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: apps/bridge
+      - name: Setup pnpm 💚
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
 
-      - name: Deploy to Cloudflare
-        run: npx wrangler deploy
+      - name: Get pnpm store directory 💚
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache 💚
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies with love 💚
+        run: pnpm install
+        working-directory: .
+
+      - name: Build packages 💚
+        run: pnpm run build
+        working-directory: .
+
+      - name: Deploy to Cloudflare with love 💚
+        run: pnpm wrangler deploy
         working-directory: apps/bridge
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+      - name: Spread deployment love 🌟
+        run: |
+          echo "🎉 Deployment successful! Spreading love to everyone 💚"
+          echo "✨ Your Worker is now live and making the world better"
           

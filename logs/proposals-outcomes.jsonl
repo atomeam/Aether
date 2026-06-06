@@ -12,3 +12,6 @@
 {"timestamp":"2026-06-06T06:07:26.255Z","traceId":"trace_abc","prompt":"Add a stat","promptHash":"hash123","verdict":"APPROVED","reason":"valid","rejectedIds":[],"rawActions":[{"action":"ADD","plan":{"type":"stat"}}]}
 {"timestamp":"2026-06-06T06:07:26.257Z","traceId":"trace_rejected","prompt":"Invalid","promptHash":"bad","verdict":"REJECTED","reason":"Unknown component type","rejectedIds":["stat-fake-1"],"rawActions":[{"action":"ADD"}]}
 {"timestamp":"2026-06-06T06:07:26.260Z","traceId":"trace_123","prompt":"Use API key abc123","promptHash":"hash","verdict":"APPROVED","reason":"ok","rejectedIds":[],"rawActions":[]}
+{"timestamp":"2026-06-06T07:16:24.886Z","traceId":"trace_abc","prompt":"Add a stat","promptHash":"hash123","verdict":"APPROVED","reason":"valid","rejectedIds":[],"rawActions":[{"action":"ADD","plan":{"type":"stat"}}]}
+{"timestamp":"2026-06-06T07:16:24.887Z","traceId":"trace_rejected","prompt":"Invalid","promptHash":"bad","verdict":"REJECTED","reason":"Unknown component type","rejectedIds":["stat-fake-1"],"rawActions":[{"action":"ADD"}]}
+{"timestamp":"2026-06-06T07:16:24.889Z","traceId":"trace_123","prompt":"Use API key abc123","promptHash":"hash","verdict":"APPROVED","reason":"ok","rejectedIds":[],"rawActions":[]}

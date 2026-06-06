@@ -3,6 +3,22 @@ import { parseEnv, BackendEnvSchema } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
 import express from "express";
+import { GoogleGenAI } from "@google/genai";
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as path from "path";
+import { exec } from "child_process";
+import * as os from "os";
+
+// Vite import for development mode
+import { createServer as createViteServer } from "vite";
+
+// Build request parsing and curator functions
+import { parseBuildRequest } from "@aether/contracts";
+import { curateActions, logCuratorVerdict } from "@aether/curator";
+
+// Sandbox configuration
+import { DEFAULT_PATH_POLICY, getSandboxRoot } from "@aether/sandbox";
 
 dotenv.config();
 
@@ -872,765 +888,793 @@ async function startServer() {
     });
   }
 
+  // Workflow webhook endpoints
+  app.post("/api/workflows/trigger", async (req, res) => {
+    try {
+      const { runWorkflow, getWorkflow } = await import('@aether/workflow');
+      const { workflow: workflowName, context } = req.body;
+      
+      const workflow = getWorkflow(workflowName);
+      if (!workflow) {
+        return res.status(404).json({ error: `Unknown workflow: ${workflowName}` });
+      }
+      
+      const result = await runWorkflow(workflow, context || {});
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/workflows", async (req, res) => {
+    try {
+      const { listWorkflows } = await import('@aether/workflow');
+      res.json({ workflows: listWorkflows() });
+    } catch (e: any) {
+      res.json({ workflows: [], error: e.message });
+    }
+  });
+
+  // Chaos injection endpoint
+  app.post("/api/agents/chaos", async (req, res) => {
+    try {
+      const { executeChaos } = await import('@aether/chaos');
+      const { scenario, targetPath } = req.body;
+      
+      const result = executeChaos(scenario, targetPath);
+      res.json({ meta: 'Chaos injected. Training loop engaged.', ...result });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+  app.get("/api/agents/chaos", async (req, res) => {
+    try {
+      const { getScenarios } = await import('@aether/chaos');
+      res.json({ scenarios: getScenarios() });
+    } catch (e: any) {
+      res.json({ scenarios: [], error: e.message });
+    }
+  });
+
+  // Dream state endpoint
+  app.get("/api/dream", async (req, res) => {
+    try {
+      const { shouldDream, dream, getDreamStatus, touch } = await import('@aether/dream');
+      
+      // Touch on any activity
+      touch();
+      
+      const status = getDreamStatus();
+      status.shouldDream = shouldDream();
+      
+      if (req.query.trigger === 'true' && shouldDream()) {
+        const result = await dream();
+        return res.json({ ...status, triggered: result });
+      }
+      
+      res.json(status);
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  // Scheduler endpoints
+  app.get("/api/scheduler", async (req, res) => {
+    try {
+      const { scheduler } = await import('@aether/scheduler');
+      res.json({ jobs: scheduler.listJobs() });
+    } catch (e: any) {
+      res.json({ jobs: [], error: e.message });
+    }
+  });
+
+  // Notifier channels
+  app.get("/api/notifier", async (req, res) => {
+    try {
+      const { notifier } = await import('@aether/notifier');
+      res.json({ channels: notifier.listChannels() });
+    } catch (e: any) {
+      res.json({ channels: [], error: e.message });
+    }
+  });
+
+  app.post("/api/notifier", async (req, res) => {
+    try {
+      const { notifier } = await import('@aether/notifier');
+      const { channel, message, severity } = req.body;
+      const result = await notifier.notify({ channel, message, severity });
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Secrets list (keys only)
+  app.get("/api/secrets", async (req, res) => {
+    try {
+      const { listSecrets } = await import('@aether/secrets');
+      res.json({ keys: listSecrets() });
+    } catch (e: any) {
+      res.json({ keys: [], error: e.message });
+    }
+  });
+
+  // Rate limit status
+  app.get("/api/rate-limits", async (req, res) => {
+    try {
+      const { DEFAULT_TOOL_LIMITS } = await import('@aether/rate-limiter');
+      res.json({ limits: DEFAULT_TOOL_LIMITS });
+    } catch (e: any) {
+      res.json({ limits: {}, error: e.message });
+    }
+  });
+
+  // Unified health dashboard
+  app.get("/api/health", async (req, res) => {
+    try {
+      const { snapshot } = await import('@aether/metrics');
+      const { getStats } = await import('@aether/curator-audit');
+      const { listWorkflows } = await import('@aether/workflow');
+      const { getDreamStatus } = await import('@aether/dream');
+      const { scheduler } = await import('@aether/scheduler');
+      const { notifier } = await import('@aether/notifier');
+      const { DEFAULT_TOOL_LIMITS } = await import('@aether/rate-limiter');
+      
+      const metrics = snapshot();
+      const audit = await getStats();
+      
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        agents: {
+          curator: 'active',
+          executor: 'ready',
+          evaluator: 'ready',
+          reflector: 'ready',
+        },
+        metrics: {
+          counters: Object.keys(metrics.counters || {}).length,
+          gauges: Object.keys(metrics.gauges || {}).length,
+        },
+        audit: {
+          total: audit.total,
+          denial_rate: audit.denial_rate,
+        },
+        workflows: listWorkflows().length,
+        dream: getDreamStatus(),
+        scheduler: scheduler.listJobs().length,
+        notifier: notifier.listChannels().length,
+        rateLimits: Object.keys(DEFAULT_TOOL_LIMITS).length,
+      });
+    } catch (e: any) {
+      res.json({ status: 'degraded', error: e.message });
+    }
+  });
+
+  // Replay harness
+  app.post("/api/replay", async (req, res) => {
+    try {
+      const { replayEvents, dryRun } = await import('@aether/replay');
+      const { since, limit } = req.body;
+      const result = await replayEvents({ since, limit });
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Alerts
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const { alertEngine } = await import('@aether/alerts');
+      const results = await alertEngine.evaluate();
+      const rules = alertEngine.listRules();
+      res.json({ rules, results });
+    } catch (e: any) {
+      res.json({ rules: [], results: [], error: e.message });
+    }
+  });
+
+  app.post("/api/alerts", async (req, res) => {
+    try {
+      const { alertEngine } = await import('@aether/alerts');
+      const { name, condition, threshold, severity, enabled } = req.body;
+      const id = alertEngine.addRule({ name, condition, threshold, severity, enabled });
+      res.json({ id });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Human queue
+  app.get("/api/human-queue", async (req, res) => {
+    try {
+      const { getPending, getStats } = await import('@aether/human-queue');
+      const items = getPending();
+      const stats = getStats();
+      res.json({ items, stats });
+    } catch (e: any) {
+      res.json({ items: [], stats: {}, error: e.message });
+    }
+  });
+
+  app.post("/api/human-queue", async (req, res) => {
+    try {
+      const { enqueue } = await import('@aether/human-queue');
+      const { type, request, priority } = req.body;
+      const item = enqueue({ type, request, priority: priority || 0 });
+      res.json(item);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/human-queue/:id/resolve", async (req, res) => {
+    try {
+      const { resolve } = await import('@aether/human-queue');
+      const { id } = req.params;
+      const { status } = req.body;
+      const result = resolve(id, status);
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Telemetry export
+  app.get("/api/telemetry", async (req, res) => {
+    try {
+      const { collectTelemetry, exportPrometheus, exportCSV } = await import('@aether/telemetry');
+      const format = req.query.format as string || 'json';
+      const { events, summary } = await collectTelemetry();
+
+      if (format === 'prometheus') {
+        res.set('Content-Type', 'text/plain');
+        res.send(exportPrometheus(events));
+      } else if (format === 'csv') {
+        res.set('Content-Type', 'text/csv');
+        res.send(exportCSV(events));
+      } else {
+        res.json({ events, summary });
+      }
+    } catch (e: any) {
+      res.json({ events: [], summary: {}, error: e.message });
+    }
+  });
+
+  // Council of Evaluators endpoint
+  app.post("/api/council/evaluate", async (req, res) => {
+    try {
+      const { evaluateWithCouncil, isHighSignal } = await import('@aether/council');
+      const { tool, args } = req.body;
+      const vote = evaluateWithCouncil(tool, args || {});
+      res.json({ ...vote, highSignal: isHighSignal(vote) });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Triage queue endpoints
+  app.get("/api/triage", async (req, res) => {
+    try {
+      const { getPending, getStats } = await import('@aether/triage');
+      const items = getPending();
+      const stats = getStats();
+      res.json({ items, stats });
+    } catch (e: any) {
+      res.json({ items: [], stats: {}, error: e.message });
+    }
+  });
+
+  app.post("/api/triage", async (req, res) => {
+    try {
+      const { addToTriage } = await import('@aether/triage');
+      const { type, tool, args, reason, priority } = req.body;
+      const item = addToTriage({ type, tool, args, reason, priority: priority || 'medium', sla: 3600000 });
+      res.json(item);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Lesson Compactor endpoint
+  app.post("/api/compactor", async (req, res) => {
+    try {
+      const { compact, getContradictions, prune } = await import('@aether/compactor');
+      const action = req.query.action as string || 'compact';
+      if (action === 'compact') res.json(compact());
+      else if (action === 'contradictions') res.json({ contradictions: getContradictions() });
+      else if (action === 'prune') res.json({ removed: prune(parseInt(req.query.days as string) || 30) });
+      else res.status(400).json({ error: 'Unknown action' });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Foresight endpoint
+  app.get("/api/foresight", async (req, res) => {
+    try {
+      const { getPending, scorePredictions } = await import('@aether/foresight');
+      if (req.query.action === 'score') res.json(await scorePredictions(parseInt(req.query.days as string) || 7));
+      else res.json({ predictions: getPending() });
+    } catch (e: any) {
+      res.json({ predictions: [], error: e.message });
+    }
+  });
+
+  // Adversarial Twin endpoint
+  app.post("/api/adversarial", async (req, res) => {
+    try {
+      const { evaluateAdversarial } = await import('@aether/adversarial');
+      const { tool, args, originalDecision } = req.body;
+      res.json(evaluateAdversarial(tool, args || {}, originalDecision || 'approve'));
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Storyteller journal endpoint
+  app.get("/api/journal", async (req, res) => {
+    try {
+      const { readJournal } = await import('@aether/storyteller');
+      res.json({ entries: readJournal(parseInt(req.query.days as string) || 7) });
+    } catch (e: any) {
+      res.json({ entries: [], error: e.message });
+    }
+  });
+
+  app.post("/api/journal", async (req, res) => {
+    try {
+      const { generateAutoJournal } = await import('@aether/storyteller');
+      res.json(await generateAutoJournal());
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Vital Signs endpoint
+  app.get("/api/vitals", async (req, res) => {
+    try {
+      const { checkVitals, getThrottleRecommendation } = await import('@aether/vitalsigns');
+      const vitals = await checkVitals();
+      const throttle = await getThrottleRecommendation();
+      res.json({ vitals, throttle });
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  // Time Capsule endpoint
+  app.get("/api-capsule", async (req, res) => {
+    try {
+      const { getLatestCapsule, getCapsuleByDate } = await import('@aether/timecapsule');
+      res.json(req.query.date ? getCapsuleByDate(req.query.date as string) : getLatestCapsule());
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.post("/api-capsule", async (req, res) => {
+    try {
+      const { createCapsule } = await import('@aether/timecapsule');
+      res.json(await createCapsule());
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Profile API (read-only external)
+  app.get("/api/profile", async (req, res) => {
+    try {
+      const { generateProfile } = await import('@aether/profile');
+      const profile = await generateProfile({
+        includePatterns: req.query.patterns !== 'false',
+        includeStats: req.query.stats !== 'false',
+      });
+      res.json(profile);
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.get("/api/profile/patterns", async (req, res) => {
+    try {
+      const { queryPatterns } = await import('@aether/profile');
+      const patterns = await queryPatterns({
+        minConfidence: parseFloat(req.query.minConfidence as string) || 0,
+        minSuccessRate: parseFloat(req.query.minSuccessRate as string) || 0,
+        limit: parseInt(req.query.limit as string) || 50,
+      });
+      res.json({ patterns });
+    } catch (e: any) {
+      res.json({ patterns: [], error: e.message });
+    }
+  });
+
+  // Goals / Intent layer
+  app.get("/api/goals", async (req, res) => {
+    try {
+      const { getActiveGoals, getCurrentFocus, getFocusAreas } = await import('@aether/goals');
+      const goals = getActiveGoals();
+      const focus = getCurrentFocus();
+      const areas = getFocusAreas();
+      res.json({ goals, currentFocus: focus, focusAreas: areas });
+    } catch (e: any) {
+      res.json({ goals: [], error: e.message });
+    }
+  });
+
+  app.post("/api/goals", async (req, res) => {
+    try {
+      const { createGoal } = await import('@aether/goals');
+      const { title, description, priority, focus, outcomes } = req.body;
+      const goal = createGoal({ title, description, priority, focus, outcomes });
+      res.json(goal);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/goals/:id/complete", async (req, res) => {
+    try {
+      const { completeGoal } = await import('@aether/goals');
+      const result = completeGoal(req.params.id);
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/goals/align/:task", async (req, res) => {
+    try {
+      const { alignsWithGoals } = await import('@aether/goals');
+      const { aligned, goalId, reasoning } = alignsWithGoals(req.params.task);
+      res.json({ aligned, goalId, reasoning });
+    } catch (e: any) {
+      res.json({ aligned: false, error: e.message });
+    }
+  });
+
+  // Panic button
+  app.get("/api/panic", async (req, res) => {
+    try {
+      const { getPanicState, getPolicyOverride, isPanicActive } = await import('@aether/panic');
+      res.json({ 
+        panic: getPanicState(), 
+        policyOverride: getPolicyOverride(),
+        isActive: isPanicActive(),
+      });
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.post("/api/panic", async (req, res) => {
+    try {
+      const { triggerPanic } = await import('@aether/panic');
+      const { reason, level, autoResumeMinutes } = req.body;
+      const state = triggerPanic({ reason, level, autoResumeMinutes });
+      res.json(state);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/panic", async (req, res) => {
+    try {
+      const { releasePanic } = await import('@aether/panic');
+      const state = releasePanic();
+      res.json(state);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Network Health Check
+  app.get("/api/network-health", async (req, res) => {
+    try {
+      const { checkAllServices, getExternalStatus, gatekeepDiagnosis } = await import('@aether/network-health');
+
+      if (req.query.diagnosis) {
+        const result = await gatekeepDiagnosis(req.query.diagnosis as string);
+        res.json(result);
+      } else {
+        const status = await getExternalStatus();
+        res.json(status);
+      }
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  // Context Truncation
+  app.post("/api/truncate", async (req, res) => {
+    try {
+      const { truncateContext } = await import('@aether/context-truncate');
+      const { steps } = req.body;
+      const result = truncateContext(steps || []);
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // Signed Provenance
+  app.post("/api/provenance/sign", async (req, res) => {
+    try {
+      const { writeSignedLesson, verifyLesson } = await import('@aether/signed-provenance');
+      const { pattern, action, outcome, confidence, source } = req.body;
+
+      if (req.query.verify === 'true') {
+        const result = verifyLesson(req.body);
+        res.json(result);
+      } else {
+        const lesson = writeSignedLesson({ pattern, action, outcome, confidence, source });
+        res.json(lesson);
+      }
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/provenance/quota/:source", async (req, res) => {
+    try {
+      const { getQuotaRemaining } = await import('@aether/signed-provenance');
+      const remaining = getQuotaRemaining(req.params.source);
+      res.json({ source: req.params.source, remaining, max: 100 });
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.get("/api/provenance/drift", async (req, res) => {
+    try {
+      const { detectConfidenceDrift } = await import('@aether/signed-provenance');
+      const threshold = parseFloat(req.query.threshold as string) || 0.2;
+      res.json({ alerts: detectConfidenceDrift([], threshold) });
+    } catch (e: any) {
+      res.json({ alerts: [], error: e.message });
+    }
+  });
+
+  // Tombstone (GDPR deletion)
+  app.post("/api/tombstone", async (req, res) => {
+    try {
+      const { markDeleted } = await import('@aether/tombstone');
+      const { originalId, recordType, reason, suppressedBy, originalRecord } = req.body;
+      const result = markDeleted({ originalId, recordType, reason, suppressedBy, originalRecord });
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/tombstone/:id", async (req, res) => {
+    try {
+      const { isDeleted, listTombstones, getDeletionStats } = await import('@aether/tombstone');
+
+      if (req.query.id) {
+        res.json(isDeleted(req.query.id as string));
+      } else if (req.query.stats === 'true') {
+        res.json(getDeletionStats());
+      } else {
+        res.json({ tombstones: listTombstones() });
+      }
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.get("/api/tombstone-verify", async (req, res) => {
+    try {
+      const { verifyChain } = await import('@aether/tombstone');
+      res.json(verifyChain());
+    } catch (e: any) {
+      res.json({ valid: false, error: e.message });
+    }
+  });
+
+  app.get("/api/tombstone-export", async (req, res) => {
+    try {
+      const { exportDeletionLog } = await import('@aether/tombstone');
+      const startDate = req.query.start ? parseInt(req.query.start as string) : undefined;
+      const endDate = req.query.end ? parseInt(req.query.end as string) : undefined;
+      res.json(exportDeletionLog(startDate, endDate));
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  // Hash-chain integrity endpoint
+  app.get("/api/audit-verify", async (req, res) => {
+    try {
+      const { verifyChainIntegrity } = await import('@aether/curator-audit');
+      res.json(verifyChainIntegrity());
+    } catch (e: any) {
+      res.json({ valid: false, error: e.message });
+    }
+  });
+
+  // Sandbox Enforcement
+  app.get("/api/sandbox/config", async (req, res) => {
+    try {
+      const { getConfig, getPathPolicy } = await import('@aether/sandbox');
+      res.json({ config: getConfig(), policies: DEFAULT_PATH_POLICY });
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.post("/api/sandbox/config", async (req, res) => {
+    try {
+      const { setConfig } = await import('@aether/sandbox');
+      const { basePath, perTenantNamespacing, allowSubprocess, allowedHosts } = req.body;
+      const config = setConfig({ basePath, perTenantNamespacing, allowSubprocess, allowedHosts });
+      res.json(config);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/sandbox/:profileId", async (req, res) => {
+    try {
+      const { createSandbox, deleteSandbox, listSandboxes, enforce } = await import('@aether/sandbox');
+      const { profileId } = req.params;
+
+      if (req.query.create === 'true') {
+        res.json(createSandbox(profileId));
+      } else if (req.query.delete === 'true') {
+        res.json(deleteSandbox(profileId));
+      } else if (req.query.list === 'true') {
+        res.json({ sandboxes: listSandboxes() });
+      } else if (req.query.enforce) {
+        const { tool, args } = req.body;
+        res.json(enforce(tool, profileId, args));
+      } else {
+        res.json({ profileId, sandboxRoot: getSandboxRoot(profileId) });
+      }
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.post("/api/sandbox/:profileId/enforce", async (req, res) => {
+    try {
+      const { enforce } = await import('@aether/sandbox');
+      const { profileId } = req.params;
+      const { tool, args } = req.body;
+      res.json(enforce(tool, profileId, args || {}));
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/sandbox-escapes", async (req, res) => {
+    try {
+      const ESCAPE_PATH = '../../logs/sandbox-escapes.jsonl';
+      const content = fs.readFileSync(ESCAPE_PATH, 'utf-8');
+      const escapes = content.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+      res.json({ escapes, count: escapes.length });
+    } catch (e: any) {
+      res.json({ escapes: [], error: e.message });
+    }
+  });
+
+  // Convene - Cross-assistant coordination layer
+  app.post("/api/profile/:profileId/convene", async (req, res) => {
+    try {
+      const { deliberate } = await import('@aether/convene');
+      const { profileId } = req.params;
+      const { question, context } = req.body;
+
+      const result = await deliberate({ profileId, question, context: context || {} });
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/convene/sessions", async (req, res) => {
+    try {
+      const { listSessions, getSession } = await import('@aether/convene');
+      const { profileId, sessionId } = req.query;
+
+      if (sessionId) {
+        const session = getSession(sessionId as string);
+        res.json(session);
+      } else {
+        const sessions = listSessions(profileId as string);
+        res.json({ sessions, count: sessions.length });
+      }
+    } catch (e: any) {
+      res.json({ sessions: [], error: e.message });
+    }
+  });
+
+  app.post("/api/convene/sessions/:sessionId/vote", async (req, res) => {
+    try {
+      const { castVote } = await import('@aether/convene');
+      const { sessionId } = req.params;
+      const { assistantName, scope, vote, confidence, rationale } = req.body;
+
+      const result = castVote(sessionId, { assistantName, scope, vote, confidence, rationale });
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/convene/sessions/:sessionId/resolve", async (req, res) => {
+    try {
+      const { resolveSession } = await import('@aether/convene');
+      const { sessionId } = req.params;
+      const { resolution } = req.body;
+
+      const result = resolveSession(sessionId, resolution);
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/convene/assistants", async (req, res) => {
+    try {
+      const { listAssistants, getAssistantsByScope, SCOPES, registerAssistant } = await import('@aether/convene');
+
+      const scope = req.query.scope as string;
+      const assistants = scope ? getAssistantsByScope(scope) : listAssistants();
+
+      res.json({ assistants, scopes: SCOPES });
+    } catch (e: any) {
+      res.json({ assistants: [], error: e.message });
+    }
+  });
+
+  // Automation Registry endpoints
+  app.get("/api/automations", async (req, res) => {
+    try {
+      // Return static data for now to test the endpoint
+      const automations = {
+        scheduledJobs: [
+          { id: '1', name: 'github-pr-check', schedule: '*/5 * * * *', enabled: true },
+          { id: '2', name: 'github-issue-triage', schedule: '0 * * * *', enabled: true },
+          { id: '3', name: 'system-health-check', schedule: '*/10 * * * *', enabled: true },
+          { id: '4', name: 'github-sync', schedule: '0 */2 * * *', enabled: true },
+        ],
+        availableWorkflows: ['pr-created-notification', 'auto-issue-triage'],
+      };
+      res.json(automations);
+    } catch (e: any) {
+      console.error('Automation error:', e);
+      res.json({ jobs: [], workflows: [], error: e.message });
+    }
+  });
+
+  app.post("/api/automations/trigger", async (req, res) => {
+    try {
+      const { automationRegistry } = await import('./src/automations/registry');
+      const { workflow, input } = req.body;
+      const result = await automationRegistry.triggerWorkflow(workflow, input);
+      res.json(result);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/automations/toggle", async (req, res) => {
+    try {
+      const { automationRegistry } = await import('./src/automations/registry');
+      const { id, enabled } = req.body;
+      const result = automationRegistry.toggleAutomation(id, enabled);
+      res.json({ success: result });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Aether engine running at http://localhost:${PORT}`);
   });
 }
 
 startServer();
-
-// Workflow webhook endpoints
-app.post("/api/workflows/trigger", async (req, res) => {
-  try {
-    const { runWorkflow, getWorkflow } = await import('@aether/workflow');
-    const { workflow: workflowName, context } = req.body;
-    
-    const workflow = getWorkflow(workflowName);
-    if (!workflow) {
-      return res.status(404).json({ error: `Unknown workflow: ${workflowName}` });
-    }
-    
-    const result = await runWorkflow(workflow, context || {});
-    res.json(result);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/workflows", async (req, res) => {
-  try {
-    const { listWorkflows } = await import('@aether/workflow');
-    res.json({ workflows: listWorkflows() });
-  } catch (e: any) {
-    res.json({ workflows: [], error: e.message });
-  }
-});
-
-// Chaos injection endpoint
-app.post("/api/agents/chaos", async (req, res) => {
-  try {
-    const { executeChaos } = await import('@aether/chaos');
-    const { scenario, targetPath } = req.body;
-    
-    const result = executeChaos(scenario, targetPath);
-    res.json({ meta: 'Chaos injected. Training loop engaged.', ...result });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-app.get("/api/agents/chaos", async (req, res) => {
-  try {
-    const { getScenarios } = await import('@aether/chaos');
-    res.json({ scenarios: getScenarios() });
-  } catch (e: any) {
-    res.json({ scenarios: [], error: e.message });
-  }
-});
-
-// Dream state endpoint
-app.get("/api/dream", async (req, res) => {
-  try {
-    const { shouldDream, dream, getDreamStatus, touch } = await import('@aether/dream');
-    
-    // Touch on any activity
-    touch();
-    
-    const status = getDreamStatus();
-    status.shouldDream = shouldDream();
-    
-    if (req.query.trigger === 'true' && shouldDream()) {
-      const result = await dream();
-      return res.json({ ...status, triggered: result });
-    }
-    
-    res.json(status);
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-// Scheduler endpoints
-app.get("/api/scheduler", async (req, res) => {
-  try {
-    const { scheduler } = await import('@aether/scheduler');
-    res.json({ jobs: scheduler.listJobs() });
-  } catch (e: any) {
-    res.json({ jobs: [], error: e.message });
-  }
-});
-
-// Notifier channels
-app.get("/api/notifier", async (req, res) => {
-  try {
-    const { notifier } = await import('@aether/notifier');
-    res.json({ channels: notifier.listChannels() });
-  } catch (e: any) {
-    res.json({ channels: [], error: e.message });
-  }
-});
-
-app.post("/api/notifier", async (req, res) => {
-  try {
-    const { notifier } = await import('@aether/notifier');
-    const { channel, message, severity } = req.body;
-    const result = await notifier.notify({ channel, message, severity });
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Secrets list (keys only)
-app.get("/api/secrets", async (req, res) => {
-  try {
-    const { listSecrets } = await import('@aether/secrets');
-    res.json({ keys: listSecrets() });
-  } catch (e: any) {
-    res.json({ keys: [], error: e.message });
-  }
-});
-
-// Rate limit status
-app.get("/api/rate-limits", async (req, res) => {
-  try {
-    const { DEFAULT_TOOL_LIMITS } = await import('@aether/rate-limiter');
-    res.json({ limits: DEFAULT_TOOL_LIMITS });
-  } catch (e: any) {
-    res.json({ limits: {}, error: e.message });
-  }
-});
-
-// Unified health dashboard
-app.get("/api/health", async (req, res) => {
-  try {
-    const { snapshot } = await import('@aether/metrics');
-    const { getStats } = await import('@aether/curator-audit');
-    const { listWorkflows } = await import('@aether/workflow');
-    const { getDreamStatus } = await import('@aether/dream');
-    const { scheduler } = await import('@aether/scheduler');
-    const { notifier } = await import('@aether/notifier');
-    const { DEFAULT_TOOL_LIMITS } = await import('@aether/rate-limiter');
-    
-    const metrics = snapshot();
-    const audit = await getStats();
-    
-    res.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      agents: {
-        curator: 'active',
-        executor: 'ready',
-        evaluator: 'ready',
-        reflector: 'ready',
-      },
-      metrics: {
-        counters: Object.keys(metrics.counters || {}).length,
-        gauges: Object.keys(metrics.gauges || {}).length,
-      },
-      audit: {
-        total: audit.total,
-        denial_rate: audit.denial_rate,
-      },
-      workflows: listWorkflows().length,
-      dream: getDreamStatus(),
-      scheduler: scheduler.listJobs().length,
-      notifier: notifier.listChannels().length,
-      rateLimits: Object.keys(DEFAULT_TOOL_LIMITS).length,
-    });
-  } catch (e: any) {
-    res.json({ status: 'degraded', error: e.message });
-  }
-});
-
-// Replay harness
-app.post("/api/replay", async (req, res) => {
-  try {
-    const { replayEvents, dryRun } = await import('@aether/replay');
-    const { since, limit } = req.body;
-    const result = await replayEvents({ since, limit });
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Alerts
-app.get("/api/alerts", async (req, res) => {
-  try {
-    const { alertEngine } = await import('@aether/alerts');
-    const results = await alertEngine.evaluate();
-    const rules = alertEngine.listRules();
-    res.json({ rules, results });
-  } catch (e: any) {
-    res.json({ rules: [], results: [], error: e.message });
-  }
-});
-
-app.post("/api/alerts", async (req, res) => {
-  try {
-    const { alertEngine } = await import('@aether/alerts');
-    const { name, condition, threshold, severity, enabled } = req.body;
-    const id = alertEngine.addRule({ name, condition, threshold, severity, enabled });
-    res.json({ id });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Human queue
-app.get("/api/human-queue", async (req, res) => {
-  try {
-    const { getPending, getStats } = await import('@aether/human-queue');
-    const items = getPending();
-    const stats = getStats();
-    res.json({ items, stats });
-  } catch (e: any) {
-    res.json({ items: [], stats: {}, error: e.message });
-  }
-});
-
-app.post("/api/human-queue", async (req, res) => {
-  try {
-    const { enqueue } = await import('@aether/human-queue');
-    const { type, request, priority } = req.body;
-    const item = enqueue({ type, request, priority: priority || 0 });
-    res.json(item);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.post("/api/human-queue/:id/resolve", async (req, res) => {
-  try {
-    const { resolve } = await import('@aether/human-queue');
-    const { id } = req.params;
-    const { status } = req.body;
-    const result = resolve(id, status);
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Telemetry export
-app.get("/api/telemetry", async (req, res) => {
-  try {
-    const { collectTelemetry, exportPrometheus, exportCSV } = await import('@aether/telemetry');
-    const format = req.query.format as string || 'json';
-    const { events, summary } = await collectTelemetry();
-    
-    if (format === 'prometheus') {
-      res.set('Content-Type', 'text/plain');
-      res.send(exportPrometheus(events));
-    } else if (format === 'csv') {
-      res.set('Content-Type', 'text/csv');
-      res.send(exportCSV(events));
-    } else {
-      res.json({ events, summary });
-    }
-  } catch (e: any) {
-    res.json({ events: [], summary: {}, error: e.message });
-  }
-});
-
-// Council of Evaluators endpoint
-app.post("/api/council/evaluate", async (req, res) => {
-  try {
-    const { evaluateWithCouncil, isHighSignal } = await import('@aether/council');
-    const { tool, args } = req.body;
-    const vote = evaluateWithCouncil(tool, args || {});
-    res.json({ ...vote, highSignal: isHighSignal(vote) });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Triage queue endpoints
-app.get("/api/triage", async (req, res) => {
-  try {
-    const { getPending, getStats } = await import('@aether/triage');
-    const items = getPending();
-    const stats = getStats();
-    res.json({ items, stats });
-  } catch (e: any) {
-    res.json({ items: [], stats: {}, error: e.message });
-  }
-});
-
-app.post("/api/triage", async (req, res) => {
-  try {
-    const { addToTriage } = await import('@aether/triage');
-    const { type, tool, args, reason, priority } = req.body;
-    const item = addToTriage({ type, tool, args, reason, priority: priority || 'medium', sla: 3600000 });
-    res.json(item);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Lesson Compactor endpoint
-app.post("/api/compactor", async (req, res) => {
-  try {
-    const { compact, getContradictions, prune } = await import('@aether/compactor');
-    const action = req.query.action as string || 'compact';
-    if (action === 'compact') res.json(compact());
-    else if (action === 'contradictions') res.json({ contradictions: getContradictions() });
-    else if (action === 'prune') res.json({ removed: prune(parseInt(req.query.days as string) || 30) });
-    else res.status(400).json({ error: 'Unknown action' });
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Foresight endpoint
-app.get("/api/foresight", async (req, res) => {
-  try {
-    const { getPending, scorePredictions } = await import('@aether/foresight');
-    if (req.query.action === 'score') res.json(await scorePredictions(parseInt(req.query.days as string) || 7));
-    else res.json({ predictions: getPending() });
-  } catch (e: any) {
-    res.json({ predictions: [], error: e.message });
-  }
-});
-
-// Adversarial Twin endpoint
-app.post("/api/adversarial", async (req, res) => {
-  try {
-    const { evaluateAdversarial } = await import('@aether/adversarial');
-    const { tool, args, originalDecision } = req.body;
-    res.json(evaluateAdversarial(tool, args || {}, originalDecision || 'approve'));
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Storyteller journal endpoint
-app.get("/api/journal", async (req, res) => {
-  try {
-    const { readJournal } = await import('@aether/storyteller');
-    res.json({ entries: readJournal(parseInt(req.query.days as string) || 7) });
-  } catch (e: any) {
-    res.json({ entries: [], error: e.message });
-  }
-});
-
-app.post("/api/journal", async (req, res) => {
-  try {
-    const { generateAutoJournal } = await import('@aether/storyteller');
-    res.json(await generateAutoJournal());
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Vital Signs endpoint
-app.get("/api/vitals", async (req, res) => {
-  try {
-    const { checkVitals, getThrottleRecommendation } = await import('@aether/vitalsigns');
-    const vitals = await checkVitals();
-    const throttle = await getThrottleRecommendation();
-    res.json({ vitals, throttle });
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-// Time Capsule endpoint
-app.get("/api-capsule", async (req, res) => {
-  try {
-    const { getLatestCapsule, getCapsuleByDate } = await import('@aether/timecapsule');
-    res.json(req.query.date ? getCapsuleByDate(req.query.date as string) : getLatestCapsule());
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.post("/api-capsule", async (req, res) => {
-  try {
-    const { createCapsule } = await import('@aether/timecapsule');
-    res.json(await createCapsule());
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Profile API (read-only external)
-app.get("/api/profile", async (req, res) => {
-  try {
-    const { generateProfile } = await import('@aether/profile');
-    const profile = await generateProfile({
-      includePatterns: req.query.patterns !== 'false',
-      includeStats: req.query.stats !== 'false',
-    });
-    res.json(profile);
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.get("/api/profile/patterns", async (req, res) => {
-  try {
-    const { queryPatterns } = await import('@aether/profile');
-    const patterns = await queryPatterns({
-      minConfidence: parseFloat(req.query.minConfidence as string) || 0,
-      minSuccessRate: parseFloat(req.query.minSuccessRate as string) || 0,
-      limit: parseInt(req.query.limit as string) || 50,
-    });
-    res.json({ patterns });
-  } catch (e: any) {
-    res.json({ patterns: [], error: e.message });
-  }
-});
-
-// Goals / Intent layer
-app.get("/api/goals", async (req, res) => {
-  try {
-    const { getActiveGoals, getCurrentFocus, getFocusAreas } = await import('@aether/goals');
-    const goals = getActiveGoals();
-    const focus = getCurrentFocus();
-    const areas = getFocusAreas();
-    res.json({ goals, currentFocus: focus, focusAreas: areas });
-  } catch (e: any) {
-    res.json({ goals: [], error: e.message });
-  }
-});
-
-app.post("/api/goals", async (req, res) => {
-  try {
-    const { createGoal } = await import('@aether/goals');
-    const { title, description, priority, focus, outcomes } = req.body;
-    const goal = createGoal({ title, description, priority, focus, outcomes });
-    res.json(goal);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.post("/api/goals/:id/complete", async (req, res) => {
-  try {
-    const { completeGoal } = await import('@aether/goals');
-    const result = completeGoal(req.params.id);
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/goals/align/:task", async (req, res) => {
-  try {
-    const { alignsWithGoals } = await import('@aether/goals');
-    const { aligned, goalId, reasoning } = alignsWithGoals(req.params.task);
-    res.json({ aligned, goalId, reasoning });
-  } catch (e: any) {
-    res.json({ aligned: false, error: e.message });
-  }
-});
-
-// Panic button
-app.get("/api/panic", async (req, res) => {
-  try {
-    const { getPanicState, getPolicyOverride, isPanicActive } = await import('@aether/panic');
-    res.json({ 
-      panic: getPanicState(), 
-      policyOverride: getPolicyOverride(),
-      isActive: isPanicActive(),
-    });
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.post("/api/panic", async (req, res) => {
-  try {
-    const { triggerPanic } = await import('@aether/panic');
-    const { reason, level, autoResumeMinutes } = req.body;
-    const state = triggerPanic({ reason, level, autoResumeMinutes });
-    res.json(state);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.delete("/api/panic", async (req, res) => {
-  try {
-    const { releasePanic } = await import('@aether/panic');
-    const state = releasePanic();
-    res.json(state);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Network Health Check
-app.get("/api/network-health", async (req, res) => {
-  try {
-    const { checkAllServices, getExternalStatus, gatekeepDiagnosis } = await import('@aether/network-health');
-    
-    if (req.query.diagnosis) {
-      const result = await gatekeepDiagnosis(req.query.diagnosis as string);
-      res.json(result);
-    } else {
-      const status = await getExternalStatus();
-      res.json(status);
-    }
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-// Context Truncation
-app.post("/api/truncate", async (req, res) => {
-  try {
-    const { truncateContext } = await import('@aether/context-truncate');
-    const { steps } = req.body;
-    const result = truncateContext(steps || []);
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Signed Provenance
-app.post("/api/provenance/sign", async (req, res) => {
-  try {
-    const { writeSignedLesson, verifyLesson } = await import('@aether/signed-provenance');
-    const { pattern, action, outcome, confidence, source } = req.body;
-    
-    if (req.query.verify === 'true') {
-      const result = verifyLesson(req.body);
-      res.json(result);
-    } else {
-      const lesson = writeSignedLesson({ pattern, action, outcome, confidence, source });
-      res.json(lesson);
-    }
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/provenance/quota/:source", async (req, res) => {
-  try {
-    const { getQuotaRemaining } = await import('@aether/signed-provenance');
-    const remaining = getQuotaRemaining(req.params.source);
-    res.json({ source: req.params.source, remaining, max: 100 });
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.get("/api/provenance/drift", async (req, res) => {
-  try {
-    const { detectConfidenceDrift } = await import('@aether/signed-provenance');
-    const threshold = parseFloat(req.query.threshold as string) || 0.2;
-    res.json({ alerts: detectConfidenceDrift([], threshold) });
-  } catch (e: any) {
-    res.json({ alerts: [], error: e.message });
-  }
-});
-
-// Tombstone (GDPR deletion)
-app.post("/api/tombstone", async (req, res) => {
-  try {
-    const { markDeleted } = await import('@aether/tombstone');
-    const { originalId, recordType, reason, suppressedBy, originalRecord } = req.body;
-    const result = markDeleted({ originalId, recordType, reason, suppressedBy, originalRecord });
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/tombstone/:id", async (req, res) => {
-  try {
-    const { isDeleted, listTombstones, getDeletionStats } = await import('@aether/tombstone');
-    
-    if (req.query.id) {
-      res.json(isDeleted(req.query.id as string));
-    } else if (req.query.stats === 'true') {
-      res.json(getDeletionStats());
-    } else {
-      res.json({ tombstones: listTombstones() });
-    }
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.get("/api/tombstone-verify", async (req, res) => {
-  try {
-    const { verifyChain } = await import('@aether/tombstone');
-    res.json(verifyChain());
-  } catch (e: any) {
-    res.json({ valid: false, error: e.message });
-  }
-});
-
-app.get("/api/tombstone-export", async (req, res) => {
-  try {
-    const { exportDeletionLog } = await import('@aether/tombstone');
-    const startDate = req.query.start ? parseInt(req.query.start as string) : undefined;
-    const endDate = req.query.end ? parseInt(req.query.end as string) : undefined;
-    res.json(exportDeletionLog(startDate, endDate));
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-// Hash-chain integrity endpoint
-app.get("/api/audit-verify", async (req, res) => {
-  try {
-    const { verifyChainIntegrity } = await import('@aether/curator-audit');
-    res.json(verifyChainIntegrity());
-  } catch (e: any) {
-    res.json({ valid: false, error: e.message });
-  }
-});
-
-// Sandbox Enforcement
-app.get("/api/sandbox/config", async (req, res) => {
-  try {
-    const { getConfig, getPathPolicy } = await import('@aether/sandbox');
-    res.json({ config: getConfig(), policies: DEFAULT_PATH_POLICY });
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.post("/api/sandbox/config", async (req, res) => {
-  try {
-    const { setConfig } = await import('@aether/sandbox');
-    const { basePath, perTenantNamespacing, allowSubprocess, allowedHosts } = req.body;
-    const config = setConfig({ basePath, perTenantNamespacing, allowSubprocess, allowedHosts });
-    res.json(config);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/sandbox/:profileId", async (req, res) => {
-  try {
-    const { createSandbox, deleteSandbox, listSandboxes, enforce } = await import('@aether/sandbox');
-    const { profileId } = req.params;
-    
-    if (req.query.create === 'true') {
-      res.json(createSandbox(profileId));
-    } else if (req.query.delete === 'true') {
-      res.json(deleteSandbox(profileId));
-    } else if (req.query.list === 'true') {
-      res.json({ sandboxes: listSandboxes() });
-    } else if (req.query.enforce) {
-      const { tool, args } = req.body;
-      res.json(enforce(tool, profileId, args));
-    } else {
-      res.json({ profileId, sandboxRoot: getSandboxRoot(profileId) });
-    }
-  } catch (e: any) {
-    res.json({ error: e.message });
-  }
-});
-
-app.post("/api/sandbox/:profileId/enforce", async (req, res) => {
-  try {
-    const { enforce } = await import('@aether/sandbox');
-    const { profileId } = req.params;
-    const { tool, args } = req.body;
-    res.json(enforce(tool, profileId, args || {}));
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/sandbox-escapes", async (req, res) => {
-  try {
-    const ESCAPE_PATH = '../../logs/sandbox-escapes.jsonl';
-    const content = fs.readFileSync(ESCAPE_PATH, 'utf-8');
-    const escapes = content.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
-    res.json({ escapes, count: escapes.length });
-  } catch (e: any) {
-    res.json({ escapes: [], error: e.message });
-  }
-});
-
-import { DEFAULT_PATH_POLICY, getSandboxRoot } from '@aether/sandbox';
-
-// Convene - Cross-assistant coordination layer
-app.post("/api/profile/:profileId/convene", async (req, res) => {
-  try {
-    const { deliberate } = await import('@aether/convene');
-    const { profileId } = req.params;
-    const { question, context } = req.body;
-    
-    const result = await deliberate({ profileId, question, context: context || {} });
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/convene/sessions", async (req, res) => {
-  try {
-    const { listSessions, getSession } = await import('@aether/convene');
-    const { profileId, sessionId } = req.query;
-    
-    if (sessionId) {
-      const session = getSession(sessionId as string);
-      res.json(session);
-    } else {
-      const sessions = listSessions(profileId as string);
-      res.json({ sessions, count: sessions.length });
-    }
-  } catch (e: any) {
-    res.json({ sessions: [], error: e.message });
-  }
-});
-
-app.post("/api/convene/sessions/:sessionId/vote", async (req, res) => {
-  try {
-    const { castVote } = await import('@aether/convene');
-    const { sessionId } = req.params;
-    const { assistantName, scope, vote, confidence, rationale } = req.body;
-    
-    const result = castVote(sessionId, { assistantName, scope, vote, confidence, rationale });
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.post("/api/convene/sessions/:sessionId/resolve", async (req, res) => {
-  try {
-    const { resolveSession } = await import('@aether/convene');
-    const { sessionId } = req.params;
-    const { resolution } = req.body;
-    
-    const result = resolveSession(sessionId, resolution);
-    res.json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-app.get("/api/convene/assistants", async (req, res) => {
-  try {
-    const { listAssistants, getAssistantsByScope, SCOPES, registerAssistant } = await import('@aether/convene');
-    
-    const scope = req.query.scope as string;
-    const assistants = scope ? getAssistantsByScope(scope) : listAssistants();
-    
-    res.json({ assistants, scopes: SCOPES });
-  } catch (e: any) {
-    res.json({ assistants: [], error: e.message });
-  }
-});
-
-app.post("/api/convene/assistants", async (req, res) => {
-  try {
-    const { registerAssistant } = await import('@aether/convene');
-    const { name, scopes } = req.body;
-    
-    const assistant = registerAssistant({ name, scopes });
-    res.json(assistant);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});

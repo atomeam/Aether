@@ -1,180 +1,218 @@
 /**
  * Workflow Package
  * 
- * Webhook-triggered workflow automations.
- * Define workflows as config, trigger by webhook.
+ * Chain multiple automation steps together with error handling and context passing.
  */
 
 import { z } from 'zod';
 
-// ============ Workflow Definition ============
-
-export const StepSchema = z.object({
-  name: z.string(),
-  tool: z.string(),
-  args: z.record(z.unknown()),
-  condition: z.string().optional(), // JMESPath expression
-  retry: z.number().optional(),
-});
-
-export const WorkflowSchema = z.object({
-  name: z.string(),
-  trigger: z.object({
-    type: z.enum(['webhook', 'schedule', 'event']),
-    url: z.string().optional(),    // For webhook
-    schedule: z.string().optional(), // Cron
-    event: z.string().optional(),  // Event type
-  }),
-  steps: z.array(StepSchema),
-  on_failure: z.enum(['stop', 'continue', 'rollback']).default('stop'),
-  timeout: z.number().default(300000), // 5 min
-});
-
-export type Workflow = z.infer<typeof WorkflowSchema>;
-export type Step = z.infer<typeof StepSchema>;
-
-// ============ Workflow Runner ============
-
-import { executeTool } from '@aether/mcp-tools';
-
-export interface WorkflowResult {
-  workflow: string;
-  status: 'success' | 'failed' | 'timeout';
-  steps_completed: number;
-  steps_failed: number;
-  results: Array<{ step: string; success: boolean; result?: unknown; error?: string }>;
-  duration: number;
+// Workflow step definition
+export interface WorkflowStep {
+  name: string;
+  handler: (context: any) => Promise<any>;
+  onError?: (error: Error, context: any) => Promise<any>;
+  continueOnError?: boolean;
 }
 
-export async function runWorkflow(workflow: Workflow, context: Record<string, unknown> = {}): Promise<WorkflowResult> {
-  const startTime = Date.now();
-  const results: WorkflowResult['results'] = [];
-  let steps_completed = 0;
-  let steps_failed = 0;
+// Workflow definition
+export interface Workflow {
+  name: string;
+  description?: string;
+  steps: WorkflowStep[];
+  onFinally?: (context: any) => Promise<void>;
+}
 
-  for (const step of workflow.steps) {
-    // Check condition (JMESPath-like simple check)
-    if (step.condition) {
-      const pass = evaluateCondition(step.condition, context);
-      if (!pass) {
-        results.push({ step: step.name, success: true, result: 'skipped' });
-        continue;
-      }
-    }
+// Workflow execution context
+export interface WorkflowContext {
+  input: any;
+  output: any;
+  errors: Array<{ step: string; error: Error }>;
+  metadata: Record<string, any>;
+}
 
-    // Execute step with retry
-    let stepResult: unknown;
-    let stepError: string | undefined;
-    let success = false;
+// Workflow registry
+const workflows: Map<string, Workflow> = new Map();
 
-    const attempts = step.retry || 1;
-    for (let i = 0; i < attempts; i++) {
-      try {
-        // Interpolate args with context
-        const args = interpolateArgs(step.args, context);
-        
-        stepResult = await executeTool(step.tool, args);
-        success = true;
-        break;
-      } catch (e) {
-        stepError = (e as Error).message;
-        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
-      }
-    }
+// Register a workflow
+export function registerWorkflow(workflow: Workflow): void {
+  workflows.set(workflow.name, workflow);
+}
 
-    if (success) {
-      steps_completed++;
-      results.push({ step: step.name, success: true, result: stepResult });
-      context[step.name] = stepResult; // Chain output
-    } else {
-      steps_failed++;
-      results.push({ step: step.name, success: false, error: stepError });
+// Get a workflow
+export function getWorkflow(name: string): Workflow | undefined {
+  return workflows.get(name);
+}
 
-      if (workflow.on_failure === 'stop') {
-        break;
-      }
-    }
-  }
+// List all workflows
+export function listWorkflows(): Workflow[] {
+  return Array.from(workflows.values());
+}
 
-  return {
-    workflow: workflow.name,
-    status: steps_failed > 0 && workflow.on_failure === 'stop' ? 'failed' : 'success',
-    steps_completed,
-    steps_failed,
-    results,
-    duration: Date.now() - startTime,
+// Run a workflow
+export async function runWorkflow(workflow: Workflow, input: any = {}): Promise<any> {
+  const context: WorkflowContext = {
+    input,
+    output: {},
+    errors: [],
+    metadata: {
+      startTime: Date.now(),
+      workflowName: workflow.name,
+    },
   };
-}
 
-// Simple condition evaluation (very basic)
-function evaluateCondition(condition: string, context: Record<string, unknown>): boolean {
-  // Handle ${stepName.output} references
-  const match = condition.match(/\$\{(\w+)\.\w+\}/);
-  if (!match) return true;
-  
-  const [, stepName] = match;
-  return stepName in context;
-}
-
-// Interpolate ${context.key} in args
-function interpolateArgs(args: Record<string, unknown>, context: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  
-  for (const [key, value] of Object.entries(args)) {
-    if (typeof value === 'string' && value.includes('${')) {
-      let interpolated = value;
-      for (const [ck, cv] of Object.entries(context)) {
-        interpolated = interpolated.replace(`\${${ck}}`, String(cv));
+  try {
+    for (const step of workflow.steps) {
+      try {
+        const stepOutput = await step.handler(context);
+        context.output[step.name] = stepOutput;
+        context.metadata[`step_${step.name}_completed`] = Date.now();
+      } catch (error) {
+        const err = error as Error;
+        context.errors.push({ step: step.name, error: err });
+        
+        if (step.onError) {
+          const recovery = await step.onError(err, context);
+          context.output[`${step.name}_recovery`] = recovery;
+        }
+        
+        if (!step.continueOnError) {
+          throw err;
+        }
       }
-      result[key] = interpolated;
-    } else {
-      result[key] = value;
     }
+  } finally {
+    if (workflow.onFinally) {
+      await workflow.onFinally(context);
+    }
+    context.metadata.endTime = Date.now();
+    context.metadata.duration = context.metadata.endTime - context.metadata.startTime;
   }
-  
-  return result;
+
+  return context;
 }
 
-// ============ Webhook Handler ============
-
-export interface WebhookPayload {
-  workflow: string;
-  context: Record<string, unknown>;
-  secret?: string;
-}
-
-// Validate webhook payload
-export function validateWebhook(payload: WebhookPayload, secret?: string): boolean {
-  if (!secret) return true;
-  return payload.secret === secret;
-}
-
-// ============ Example Workflows ============
-
-export const EXAMPLE_WORKFLOWS: Workflow[] = [
+// Predefined workflows
+export const predefinedWorkflows: Workflow[] = [
   {
-    name: 'deploy-frontend',
-    trigger: { type: 'webhook', url: '/webhooks/deploy-frontend' },
+    name: 'github-pr-notification',
+    description: 'Notify Slack when a new PR is created',
     steps: [
-      { name: 'checkout', tool: 'git_status', args: {} },
-      { name: 'build', tool: 'http_request', args: { url: 'https://api.vercel.com/deploy', method: 'POST' } },
+      {
+        name: 'fetch_pr',
+        handler: async (context) => {
+          const { createPR } = await import('@aether/github-automation');
+          return createPR(context.input);
+        },
+      },
+      {
+        name: 'notify_slack',
+        handler: async (context) => {
+          const { sendMessage } = await import('@aether/slack-automation');
+          const pr = context.output.fetch_pr;
+          return sendMessage({
+            channel: context.input.slackChannel || '#general',
+            text: `New PR created: ${pr.title}`,
+          });
+        },
+        continueOnError: true,
+      },
     ],
-    on_failure: 'stop',
   },
   {
-    name: 'fix-and-commit',
-    trigger: { type: 'webhook' },
+    name: 'daily-status-report',
+    description: 'Generate and post daily status report',
     steps: [
-      { name: 'check-diff', tool: 'git_diff', args: {} },
-      { name: 'stage', tool: 'git_commit', args: { message: 'Auto-fix via workflow' }, retry: 2 },
+      {
+        name: 'collect_metrics',
+        handler: async (context) => {
+          // Collect metrics from various sources
+          return {
+            github: await fetch('https://api.github.com/repos/owner/repo').then(r => r.json()),
+            system: await fetch('http://localhost:3000/api/stack').then(r => r.json()),
+          };
+        },
+      },
+      {
+        name: 'create_notion_page',
+        handler: async (context) => {
+          const { createPage } = await import('@aether/notion-automation');
+          const metrics = context.output.collect_metrics;
+          return createPage({
+            parent: { database_id: context.input.notionDatabaseId },
+            properties: {
+              title: `Daily Report ${new Date().toISOString().split('T')[0]}`,
+              metrics: JSON.stringify(metrics),
+            },
+          });
+        },
+        continueOnError: true,
+      },
+      {
+        name: 'notify_slack',
+        handler: async (context) => {
+          const { sendMessage } = await import('@aether/slack-automation');
+          return sendMessage({
+            channel: context.input.slackChannel || '#reports',
+            text: 'Daily status report created in Notion',
+          });
+        },
+        continueOnError: true,
+      },
+    ],
+  },
+  {
+    name: 'issue-triage',
+    description: 'Automatically triage GitHub issues',
+    steps: [
+      {
+        name: 'fetch_issues',
+        handler: async (context) => {
+          const { listIssues } = await import('@aether/github-automation');
+          return listIssues({
+            owner: context.input.owner,
+            repo: context.input.repo,
+            state: 'open',
+          });
+        },
+      },
+      {
+        name: 'categorize',
+        handler: async (context) => {
+          const issues = context.output.fetch_issues;
+          // Simple categorization logic
+          return issues.map((issue: any) => ({
+            ...issue,
+            category: issue.labels?.[0]?.name || 'uncategorized',
+          }));
+        },
+      },
+      {
+        name: 'update_notion',
+        handler: async (context) => {
+          const { createPage } = await import('@aether/notion-automation');
+          const categorized = context.output.categorize;
+          // Create pages for each category
+          return Promise.all(
+            categorized.map((issue: any) =>
+              createPage({
+                parent: { database_id: context.input.notionDatabaseId },
+                properties: {
+                  title: issue.title,
+                  category: issue.category,
+                  url: issue.html_url,
+                },
+              })
+            )
+          );
+        },
+        continueOnError: true,
+      },
     ],
   },
 ];
 
-export function listWorkflows() {
-  return EXAMPLE_WORKFLOWS.map(w => ({ name: w.name, trigger: w.trigger.type, steps: w.steps.length }));
-}
+// Register predefined workflows
+predefinedWorkflows.forEach(registerWorkflow);
 
-export function getWorkflow(name: string) {
-  return EXAMPLE_WORKFLOWS.find(w => w.name === name);
-}
+// Export workflow utilities
+export { workflows };

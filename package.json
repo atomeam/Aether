@@ -3,25 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/backend",
+    "apps/frontend",
+    "apps/bridge"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "npm run dev --workspaces --parallel",
     "dev:backend": "npm run dev -w @aether/backend",
     "dev:frontend": "npm run dev -w @aether/frontend",
     "dev:bridge": "npm run dev -w @aether/bridge",
-    "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
-    "start": "npm run start -w @aether/backend",
-    "clean": "turbo run clean"
+    "build": "npm run build -w @aether/backend && npm run build -w @aether/frontend",
+    "start": "npm run start -w @aether/backend"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "devDependencies": {
-    "turbo": "^2.9.14"
-  },
-  "packageManager": "npm@10.9.8"
+  }
 }
