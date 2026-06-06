@@ -11,7 +11,7 @@
 
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import express from 'express';
+import express, { Express } from 'express';
 
 // Load .env if present
 const ENV_FILE = '.env';
@@ -30,7 +30,7 @@ const NOTION_WEBHOOK_SECRET = process.env.NOTION_WEBHOOK_SECRET;
 const CURATOR_QUEUE_URL = process.env.CURATOR_QUEUE_URL || 'http://127.0.0.1:8787/curator/dispatch';
 const PORT = parseInt(process.env.PORT || '8787');
 
-const app = express();
+const app: Express = express();
 
 // Raw body capture for HMAC verification
 app.use(express.raw({ type: 'application/json', limit: '10mb' }));
