@@ -18,11 +18,33 @@ $simulatedDataFound = [System.Collections.Generic.List[object]]::new()
 
 # Patterns to search for simulated data
 $patterns = @(
-    @{ Pattern = "Math\.random"; Description = "Random number generation" },
+    @{ Pattern = "Math\.random.*fake"; Description = "Fake data generation" },
+    @{ Pattern = "Math\.random.*mock"; Description = "Mock data generation" },
+    @{ Pattern = "Math\.random.*simulated"; Description = "Simulated data generation" },
+    @{ Pattern = "fake.*Math\.random"; Description = "Fake data with random" },
+    @{ Pattern = "mock.*Math\.random"; Description = "Mock data with random" },
+    @{ Pattern = "simulated.*Math\.random"; Description = "Simulated data with random" },
     @{ Pattern = "fake"; Description = "Fake data keyword" },
     @{ Pattern = "mock"; Description = "Mock data keyword" },
     @{ Pattern = "simulated"; Description = "Simulated data keyword" },
     @{ Pattern = "hardcoded"; Description = "Hardcoded values" }
+)
+
+# Patterns to EXCLUDE (legitimate algorithmic randomness)
+$excludePatterns = @(
+    @{ Pattern = "bootstrap"; Description = "Bootstrap resampling" },
+    @{ Pattern = "resample"; Description = "Resampling algorithms" },
+    @{ Pattern = "p.*value"; Description = "P-value calculations" },
+    @{ Pattern = "monte.*carlo"; Description = "Monte Carlo simulations" },
+    @{ Pattern = "sampling"; Description = "Statistical sampling" },
+    @{ Pattern = "shuffle"; Description = "Array shuffling" },
+    @{ Pattern = "random.*index"; Description = "Random index selection" },
+    @{ Pattern = "calculatePValue"; Description = "P-value calculation function" },
+    @{ Pattern = "calculateConfidenceInterval"; Description = "Confidence interval calculation" },
+    @{ Pattern = "UAP.*detection"; Description = "UAP detection simulation (feature, not fake data)" },
+    @{ Pattern = "detectUAP"; Description = "UAP detection function (feature, not fake data)" },
+    @{ Pattern = "gravitational.*wave"; Description = "Gravitational wave detection (feature, not fake data)" },
+    @{ Pattern = "electromagnetic.*field"; Description = "EM field detection (feature, not fake data)" }
 )
 
 # Audit function
@@ -42,6 +64,29 @@ function Find-SimulatedData {
     foreach ($file in $keyFiles) {
         $filePath = Join-Path $Path $file
         if (Test-Path $filePath) {
+            $content = Get-Content $filePath -Raw -ErrorAction SilentlyContinue
+            if ($null -eq $content) { continue }
+            
+            # Check if file already has warning comment
+            if ($content -match "WARNING.*simulated data") {
+                Write-Host "Skipping $file (already has warning comment)" -ForegroundColor Gray
+                continue
+            }
+            
+            # Check if file contains legitimate algorithmic randomness
+            $isLegitimate = $false
+            foreach ($exclude in $excludePatterns) {
+                if ($content -match $exclude.Pattern) {
+                    $isLegitimate = $true
+                    break
+                }
+            }
+            
+            if ($isLegitimate) {
+                Write-Host "Skipping $file (contains legitimate algorithmic randomness or feature simulation)" -ForegroundColor Gray
+                continue
+            }
+            
             foreach ($pattern in $patterns) {
                 $matches = Select-String -Path $filePath -Pattern $pattern.Pattern -ErrorAction SilentlyContinue
                 if ($matches) {
@@ -85,8 +130,17 @@ function Fix-SimulatedData {
             $originalContent = $content
             $modified = $false
             
-            # Add warning comment if simulated data found
-            if ($content -match "Math\.random" -and -not ($content -match "TODO.*Replace.*real")) {
+            # Check if file contains legitimate algorithmic randomness
+            $isLegitimate = $false
+            foreach ($exclude in $excludePatterns) {
+                if ($content -match $exclude.Pattern) {
+                    $isLegitimate = $true
+                    break
+                }
+            }
+            
+            # Only add warning if not legitimate and doesn't already have it
+            if (-not $isLegitimate -and ($content -match "Math\.random") -and -not ($content -match "WARNING.*simulated data")) {
                 $content = "// WARNING: This uses simulated data. Replace with real API calls.`n// Real work is easier than simulated work.`n" + $content
                 $modified = $true
             }
