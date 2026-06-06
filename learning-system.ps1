@@ -1,5 +1,5 @@
-# Continuous Learning System
-# Autonomously learns, organizes, and documents skill improvements
+# Continuous Learning System - Fully Connected
+# Autonomously learns, organizes, and documents skill improvements using all systems
 
 param(
     [switch]$Continuous,
@@ -9,9 +9,10 @@ param(
 $repoRoot = "C:\Users\adamm\Aether"
 $learningDir = "$repoRoot\.learning"
 $logFile = "$repoRoot\learning.log"
+$victusUrl = "http://localhost:8080"
 
-Write-Host "=== CONTINUOUS LEARNING SYSTEM ===" -ForegroundColor Cyan
-Write-Host "Autonomously learning, organizing, and documenting skills" -ForegroundColor Yellow
+Write-Host "=== CONTINUOUS LEARNING SYSTEM - FULLY CONNECTED ===" -ForegroundColor Cyan
+Write-Host "Connected to MCP, Victus, Codebase, and Improvement System" -ForegroundColor Yellow
 Write-Host ""
 
 # Create learning directory structure
@@ -33,12 +34,100 @@ function Log-Message {
     Write-Host "[$timestamp] $message" -ForegroundColor Gray
 }
 
+function Research-Topic {
+    param($area, $topic)
+    
+    Log-Message "Researching: $area - $topic"
+    
+    # Use web search for research
+    try {
+        $searchQuery = "$area $topic tutorial 2026 best practices"
+        $results = web_search -query $searchQuery -num_results 5
+        
+        $resources = @()
+        foreach ($result in $results) {
+            $resources += "- [$($result.title)]($($result.url))"
+        }
+        
+        return $resources
+    } catch {
+        Log-Message "Research failed"
+        return @("- Search failed")
+    }
+}
+
+function Apply-Learning {
+    param($area, $topic, $content)
+    
+    Log-Message "Applying learning: $topic to codebase"
+    
+    # Send to Victus for orchestration
+    try {
+        $response = Invoke-RestMethod -Uri "$victusUrl/api/execute" -Method POST -ContentType "application/json" -Body @{
+            objective = "Apply learning: $topic"
+            plan = @(
+                @{ type = "local"; action = "apply-learning"; params = @{ area = $area; topic = $topic; content = $content } }
+            )
+        } | ConvertTo-Json -Depth 10
+        
+        Log-Message "Sent to Victus: $($response.success)"
+    } catch {
+        Log-Message "Victus not available for $topic"
+    }
+}
+
+function Generate-PracticeProject {
+    param($area, $topic)
+    
+    Log-Message "Generating practice project: $topic"
+    
+    $projectDir = "$learningDir\$area\projects\$topic"
+    if (-not (Test-Path $projectDir)) {
+        New-Item -ItemType Directory -Path $projectDir -Force | Out-Null
+        
+        # Generate project structure
+        $projectContent = @"
+# $topic - Practice Project
+
+**Area:** $area
+**Created:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+
+## Project Description
+*To be filled*
+
+## Tech Stack
+*To be filled*
+
+## Setup
+\`\`\`bash
+# Installation commands
+\`\`\`
+
+## Features
+- [ ] Feature 1
+- [ ] Feature 2
+- [ ] Feature 3
+
+## Learning Goals
+- [ ] Apply $topic concepts
+- [ ] Build working example
+- [ ] Document learnings
+"@
+        
+        $projectContent | Out-File -FilePath "$projectDir\README.md" -Encoding UTF8
+        Log-Message "Created practice project: $topic"
+    }
+}
+
 function Learn-Topic {
     param($area, $topic)
     
     Log-Message "Learning: $area - $topic"
     
-    # Document the topic structure
+    # Research the topic
+    $resources = Research-Topic -area $area -topic $topic
+    
+    # Document findings
     $topicFile = "$learningDir\$area\topics\$topic.md"
     $content = @"
 # $topic
@@ -46,29 +135,36 @@ function Learn-Topic {
 **Area:** $area
 **Learned:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 
-## Search Queries
-- $area $topic tutorial 2026
-- $area $topic best practices
-- $area $topic examples
+## Resources
+$($resources -join "`n")
 
 ## Key Concepts
-*To be filled*
+*To be filled after research*
 
 ## Code Examples
-*To be filled*
+\`\`\`typescript
+// Example code
+\`\`\`
 
 ## Practice Projects
-*To be filled*
+See: [../projects/$topic/](../projects/$topic/)
 
 ## Mastery Checklist
 - [ ] Understand basics
 - [ ] Build simple example
 - [ ] Build complex project
 - [ ] Teach someone else
+- [ ] Apply to production code
 "@
     
     $content | Out-File -FilePath $topicFile -Encoding UTF8
-    Log-Message "✅ Documented: $topic"
+    Log-Message "Documented: $topic"
+    
+    # Generate practice project
+    Generate-PracticeProject -area $area -topic $topic
+    
+    # Apply learning to codebase
+    Apply-Learning -area $area -topic $topic -content $content
 }
 
 function Learn-Frontend {
@@ -203,6 +299,14 @@ function Learn-Architecture {
     }
 }
 
+function Trigger-Improvement {
+    Log-Message "Triggering improvement system to apply learnings"
+    
+    # Trigger the autonomous improvement daemon
+    $daemonResult = & "$repoRoot\daemon.ps1" -Once 2>&1
+    Log-Message "Improvement system triggered"
+}
+
 function Run-LearningCycle {
     Log-Message "=== Starting learning cycle ==="
     
@@ -214,6 +318,9 @@ function Run-LearningCycle {
     Learn-DevOps
     Learn-Architecture
     
+    # Trigger improvement system to apply learnings
+    Trigger-Improvement
+    
     # Generate progress report
     $progressFile = "$learningDir\progress.md"
     $progress = @"
@@ -223,27 +330,40 @@ function Run-LearningCycle {
 
 ## Frontend
 $((Get-ChildItem "$learningDir\frontend\topics" -Filter "*.md").Count) topics learned
+$((Get-ChildItem "$learningDir\frontend\projects" -Directory).Count) practice projects
 
 ## Backend
 $((Get-ChildItem "$learningDir\backend\topics" -Filter "*.md").Count) topics learned
+$((Get-ChildItem "$learningDir\backend\projects" -Directory).Count) practice projects
 
 ## Cloud
 $((Get-ChildItem "$learningDir\cloud\topics" -Filter "*.md").Count) topics learned
+$((Get-ChildItem "$learningDir\cloud\projects" -Directory).Count) practice projects
 
 ## AI/ML
 $((Get-ChildItem "$learningDir\ai-ml\topics" -Filter "*.md").Count) topics learned
+$((Get-ChildItem "$learningDir\ai-ml\projects" -Directory).Count) practice projects
 
 ## DevOps
 $((Get-ChildItem "$learningDir\devops\topics" -Filter "*.md").Count) topics learned
+$((Get-ChildItem "$learningDir\devops\projects" -Directory).Count) practice projects
 
 ## Architecture
 $((Get-ChildItem "$learningDir\architecture\topics" -Filter "*.md").Count) topics learned
+$((Get-ChildItem "$learningDir\architecture\projects" -Directory).Count) practice projects
 
-**Total:** $((Get-ChildItem "$learningDir" -Recurse -Filter "*.md").Count) topics learned
+**Total Topics:** $((Get-ChildItem "$learningDir" -Recurse -Filter "*.md" -Depth 2).Count)
+**Total Projects:** $((Get-ChildItem "$learningDir" -Recurse -Directory -Depth 2).Count)
+
+## Connections
+- Web Search (research)
+- Victus (orchestration)
+- Improvement System (application)
+- Codebase (target)
 "@
     
     $progress | Out-File -FilePath $progressFile -Encoding UTF8
-    Log-Message "✅ Progress report updated"
+    Log-Message "Progress report updated"
     
     Log-Message "=== Learning cycle complete ==="
 }
