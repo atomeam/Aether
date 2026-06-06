@@ -1,6 +1,7 @@
 name = "uap-detection"
 main = "src/complete-system.ts"
 compatibility_date = "2024-01-01"
+account_id = "95745fedbea06314e24c27233033a37d"
 
 # D1 Database for anomaly storage
 [[d1_databases]]

@@ -75,6 +75,11 @@ function Deploy-UAPWorker {
         Log-Message "✅ UAP worker deployed"
         return $true
     } else {
+        # Check if it's an authentication error
+        if ($deployResult -match "Authentication error" -or $deployResult -match "10000") {
+            Log-Message "⚠️ UAP worker deployment skipped (Cloudflare auth issue)"
+            return $false
+        }
         Log-Message "❌ UAP worker deployment failed"
         return $false
     }
@@ -104,14 +109,15 @@ function Run-ImprovementCycle {
     # Scan
     $issuesFound = Scan-Improvements
     
-    # Deploy if issues were fixed
+    # Only deploy UAP worker if issues were fixed (skip on auth errors)
     if ($issuesFound) {
-        Deploy-UAPWorker
-        Update-PR
+        $deploySuccess = Deploy-UAPWorker
+        if ($deploySuccess) {
+            Update-PR
+        }
     } else {
-        # Even if no issues, deploy latest changes
-        Deploy-UAPWorker
-        Update-PR
+        # Skip deployment if no issues found
+        Log-Message "No issues found, skipping deployment"
     }
     
     Log-Message "=== Cycle complete ==="
