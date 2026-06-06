@@ -47,6 +47,7 @@ import {
 import { PrimitiveRenderer, ComponentSpec } from './components/Primitives';
 import { cn } from './lib/utils';
 import { UAPSystemStatus } from './components/UAPSystemStatus';
+import { UAPDetectionArrays } from './components/UAPDetectionArrays';
 
 interface ThemeState {
   primary: string;
@@ -1220,132 +1221,8 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* UAP Detection System */}
-                <div className="col-span-2 p-6 border border-gold/10 bg-gold/[0.02] rounded-2xl">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gold/10 rounded-lg">
-                      <Eye className="w-4 h-4 text-gold animate-pulse" />
-                    </div>
-                    <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-gold">UAP Detection System</h3>
-                      <p className="text-[6px] text-white/30 uppercase tracking-wider">Full Spectrum Monitoring - 15 Detection Arrays</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-5 gap-3">
-                    {/* Gravitational Waves */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Waves className="w-4 h-4 text-blue-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Gravitational</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random() * 1e-20).toExponential(2)}</div>
-                    </div>
-                    
-                    {/* Electromagnetic */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Radio className="w-4 h-4 text-purple-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">EM Field</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random() * 30).toFixed(1)} Hz</div>
-                    </div>
-                    
-                    {/* Propulsion */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Lightning className="w-4 h-4 text-yellow-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Propulsion</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random() * 10).toFixed(1)} G</div>
-                    </div>
-                    
-                    {/* Thermal */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Thermometer className="w-4 h-4 text-red-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Thermal</div>
-                      <div className="text-[8px] font-mono text-white/80">{(200 + Math.random() * 300).toFixed(0)} K</div>
-                    </div>
-                    
-                    {/* Radar */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Radar className="w-4 h-4 text-green-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Radar</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random() * 100).toFixed(2)} m²</div>
-                    </div>
-                    
-                    {/* Temporal */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Clock className="w-4 h-4 text-cyan-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Temporal</div>
-                      <div className="text-[8px] font-mono text-white/80">{(1 + Math.random() * 0.1).toFixed(3)}x</div>
-                    </div>
-                    
-                    {/* Quantum */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Atom className="w-4 h-4 text-pink-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Quantum</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random()).toFixed(2)} φ</div>
-                    </div>
-                    
-                    {/* Dimensional */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Layers className="w-4 h-4 text-indigo-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Dimensional</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random() * 100).toFixed(0)}%</div>
-                    </div>
-                    
-                    {/* Biological */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Dna className="w-4 h-4 text-emerald-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Biological</div>
-                      <div className="text-[8px] font-mono text-white/80">{Math.random() > 0.5 ? 'DETECTED' : 'NONE'}</div>
-                    </div>
-                    
-                    {/* Trajectory */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <ArrowUpRight className="w-4 h-4 text-orange-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Trajectory</div>
-                      <div className="text-[8px] font-mono text-white/80">{Math.random() > 0.8 ? 'NON-BALLISTIC' : 'NORMAL'}</div>
-                    </div>
-                    
-                    {/* Material */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Ghost className="w-4 h-4 text-gray-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Material</div>
-                      <div className="text-[8px] font-mono text-white/80">METAMATERIAL</div>
-                    </div>
-                    
-                    {/* Communication */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <MessageSquare className="w-4 h-4 text-teal-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Comm</div>
-                      <div className="text-[8px] font-mono text-white/80">{Math.random() > 0.95 ? 'NEURAL' : 'NONE'}</div>
-                    </div>
-                    
-                    {/* Energy */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Battery className="w-4 h-4 text-lime-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Energy</div>
-                      <div className="text-[8px] font-mono text-white/80">{(Math.random() * 1e15).toExponential(2)} J</div>
-                    </div>
-                    
-                    {/* Teleportation */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Spark className="w-4 h-4 text-violet-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Teleport</div>
-                      <div className="text-[8px] font-mono text-white/80">{Math.random() > 0.99 ? 'JUMP' : 'NONE'}</div>
-                    </div>
-                    
-                    {/* Reality */}
-                    <div className="p-3 border border-white/5 bg-white/[0.01] rounded-lg">
-                      <Globe className="w-4 h-4 text-rose-400 mb-2" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Reality</div>
-                      <div className="text-[8px] font-mono text-white/80">{Math.random() > 0.999 ? 'VIOLATION' : 'STABLE'}</div>
-                    </div>
-                    
-                    {/* Overall Confidence */}
-                    <div className="p-3 border border-gold/20 bg-gold/[0.05] rounded-lg">
-                      <Activity className="w-4 h-4 text-gold mb-2 animate-pulse" />
-                      <div className="text-[6px] text-white/40 uppercase tracking-wider">Confidence</div>
-                      <div className="text-[8px] font-mono text-gold">{(Math.random() * 100).toFixed(1)}%</div>
-                    </div>
-                  </div>
-                </div>
+                {/* UAP Detection Arrays - Real API Integration */}
+                <UAPDetectionArrays />
                 
                 {/* 20 Subsystems Status - Real API Integration */}
                 <UAPSystemStatus />
