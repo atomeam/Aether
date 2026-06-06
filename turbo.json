@@ -1,7 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*"],
-  "globalInputs": ["!apps/crew-room/**"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
