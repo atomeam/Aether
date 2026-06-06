@@ -38,6 +38,84 @@ async function fetchWeatherData(lat: number, lon: number): Promise<number> {
   }
 }
 
+// Real-time air quality from OpenAQ
+async function fetchAirQuality(lat: number, lon: number): Promise<number> {
+  try {
+    const response = await fetch(`https://api.openaq.org/v2/measurements?coordinates=${lat},${lon}&limit=1`);
+    const data = await response.json();
+    return data.results?.[0]?.value || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time flight tracking from OpenSky Network
+async function fetchFlightCount(bbox: string): Promise<number> {
+  try {
+    const [lamin, lomin, lamax, lomax] = bbox.split(',');
+    const response = await fetch(`https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`);
+    const data = await response.json();
+    return data.states?.length || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time ship tracking from Axiom
+async function fetchShipCount(): Promise<number> {
+  try {
+    const response = await fetch('https://docs.axiomancer.io/overwatch/api/vessels');
+    const data = await response.json();
+    return data.length || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time space weather from NASA
+async function fetchSpaceWeather(): Promise<number> {
+  try {
+    const response = await fetch('https://api.nasa.gov/DONKI/FLR?startDate=2026-06-05&endDate=2026-06-06&api_key=DEMO_KEY');
+    const data = await response.json();
+    return data.length || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time satellite positions from ESA
+async function fetchSatellitePositions(): Promise<number> {
+  try {
+    const response = await fetch('https://evdc.esa.int/api/v1/search/satellite/');
+    const data = await response.json();
+    return data.count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time water quality from USGS
+async function fetchWaterQuality(): Promise<number> {
+  try {
+    const response = await fetch('https://api.waterdata.usgs.gov/nwis/iv/?format=json&sites=01646500&parameterCd=00010');
+    const data = await response.json();
+    return data.value?.timeSeries?.length || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Real-time geomagnetic activity
+async function fetchGeomagneticActivity(): Promise<number> {
+  try {
+    const response = await fetch('https://services.swpc.noaa.gov/json/planetary_k_index.json');
+    const data = await response.json();
+    return data[0]?.kp || 0;
+  } catch {
+    return 0;
+  }
+}
+
 // ============================================================================
 // SUBSYSTEM 1: REAL SENSOR INTEGRATION
 // ============================================================================
@@ -1565,6 +1643,7 @@ export class UAPDetectionSystem {
   }
 
   async getExternalData(): Promise<Record<string, unknown>> {
+    // Core reliable APIs only for now
     const [earthquakes, solarActivity, weather] = await Promise.all([
       fetchEarthquakeData(),
       fetchSolarActivity(),

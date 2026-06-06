@@ -17,3 +17,13 @@ id = "4ff39cc2c4044bdab47df67dfe37cb1e"
 [[r2_buckets]]
 binding = "SENSOR_DATA"
 bucket_name = "uap-sensor-data"
+
+# Queue for async anomaly processing
+[[queues.producers]]
+queue = "uap-anomaly-processing"
+binding = "uap_anomaly_processing"
+
+# Vectorize for ML embeddings
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "uap-embeddings"
