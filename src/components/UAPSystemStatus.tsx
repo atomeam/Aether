@@ -12,6 +12,12 @@ interface SystemStatus {
   satellites: number;
   analyses: number;
   simulations: number;
+  externalData?: {
+    earthquakes: number;
+    solarActivity: number;
+    weather: number;
+    timestamp: string;
+  };
 }
 
 interface SubsystemStatus {
@@ -62,19 +68,41 @@ export function UAPSystemStatus() {
         setError(null);
       }
     } catch (err) {
-      // Use simulated data if API not available
-      setSystemStatus({
-        sensors: 5,
-        anomalies: 12,
-        alerts: 3,
-        clusters: 2,
-        reports: 45,
-        users: 23,
-        devices: 156,
-        satellites: 8,
-        analyses: 89,
-        simulations: 12
-      });
+      // Try external data endpoint
+      try {
+        const extResponse = await fetch('https://uap-detection.atomicmoonbeam88.workers.dev/api/external-data');
+        if (extResponse.ok) {
+          const extData = await extResponse.json();
+          setSystemStatus({
+            sensors: 5,
+            anomalies: 12,
+            alerts: 3,
+            clusters: 2,
+            reports: 45,
+            users: 23,
+            devices: 156,
+            satellites: 8,
+            analyses: 89,
+            simulations: 12,
+            externalData: extData.externalData
+          });
+          setError(null);
+        }
+      } catch {
+        // Use simulated data if API not available
+        setSystemStatus({
+          sensors: 5,
+          anomalies: 12,
+          alerts: 3,
+          clusters: 2,
+          reports: 45,
+          users: 23,
+          devices: 156,
+          satellites: 8,
+          analyses: 89,
+          simulations: 12
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -172,6 +200,26 @@ export function UAPSystemStatus() {
           <div className="text-center">
             <div className="text-[8px] text-white/40 uppercase tracking-wider">Satellites</div>
             <div className="text-[10px] font-mono text-white/80">{systemStatus.satellites}</div>
+          </div>
+        </div>
+      )}
+
+      {systemStatus?.externalData && (
+        <div className="mt-4 pt-4 border-t border-gold/20">
+          <div className="text-[8px] text-gold/60 uppercase tracking-wider mb-3">Real-World Correlation Data</div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2 bg-gold/[0.05] border border-gold/10 rounded">
+              <div className="text-[6px] text-white/40 uppercase tracking-wider">Earthquakes</div>
+              <div className="text-[10px] font-mono text-gold">{systemStatus.externalData.earthquakes}</div>
+            </div>
+            <div className="p-2 bg-gold/[0.05] border border-gold/10 rounded">
+              <div className="text-[6px] text-white/40 uppercase tracking-wider">Solar Wind</div>
+              <div className="text-[10px] font-mono text-gold">{systemStatus.externalData.solarActivity} km/s</div>
+            </div>
+            <div className="p-2 bg-gold/[0.05] border border-gold/10 rounded">
+              <div className="text-[6px] text-white/40 uppercase tracking-wider">Temperature</div>
+              <div className="text-[10px] font-mono text-gold">{systemStatus.externalData.weather}°C</div>
+            </div>
           </div>
         </div>
       )}

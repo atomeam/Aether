@@ -20,6 +20,11 @@ interface DetectionData {
   energy?: { ambientAbsorption: number; zeroPointExtraction: number };
   teleportation?: { matterDisplacement: number; spatialJump: boolean };
   reality?: { simulationGlitch: number; physicsViolation: boolean };
+  externalData?: {
+    earthquakes: number;
+    solarActivity: number;
+    weather: number;
+  };
 }
 
 interface DetectionCard {
@@ -48,8 +53,21 @@ export function UAPDetectionArrays() {
         setDetectionData(data.anomaly || data);
       }
     } catch (err) {
-      // Use simulated data if API not available
-      setDetectionData(generateSimulatedData());
+      // Try production API
+      try {
+        const prodResponse = await fetch('https://uap-detection.atomicmoonbeam88.workers.dev/api/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sensorData: Array.from({ length: 5 }, () => Math.random()) })
+        });
+        if (prodResponse.ok) {
+          const data = await prodResponse.json();
+          setDetectionData(data.anomaly);
+        }
+      } catch {
+        // Use simulated data if API not available
+        setDetectionData(generateSimulatedData());
+      }
     } finally {
       setLoading(false);
     }
@@ -217,6 +235,29 @@ export function UAPDetectionArrays() {
           );
         })}
       </div>
+      
+      {detectionData?.externalData && (
+        <div className="mt-4 pt-4 border-t border-gold/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Globe className="w-3 h-3 text-gold animate-pulse" />
+            <div className="text-[8px] text-gold/60 uppercase tracking-wider">Real-World Correlation</div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2 bg-gold/[0.05] border border-gold/10 rounded">
+              <div className="text-[6px] text-white/40 uppercase tracking-wider">Earthquakes</div>
+              <div className="text-[10px] font-mono text-gold">{detectionData.externalData.earthquakes}</div>
+            </div>
+            <div className="p-2 bg-gold/[0.05] border border-gold/10 rounded">
+              <div className="text-[6px] text-white/40 uppercase tracking-wider">Solar Wind</div>
+              <div className="text-[10px] font-mono text-gold">{detectionData.externalData.solarActivity} km/s</div>
+            </div>
+            <div className="p-2 bg-gold/[0.05] border border-gold/10 rounded">
+              <div className="text-[6px] text-white/40 uppercase tracking-wider">Temperature</div>
+              <div className="text-[10px] font-mono text-gold">{detectionData.externalData.weather}°C</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
