@@ -1,0 +1,17 @@
+$kind: http-request
+description: Create a new alert in the Aether alert engine
+url: "{{baseUrl}}/api/alerts"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "type": "threshold",
+      "metric": "cpu_usage",
+      "threshold": 80,
+      "severity": "warning",
+      "description": "CPU usage above threshold"
+    }
+order: 2000

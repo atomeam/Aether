@@ -1,0 +1,14 @@
+$kind: http-request
+description: Add an item to the Aether triage queue
+url: "{{baseUrl}}/api/triage"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "description": "Triage this issue",
+      "severity": "high"
+    }
+order: 4000

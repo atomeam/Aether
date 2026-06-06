@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get unified health dashboard with all system metrics
+url: "{{baseUrl}}/api/health"
+method: GET
+order: 4000

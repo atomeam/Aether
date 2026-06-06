@@ -1,0 +1,777 @@
+{
+  "info": {
+    "name": "Aether Backend API",
+    "description": "Complete API collection for Aether backend - Victus integration with 32+ endpoints for system monitoring, agents, workflows, alerts, and more",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string",
+      "description": "API key for authentication (if required)"
+    }
+  ],
+  "item": [
+    {
+      "name": "System Health & Monitoring",
+      "item": [
+        {
+          "name": "Get Stack Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stack",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stack"]
+            },
+            "description": "Get Aether stack health status and system information"
+          }
+        },
+        {
+          "name": "Get Agent Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agents"]
+            },
+            "description": "Get status of Aether agent system (curator, executor, evaluator)"
+          }
+        },
+        {
+          "name": "Get Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "metrics"]
+            },
+            "description": "Get Aether system metrics snapshot"
+          }
+        },
+        {
+          "name": "Get Health Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Get unified health dashboard with all system metrics"
+          }
+        },
+        {
+          "name": "Get Vital Signs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/vitals",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "vitals"]
+            },
+            "description": "Get Aether system vital signs and throttle recommendations"
+          }
+        },
+        {
+          "name": "Get Telemetry",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/telemetry",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "telemetry"]
+            },
+            "description": "Get Aether system telemetry data (supports json, prometheus, csv formats)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alert & Notification System",
+      "item": [
+        {
+          "name": "Get Alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "alerts"]
+            },
+            "description": "Get active alerts from the Aether alert engine"
+          }
+        },
+        {
+          "name": "Create Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"threshold\",\n  \"metric\": \"cpu_usage\",\n  \"threshold\": 80,\n  \"severity\": \"warning\",\n  \"description\": \"CPU usage above threshold\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "alerts"]
+            },
+            "description": "Create a new alert in the Aether alert engine"
+          }
+        },
+        {
+          "name": "Get Notifier Channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifier",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifier"]
+            },
+            "description": "Get Aether notifier channel status"
+          }
+        },
+        {
+          "name": "Send Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"slack\",\n  \"message\": \"Test notification from Postman\",\n  \"priority\": \"info\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifier",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifier"]
+            },
+            "description": "Send a notification through Aether notifier"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow & Task Management",
+      "item": [
+        {
+          "name": "Get Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workflows"]
+            },
+            "description": "List available Aether workflows"
+          }
+        },
+        {
+          "name": "Trigger Workflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflowId\": \"example-workflow\",\n  \"params\": {\n    \"param1\": \"value1\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/trigger",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workflows", "trigger"]
+            },
+            "description": "Trigger an Aether workflow execution"
+          }
+        },
+        {
+          "name": "Get Scheduler Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/scheduler",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "scheduler"]
+            },
+            "description": "Get Aether scheduler status and pending tasks"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Human Intervention & Triage",
+      "item": [
+        {
+          "name": "Get Human Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/human-queue",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "human-queue"]
+            },
+            "description": "Get pending items in Aether human intervention queue"
+          }
+        },
+        {
+          "name": "Add to Human Queue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"review\",\n  \"description\": \"Please review this change\",\n  \"priority\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/human-queue",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "human-queue"]
+            },
+            "description": "Add an item to the Aether human intervention queue"
+          }
+        },
+        {
+          "name": "Get Triage Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/triage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "triage"]
+            },
+            "description": "Get pending items in Aether triage queue"
+          }
+        },
+        {
+          "name": "Add to Triage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Triage this issue\",\n  \"severity\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/triage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "triage"]
+            },
+            "description": "Add an item to the Aether triage queue"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent Reflection & Learning",
+      "item": [
+        {
+          "name": "Agent Reflect",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lesson\": \"Learned that this approach works better\",\n  \"context\": \"Task execution context\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/agents/reflect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agents", "reflect"]
+            },
+            "description": "Write a lesson to the agent reflection system"
+          }
+        },
+        {
+          "name": "Get Learned Patterns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/agents/reflect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agents", "reflect"]
+            },
+            "description": "Get patterns learned by the agent reflection system"
+          }
+        },
+        {
+          "name": "Compact Lessons",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"compact\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/compactor",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "compactor"]
+            },
+            "description": "Compact and optimize learned lessons"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Council & Evaluation",
+      "item": [
+        {
+          "name": "Council Evaluate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposal\": \"Proposed change description\",\n  \"context\": \"Additional context for evaluation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/council/evaluate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "council", "evaluate"]
+            },
+            "description": "Evaluate a proposal using the Council of Evaluators"
+          }
+        },
+        {
+          "name": "Evaluate Adversarial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposal\": \"Proposed change\",\n  \"context\": \"Context\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/adversarial",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "adversarial"]
+            },
+            "description": "Evaluate a proposal for adversarial patterns"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dream & Journal System",
+      "item": [
+        {
+          "name": "Get Dream Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dream",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dream"]
+            },
+            "description": "Get Aether dream state status and analysis"
+          }
+        },
+        {
+          "name": "Get Journal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/journal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journal"]
+            },
+            "description": "Get Aether storyteller journal entries"
+          }
+        },
+        {
+          "name": "Generate Auto Journal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/journal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "journal"]
+            },
+            "description": "Generate an automatic journal entry based on recent events"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chaos Engineering",
+      "item": [
+        {
+          "name": "Execute Chaos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"latency\",\n  \"intensity\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/agents/chaos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agents", "chaos"]
+            },
+            "description": "Execute a chaos engineering scenario"
+          }
+        },
+        {
+          "name": "Get Chaos Scenarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/agents/chaos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agents", "chaos"]
+            },
+            "description": "Get available chaos engineering scenarios"
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Configuration",
+      "item": [
+        {
+          "name": "Get Rate Limits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rate-limits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rate-limits"]
+            },
+            "description": "Get Aether rate limit status and configuration"
+          }
+        },
+        {
+          "name": "Get Secrets List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/secrets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "secrets"]
+            },
+            "description": "Get list of Aether secret keys (names only, not values)"
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            },
+            "description": "Get Aether system profile (read-only external access)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Advanced Operations",
+      "item": [
+        {
+          "name": "Get Foresight Predictions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/foresight",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "foresight"]
+            },
+            "description": "Get pending foresight predictions and scores"
+          }
+        },
+        {
+          "name": "Replay Events",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"since\": 0,\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/replay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "replay"]
+            },
+            "description": "Replay historical events for analysis"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Victus Bridge",
+      "item": [
+        {
+          "name": "Victus Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/health",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["health"]
+            },
+            "description": "Check Victus runtime health status"
+          }
+        },
+        {
+          "name": "Victus Execute Command",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"execute\",\n  \"args\": {\n    \"command\": \"ls -la\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/execute",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["execute"]
+            },
+            "description": "Execute a command through Victus runtime"
+          }
+        },
+        {
+          "name": "Victus Read File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"read_file\",\n  \"args\": {\n    \"path\": \"/path/to/file\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/execute",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["execute"]
+            },
+            "description": "Read a file through Victus runtime"
+          }
+        },
+        {
+          "name": "Victus Write File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"write_file\",\n  \"args\": {\n    \"path\": \"/path/to/file\",\n    \"content\": \"file content\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/execute",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["execute"]
+            },
+            "description": "Write a file through Victus runtime"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Self-Funding System",
+      "item": [
+        {
+          "name": "Get Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3002/api/services",
+              "host": ["localhost"],
+              "port": "3002",
+              "path": ["api", "services"]
+            },
+            "description": "Get available AI services with pricing"
+          }
+        },
+        {
+          "name": "Create Payment Intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service\": \"CodeReview\",\n  \"clientEmail\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3002/api/payment/create",
+              "host": ["localhost"],
+              "port": "3002",
+              "path": ["api", "payment", "create"]
+            },
+            "description": "Create Stripe payment intent for service"
+          }
+        },
+        {
+          "name": "Submit Service Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service\": \"CodeReview\",\n  \"paymentIntentId\": \"pi_xxx\",\n  \"codeUrl\": \"https://github.com/user/repo\",\n  \"requirements\": \"Review for bugs and performance\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3002/api/service/submit",
+              "host": ["localhost"],
+              "port": "3002",
+              "path": ["api", "service", "submit"]
+            },
+            "description": "Submit service request after payment"
+          }
+        },
+        {
+          "name": "Get Service Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3002/api/service/status/:requestId",
+              "host": ["localhost"],
+              "port": "3002",
+              "path": ["api", "service", "status", ":requestId"]
+            },
+            "description": "Check service request status"
+          }
+        },
+        {
+          "name": "Get Service Results",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3002/api/service/results/:requestId",
+              "host": ["localhost"],
+              "port": "3002",
+              "path": ["api", "service", "results", ":requestId"]
+            },
+            "description": "Get completed service results"
+          }
+        }
+      ]
+    }
+  ]
+}

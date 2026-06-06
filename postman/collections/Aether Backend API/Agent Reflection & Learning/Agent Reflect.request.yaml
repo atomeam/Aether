@@ -1,0 +1,14 @@
+$kind: http-request
+description: Write a lesson to the agent reflection system
+url: "{{baseUrl}}/api/agents/reflect"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "lesson": "Learned that this approach works better",
+      "context": "Task execution context"
+    }
+order: 1000

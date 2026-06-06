@@ -1,0 +1,5 @@
+$kind: http-request
+description: Check service request status
+url: http://localhost:3002/api/service/status/:requestId
+method: GET
+order: 4000

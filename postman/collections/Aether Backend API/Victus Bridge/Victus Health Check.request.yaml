@@ -1,0 +1,5 @@
+$kind: http-request
+description: Check Victus runtime health status
+url: http://localhost:8080/health
+method: GET
+order: 1000

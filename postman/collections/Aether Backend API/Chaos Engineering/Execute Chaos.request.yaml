@@ -1,0 +1,14 @@
+$kind: http-request
+description: Execute a chaos engineering scenario
+url: "{{baseUrl}}/api/agents/chaos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "scenario": "latency",
+      "intensity": "medium"
+    }
+order: 1000

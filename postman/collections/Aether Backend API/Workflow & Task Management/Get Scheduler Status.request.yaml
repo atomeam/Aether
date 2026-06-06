@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether scheduler status and pending tasks
+url: "{{baseUrl}}/api/scheduler"
+method: GET
+order: 3000

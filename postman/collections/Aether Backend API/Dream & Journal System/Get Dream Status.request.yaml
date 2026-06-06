@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether dream state status and analysis
+url: "{{baseUrl}}/api/dream"
+method: GET
+order: 1000

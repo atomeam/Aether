@@ -1,0 +1,14 @@
+$kind: http-request
+description: Evaluate a proposal for adversarial patterns
+url: "{{baseUrl}}/api/adversarial"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "proposal": "Proposed change",
+      "context": "Context"
+    }
+order: 2000

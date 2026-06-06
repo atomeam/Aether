@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether system vital signs and throttle recommendations
+url: "{{baseUrl}}/api/vitals"
+method: GET
+order: 5000

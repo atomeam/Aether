@@ -1,0 +1,16 @@
+$kind: http-request
+description: Read a file through Victus runtime
+url: http://localhost:8080/execute
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "operation": "read_file",
+      "args": {
+        "path": "/path/to/file"
+      }
+    }
+order: 3000

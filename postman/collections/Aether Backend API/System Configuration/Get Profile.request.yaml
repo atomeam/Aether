@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether system profile (read-only external access)
+url: "{{baseUrl}}/api/profile"
+method: GET
+order: 3000

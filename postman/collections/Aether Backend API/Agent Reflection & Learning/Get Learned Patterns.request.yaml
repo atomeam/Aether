@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get patterns learned by the agent reflection system
+url: "{{baseUrl}}/api/agents/reflect"
+method: GET
+order: 2000

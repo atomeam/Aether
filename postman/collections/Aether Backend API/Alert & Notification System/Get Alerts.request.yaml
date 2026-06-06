@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get active alerts from the Aether alert engine
+url: "{{baseUrl}}/api/alerts"
+method: GET
+order: 1000

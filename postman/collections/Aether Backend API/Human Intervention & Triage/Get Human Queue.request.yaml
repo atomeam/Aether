@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get pending items in Aether human intervention queue
+url: "{{baseUrl}}/api/human-queue"
+method: GET
+order: 1000

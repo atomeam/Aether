@@ -1,0 +1,15 @@
+$kind: http-request
+description: Add an item to the Aether human intervention queue
+url: "{{baseUrl}}/api/human-queue"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "type": "review",
+      "description": "Please review this change",
+      "priority": "medium"
+    }
+order: 2000

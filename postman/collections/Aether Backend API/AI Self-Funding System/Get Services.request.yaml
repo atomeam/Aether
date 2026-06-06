@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get available AI services with pricing
+url: http://localhost:3002/api/services
+method: GET
+order: 1000

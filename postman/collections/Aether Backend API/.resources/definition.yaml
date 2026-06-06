@@ -1,0 +1,5 @@
+$kind: collection
+description: Complete API collection for Aether backend - Victus integration with 32+ endpoints for system monitoring, agents, workflows, alerts, and more
+variables:
+  baseUrl: http://localhost:3000
+  apiKey: ""

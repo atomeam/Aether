@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get completed service results
+url: http://localhost:3002/api/service/results/:requestId
+method: GET
+order: 5000

@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether system telemetry data (supports json, prometheus, csv formats)
+url: "{{baseUrl}}/api/telemetry"
+method: GET
+order: 6000

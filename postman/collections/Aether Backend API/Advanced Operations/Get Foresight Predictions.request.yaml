@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get pending foresight predictions and scores
+url: "{{baseUrl}}/api/foresight"
+method: GET
+order: 1000
