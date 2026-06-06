@@ -10,6 +10,14 @@ $repoRoot = "C:\Users\adamm\Aether"
 $victusUrl = "http://localhost:8080"
 $logFile = "$repoRoot\autonomous-improvement.log"
 
+# Read GitHub token from .env file if available
+if (Test-Path "$repoRoot\.env") {
+    $envContent = Get-Content "$repoRoot\.env" | Where-Object { $_ -match "GITHUB_TOKEN" }
+    if ($envContent) {
+        $env:GITHUB_TOKEN = ($envContent -split "=")[1].Trim()
+    }
+}
+
 Write-Host "=== AUTONOMOUS IMPROVEMENT DAEMON ===" -ForegroundColor Cyan
 Write-Host "Constantly organize, refine, and improve." -ForegroundColor Yellow
 Write-Host ""
