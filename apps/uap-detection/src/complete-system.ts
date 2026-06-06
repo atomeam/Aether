@@ -117,7 +117,31 @@ async function fetchGeomagneticActivity(): Promise<number> {
 }
 
 // ============================================================================
-// SUBSYSTEM 1: REAL SENSOR INTEGRATION
+// VICTUS INTEGRATION
+// ============================================================================
+
+// Victus runtime integration for orchestration
+async function sendToVictus(operation: string, args?: Record<string, unknown>): Promise<Record<string, unknown>> {
+  try {
+    const response = await fetch('http://localhost:8080/api/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        objective: `UAP system: ${operation}`,
+        plan: [
+          { type: 'local', action: operation, params: args }
+        ]
+      })
+    });
+    const data = await response.json();
+    return data;
+  } catch {
+    return { success: false, error: 'Victus not available' };
+  }
+}
+
+// ============================================================================
+// REAL SENSOR INTEGRATION
 // ============================================================================
 
 export interface SensorConfig {
@@ -1543,12 +1567,18 @@ export class UAPDetectionSystem {
     // ML classification
     const classification = await this.mlEngine.classifyAnomaly(data);
 
+    // Send to Victus for orchestration
+    await sendToVictus('classifyAnomaly', { sensorId, classification });
+
     // Fetch real external data for correlation
     const [earthquakes, solarActivity, weather] = await Promise.all([
       fetchEarthquakeData(),
       fetchSolarActivity(),
       fetchWeatherData(40.7128, -74.0060)
     ]);
+
+    // Send external data to Victus
+    await sendToVictus('correlateExternalData', { earthquakes, solarActivity, weather });
 
     // Boost confidence based on real-world events
     let confidence = classification.confidence;
