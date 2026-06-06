@@ -32,10 +32,38 @@ function Log-Message {
 function Scan-Improvements {
     Log-Message "Scanning for improvements..."
     
+    # Check for duplicate environment variables
+    if (Test-Path "$repoRoot\.env") {
+        $envContent = Get-Content "$repoRoot\.env"
+        $envVars = @{}
+        $duplicates = @()
+        
+        foreach ($line in $envContent) {
+            # Skip comments and empty lines
+            if ($line -match "^\s*#" -or $line -match "^\s*$") {
+                continue
+            }
+            
+            if ($line -match "^([^=]+)=") {
+                $varName = $matches[1]
+                if ($envVars.ContainsKey($varName)) {
+                    $duplicates += $varName
+                } else {
+                    $envVars[$varName] = $true
+                }
+            }
+        }
+        
+        if ($duplicates.Count -gt 0) {
+            Log-Message "Duplicate environment variables found: $($duplicates -join ', ')"
+            return $true
+        }
+    }
+    
     # Run data integrity check
     $dataIntegrityResult = & "$repoRoot\.devin\skills\real-vs-simulated\skill.ps1" -Audit 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Log-Message "❌ Data integrity issues found"
+        Log-Message "Data integrity issues found"
         return $true
     }
     
@@ -43,13 +71,13 @@ function Scan-Improvements {
     $brokenComponents = @("__scheduled.tsx", "Apidetect.tsx", "Apistatus.tsx", "Cron5min.tsx", "Health.tsx", "Jsonversion.tsx", "Verify.tsx")
     foreach ($component in $brokenComponents) {
         if (Test-Path "$repoRoot\src\components\$component") {
-            Log-Message "❌ Broken component: $component"
+            Log-Message "Broken component: $component"
             Remove-Item "$repoRoot\src\components\$component" -Force
-            Log-Message "✅ Removed $component"
+            Log-Message "Removed $component"
         }
     }
     
-    Log-Message "✅ Scan complete"
+    Log-Message "Scan complete"
     return $false
 }
 
