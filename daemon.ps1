@@ -49,12 +49,13 @@ function Scan-Improvements {
         return $true
     }
     
-    # Check for broken components
+    # Check for broken components in frontend
     $brokenComponents = @("__scheduled.tsx", "Apidetect.tsx", "Apistatus.tsx", "Cron5min.tsx", "Health.tsx", "Jsonversion.tsx", "Verify.tsx")
     foreach ($component in $brokenComponents) {
-        if (Test-Path "$repoRoot\src\components\$component") {
+        $componentPath = "$repoRoot\apps\frontend\src\components\$component"
+        if (Test-Path $componentPath) {
             Log-Message "Broken component: $component"
-            Remove-Item "$repoRoot\src\components\$component" -Force
+            Remove-Item $componentPath -Force
             Log-Message "Removed $component"
         }
     }
