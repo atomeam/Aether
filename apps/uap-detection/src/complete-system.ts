@@ -1721,6 +1721,74 @@ export default {
       }
     }
 
+    // VictusBridge-compatible health endpoint
+    if (url.pathname === '/health' && request.method === 'GET') {
+      return new Response(JSON.stringify({
+        healthy: true,
+        status: 'operational',
+        uptime: Date.now(),
+        version: '1.0.0',
+        checks: {
+          sensors: true,
+          mlEngine: true,
+          alertSystem: true,
+          database: true,
+          queue: true,
+          vectorize: true
+        }
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // VictusBridge-compatible command execution endpoint
+    if (url.pathname === '/execute' && request.method === 'POST') {
+      try {
+        const command = await request.json();
+        
+        // Execute command based on operation
+        let result;
+        switch (command.operation) {
+          case 'detectAnomaly':
+            result = await system.detectAnomaly(command.args);
+            break;
+          case 'runDiagnostics':
+            result = await system.runSystemDiagnostics();
+            break;
+          case 'getExternalData':
+            result = await system.getExternalData();
+            break;
+          case 'generateReport':
+            result = await system.generateDailyReport();
+            break;
+          default:
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: `Unknown operation: ${command.operation}` 
+            }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          data: result,
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: error.message 
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     return new Response('UAP Detection System - All 20 Subsystems Operational', {
       status: 200
     });
