@@ -10,3 +10,8 @@ coverage/
 .wrangler/
 apps/api-worker/wrangler.toml
 !apps/api-worker/wrangler.toml.example
+.turbo/
+*.lock
+package-lock.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
