@@ -61,7 +61,7 @@ export function UAPSystemStatus() {
 
   const fetchStatus = async () => {
     try {
-      const response = await fetch('/api/status');
+      const response = await fetch('https://uap-detection.atomicmoonbeam88.workers.dev/api/status');
       if (response.ok) {
         const data = await response.json();
         setSystemStatus(data);

@@ -102,6 +102,11 @@ GEMINI_API_KEY=...  # Required for /api/build
 .\.devin\skills\frontend-sync-guard\skill.ps1
 ```
 
+**Pre-commit hooks** (installed):
+```bash
+.\.devin\skills\pre-commit-hooks\skill.ps1 -Install
+```
+
 **Compliance check**:
 - Backend endpoint without UI component → FAIL
 - Dashboard shows static data instead of real API calls → FAIL
@@ -116,6 +121,41 @@ GEMINI_API_KEY=...  # Required for /api/build
 - Added to AGENTS compliance workflow as `frontend-backend-sync` check
 - Auto-invoked by frontend-sync-guard on backend changes
 - Available via pre-commit hooks
+- Git hooks installed at `.git/hooks/pre-commit`
+
+## Compliance Workflow
+
+All commits must pass the following checks:
+
+1. **Frontend-Backend Sync** (MANDATORY)
+   - Ensures UI matches backend APIs
+   - Auto-generates components for missing endpoints
+   - Blocks commits if frontend is out of sync
+
+2. **Lint** (when available)
+   - Code style checks
+   - TypeScript/ESLint rules
+
+3. **Typecheck** (when available)
+   - TypeScript type checking
+   - Build type validation
+
+4. **Test** (when available)
+   - Unit tests
+   - Integration tests
+
+5. **Secret Detection** (when available)
+   - Prevents committing secrets
+   - Scans for API keys, tokens, passwords
+
+**Running compliance checks**:
+```bash
+# Run all checks
+.\.devin\skills\pre-commit-hooks\skill.ps1 -Run
+
+# Run specific check
+.\.devin\skills\frontend-sync\skill.ps1 -AutoFix
+```
 
 ## Testing
 

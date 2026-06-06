@@ -1,5 +1,5 @@
 name = "uap-detection"
-main = "src/index.ts"
+main = "src/complete-system.ts"
 compatibility_date = "2024-01-01"
 
 # D1 Database for anomaly storage

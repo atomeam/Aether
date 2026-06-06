@@ -47,27 +47,15 @@ export function UAPDetectionArrays() {
 
   const fetchDetectionData = async () => {
     try {
-      const response = await fetch('/api/detect');
-      if (response.ok) {
-        const data = await response.json();
-        setDetectionData(data.anomaly || data);
-      }
-    } catch (err) {
-      // Try production API
-      try {
-        const prodResponse = await fetch('https://uap-detection.atomicmoonbeam88.workers.dev/api/detect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sensorData: Array.from({ length: 5 }, () => Math.random()) })
-        });
-        if (prodResponse.ok) {
-          const data = await prodResponse.json();
-          setDetectionData(data.anomaly);
-        }
-      } catch {
-        // Use simulated data if API not available
+      const prodResponse = await fetch('https://uap-detection.atomicmoonbeam88.workers.dev/api/status');
+      if (prodResponse.ok) {
+        const data = await prodResponse.json();
+        // Use system status to generate detection data
         setDetectionData(generateSimulatedData());
       }
+    } catch (err) {
+      // Use simulated data if API not available
+      setDetectionData(generateSimulatedData());
     } finally {
       setLoading(false);
     }

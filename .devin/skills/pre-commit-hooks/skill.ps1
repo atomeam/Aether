@@ -12,11 +12,12 @@ $ErrorActionPreference = "Stop"
 Write-Host "=== PRE-COMMIT HOOKS ===" -ForegroundColor Cyan
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot = Split-Path -Parent $scriptDir
+$repoRoot = "C:\Users\adamm\Aether"
 
 # Define checks
 $checks = @(
-    @{ Name = "Frontend-Backend Sync"; Script = "$scriptDir\frontend-sync\skill.ps1"; Critical = $true }
+    @{ Name = "Frontend-Backend Sync"; Script = "$scriptDir\frontend-sync\skill.ps1"; Critical = $true },
+    @{ Name = "Frontend-Sync Guard"; Script = "$scriptDir\frontend-sync-guard\skill.ps1"; Critical = $true }
 )
 
 # Install hooks
