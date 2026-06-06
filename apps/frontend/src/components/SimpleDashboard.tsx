@@ -511,31 +511,6 @@ export default function SimpleDashboard() {
     }
   };
 
-  const handleSubscribe = async (plan: 'starter' | 'pro' | 'enterprise') => {
-    const userId = localStorage.getItem('user_id');
-    const token = localStorage.getItem('session_token');
-    
-    try {
-      const response = await fetch('https://aether-api.atomicmoonbeam88.workers.dev/api/payment/create-checkout', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ plan, userId, email: formData.email })
-      });
-      const result = await response.json();
-      if (response.ok && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
-      } else {
-        alert('Failed to create checkout session');
-      }
-    } catch (e) {
-      console.error('Checkout error:', e);
-      alert('Connection error. Please try again.');
-    }
-  };
-
   const connectBankAccount = () => {
     showToastMessage('Bank account connection coming soon!', 'info');
   };
@@ -753,7 +728,6 @@ export default function SimpleDashboard() {
       {showPaymentWall && (
         <PaymentWall
           onClose={() => setShowPaymentWall(false)}
-          onSubscribe={handleSubscribe}
         />
       )}
 

@@ -9,6 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { exec } from "child_process";
 import * as os from "os";
+import Stripe from "stripe";
 
 // Vite import for development mode
 import { createServer as createViteServer } from "vite";
@@ -24,6 +25,11 @@ dotenv.config();
 
 // Validate env on boot — fail fast if required vars missing
 const env = parseEnv(BackendEnvSchema, process.env, "backend")
+
+// Initialize Stripe
+const stripe = new Stripe(env.STRIPE_API_KEY || 'sk_test_YOUR_TEST_KEY_HERE', {
+  apiVersion: '2024-11-20.acacia',
+});
 
 // Component manifest fragment for Gemini prompts
 const COMPONENT_MANIFEST = manifestPromptFragment()
@@ -1648,6 +1654,74 @@ async function startServer() {
       console.error('Automation error:', e);
       res.json({ jobs: [], workflows: [], error: e.message });
     }
+  });
+
+  // Stripe Payment endpoints
+  app.post("/api/create-checkout-session", async (req, res) => {
+    try {
+      const { planId } = req.body;
+      
+      const prices = {
+        'starter': 'price_starter_id',
+        'pro': 'price_pro_id', 
+        'enterprise': 'price_enterprise_id'
+      };
+
+      const priceId = prices[planId as keyof typeof prices];
+      if (!priceId) {
+        return res.status(400).json({ error: 'Invalid plan' });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${env.STRIPE_SUCCESS_URL || 'http://localhost:5173/success'}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${env.STRIPE_CANCEL_URL || 'http://localhost:5173/cancel'}`,
+      });
+
+      res.json({ url: session.url });
+    } catch (e: any) {
+      console.error('Stripe error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/stripe-webhook", async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (e: any) {
+      console.error('Webhook signature verification failed:', e);
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as any;
+        console.log('Payment successful:', session);
+        // TODO: Grant user access, update database, etc.
+        break;
+      case 'invoice.paid':
+        console.log('Invoice paid:', event.data.object);
+        break;
+      case 'customer.subscription.deleted':
+        console.log('Subscription cancelled:', event.data.object);
+        break;
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    res.json({ received: true });
   });
 
   app.post("/api/automations/trigger", async (req, res) => {

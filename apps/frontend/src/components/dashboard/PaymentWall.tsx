@@ -1,13 +1,14 @@
-import React from 'react';
-import { Crown, Lock, Check, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Crown, Lock, Check, X, Loader2 } from 'lucide-react';
 
 interface PaymentWallProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubscribe: (plan: 'starter' | 'pro' | 'enterprise') => void;
 }
 
-export default function PaymentWall({ isOpen, onClose, onSubscribe }: PaymentWallProps) {
+export default function PaymentWall({ isOpen, onClose }: PaymentWallProps) {
+  const [loading, setLoading] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const plans = [
@@ -36,6 +37,34 @@ export default function PaymentWall({ isOpen, onClose, onSubscribe }: PaymentWal
       popular: false
     }
   ];
+
+  const handleSubscribe = async (planId: string) => {
+    if (planId === 'enterprise') {
+      alert('Contact sales@atomicmoonbeam88.workers.dev for enterprise pricing');
+      return;
+    }
+
+    setLoading(planId);
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId })
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment initialization failed');
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -78,14 +107,20 @@ export default function PaymentWall({ isOpen, onClose, onSubscribe }: PaymentWal
                 ))}
               </ul>
               <button
-                onClick={() => onSubscribe(plan.id as 'starter' | 'pro' | 'enterprise')}
-                className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                onClick={() => handleSubscribe(plan.id)}
+                disabled={loading === plan.id}
+                className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                   plan.popular
                     ? 'bg-[#c4a661] text-black hover:bg-[#d4b671]'
                     : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
+                } ${loading === plan.id ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {plan.id === 'enterprise' ? 'Contact Sales' : 'Subscribe'}
+                {loading === plan.id ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : plan.id === 'enterprise' ? 'Contact Sales' : 'Subscribe'}
               </button>
             </div>
           ))}
