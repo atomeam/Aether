@@ -462,6 +462,21 @@ async function startServer() {
         ],
         related: ['Dr. Sbaitso', 'Citra Emulator'],
         tags: ['retro', 'gaming', 'msdos', 'disk-image', 'emulation']
+      },
+      {
+        id: 'cryengine',
+        title: 'CryEngine 5.6.5',
+        type: 'game-engine',
+        source: 'GitHub Bundle',
+        extractedAt: '2026-06-07T01:57:00Z',
+        insights: [
+          'AAA game engine architecture',
+          'Render pipeline design',
+          'Component-based systems',
+          'Cross-platform development'
+        ],
+        related: ['Citra Emulator', 'Dr. Sbaitso'],
+        tags: ['game-engine', 'cpp', 'graphics', 'physics', 'aaa']
       }
     ];
     res.json(knowledge);
