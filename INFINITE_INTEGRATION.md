@@ -126,7 +126,7 @@ Every addition follows the same structure:
 
 ## Current State
 
-### Knowledge Items (10)
+### Knowledge Items (12)
 1. Moon Child Pocket PC Game (mobile)
 2. Citra 3DS Emulator (emulation)
 3. BitTV Streaming App (streaming)
@@ -137,11 +137,13 @@ Every addition follows the same structure:
 8. Cracky Coco (retro)
 9. CryEngine 5.6.5 (game-engine)
 10. CryEngine Build Environment (build-automation)
+11. Universal Automation Pattern (skills)
+12. DOOM v1.9 (retro)
 
 ### Categories (8)
 - Mobile, Emulation, Streaming, Skills, AI, Retro, Game Engine, Build Automation
 
-### Connections (20)
+### Connections (24)
 - Each item has 2 related items
 - Creates knowledge graph
 - Enables discovery
