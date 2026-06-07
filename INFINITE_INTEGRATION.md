@@ -126,7 +126,7 @@ Every addition follows the same structure:
 
 ## Current State
 
-### Knowledge Items (14)
+### Knowledge Items (15)
 1. Moon Child Pocket PC Game (mobile)
 2. Citra 3DS Emulator (emulation)
 3. BitTV Streaming App (streaming)
@@ -141,11 +141,12 @@ Every addition follows the same structure:
 12. DOOM v1.9 (retro)
 13. DOOM Launcher (launcher)
 14. DOOM + Norton Commander Integration (integration)
+15. Devin for DOSBox (integration)
 
 ### Categories (10)
 - Mobile, Emulation, Streaming, Skills, AI, Retro, Game Engine, Build Automation, Launcher, Integration
 
-### Connections (28)
+### Connections (30)
 - Each item has 2 related items
 - Creates knowledge graph
 - Enables discovery
@@ -153,6 +154,7 @@ Every addition follows the same structure:
 ### Real App Launchers
 - DOOM Launcher (desktop shortcut)
 - DOOM + Norton Commander (unified environment)
+- Devin for DOSBox (retro AI terminal)
 - GZDoom source port installed
 - DOSBox emulator installed
 - Norton Commander 5.0 integrated
@@ -160,8 +162,9 @@ Every addition follows the same structure:
 
 ### Seamless Integrations
 - DOOM + Norton Commander work together
+- Devin runs inside DOSBox
 - Unified DOS environment
-- File management + gaming in one interface
+- File management + gaming + AI in one interface
 - Apps work as if always connected
 
 ## Future Additions
