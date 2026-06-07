@@ -1,13 +1,3 @@
 {
-  "version": 2,
-  "framework": "express",
-  "builds": [
-    {
-      "src": "apps/backend/dist/server.cjs",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/apps/backend/dist/server.cjs" }
-  ]
+  "version": 2
 }

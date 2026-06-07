@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "aether": {
+      "command": "node",
+      "args": ["C:\\Users\\adamm\\Aether\\packages\\mcp-server\\build\\index.js"],
+      "env": {
+        "AETHER_BACKEND_URL": "http://localhost:3000"
+      }
+    }
+  }
+}

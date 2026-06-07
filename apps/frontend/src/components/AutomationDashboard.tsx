@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Activity, Play, Pause, RefreshCw, Zap, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useOptimizedPolling, useSSEWithVisibility } from '../hooks/useOptimizedPolling';
 
 interface ScheduledJob {
   id: string;
@@ -18,31 +19,44 @@ interface Workflow {
 export default function AutomationDashboard() {
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAutomations = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:3000/api/automations');
-      if (response.ok) {
-        const data = await response.json();
-        setJobs(data.scheduledJobs || []);
-        setWorkflows(data.availableWorkflows || []);
-        setError(null);
-      } else {
-        throw new Error('Failed to fetch automations');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load automations');
-    } finally {
-      setLoading(false);
+  // Optimized polling for automations with Page Visibility API and request deduplication
+  const { data: automationsData, loading, manualRefresh: refreshAutomations, isVisible } = useOptimizedPolling({
+    url: '/api/automations',
+    interval: 10000,
+    deduplicate: true,
+    onSuccess: (data) => {
+      setJobs(data.scheduledJobs || []);
+      setWorkflows(data.availableWorkflows || []);
+      setError(null);
+    },
+    onError: (err) => {
+      setError(err.message || 'Failed to load automations');
     }
-  };
+  });
+
+  // SSE for real-time automation updates
+  const { data: sseData, mode: updateMode } = useSSEWithVisibility('/api/automations/events', {
+    onMessage: (data) => {
+      console.log('[Automation Dashboard] Real-time update:', data);
+      // Handle real-time updates (e.g., job status changes)
+      if (data.type === 'job_updated' && data.job) {
+        setJobs(prevJobs => 
+          prevJobs.map(job => 
+            job.id === data.job.id ? { ...job, ...data.job } : job
+          )
+        );
+      }
+    },
+    onError: (err) => {
+      console.log('[Automation Dashboard] SSE not available, using polling fallback');
+    }
+  });
 
   const toggleJob = async (id: string, enabled: boolean) => {
     try {
-      const response = await fetch('http://localhost:3000/api/automations/toggle', {
+      const response = await fetch('/api/automations/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, enabled }),
@@ -59,7 +73,7 @@ export default function AutomationDashboard() {
 
   const triggerWorkflow = async (workflowName: string) => {
     try {
-      const response = await fetch('http://localhost:3000/api/automations/trigger', {
+      const response = await fetch('/api/automations/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workflow: workflowName, input: {} }),
@@ -71,12 +85,6 @@ export default function AutomationDashboard() {
       console.error('Failed to trigger workflow:', err);
     }
   };
-
-  useEffect(() => {
-    fetchAutomations();
-    const interval = setInterval(fetchAutomations, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   if (loading) {
     return (
@@ -102,10 +110,11 @@ export default function AutomationDashboard() {
           </div>
         </div>
         <button 
-          onClick={fetchAutomations}
+          onClick={refreshAutomations}
           className="text-white/60 hover:text-white/90 transition-colors"
+          title={`Refresh automations (${updateMode === 'sse' ? 'SSE active' : 'Polling'})${!isVisible ? ' - Tab inactive' : ''}`}
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className={`w-5 h-5 ${!isVisible ? 'opacity-50' : ''}`} />
         </button>
       </div>
 

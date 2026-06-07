@@ -2,21 +2,22 @@
   "name": "aether",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "npm@10.0.0",
-  "workspaces": [
-    "apps/backend",
-    "apps/frontend",
-    "apps/bridge"
-  ],
+  "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "dev": "npm run dev --workspaces --parallel",
-    "dev:backend": "npm run dev -w @aether/backend",
-    "dev:frontend": "npm run dev -w @aether/frontend",
-    "dev:bridge": "npm run dev -w @aether/bridge",
-    "build": "npm run build -w @aether/backend && npm run build -w @aether/frontend",
-    "start": "npm run start -w @aether/backend"
+    "dev": "pnpm --filter \"./apps/**\" --parallel dev",
+    "dev:backend": "pnpm --filter @aether/backend dev",
+    "dev:frontend": "pnpm --filter @aether/frontend dev",
+    "dev:bridge": "pnpm --filter @aether/bridge dev",
+    "build": "pnpm --filter @aether/backend build && pnpm --filter @aether/frontend build && pnpm --filter @aether/mcp-server build",
+    "build:mcp": "pnpm --filter @aether/mcp-server build",
+    "start": "pnpm --filter @aether/backend start",
+    "start:mcp": "pnpm --filter @aether/mcp-server start",
+    "setup:gemini": "node scripts/setup-gemini.js"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "puppeteer": "^25.1.0"
   }
 }

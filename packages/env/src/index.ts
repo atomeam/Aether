@@ -7,12 +7,16 @@ const BaseEnv = z.object({
 })
 
 export const BackendEnvSchema = BaseEnv.extend({
-  PORT: z.coerce.number().int().positive().default(3000),
-  GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
+  PORT: z.coerce.number().int().positive().default(3002),
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_MODEL: z.string().optional().default("gemini-1.5-pro"),
   STRIPE_API_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_SUCCESS_URL: z.string().optional(),
   STRIPE_CANCEL_URL: z.string().optional(),
+  SLACK_TOKEN: z.string().optional(),
+  SLACK_BOT_TOKEN: z.string().optional(),
+  SLACK_CHANNEL: z.string().optional(),
   CURATOR_ALLOW_LIST: z
     .string()
     .optional()

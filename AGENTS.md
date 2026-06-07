@@ -73,6 +73,219 @@ Default-deny security gate for generated UI:
 - Rate limit: max 10 actions per response
 - Returns 422 on denial
 
+### @aether/mcp-server
+Model Context Protocol (MCP) server that exposes Aether backend capabilities to Claude Desktop and other MCP-compatible clients.
+
+**Location**: `packages/mcp-server/`
+
+**Purpose**: Provides 32+ MCP tools for interacting with the Aether backend, including agent operations, system monitoring, workflow management, and UAP detection subsystems.
+
+**Build & Run**:
+```bash
+cd packages/mcp-server
+npm install
+npm run build
+npm start
+```
+
+**Environment Variables**:
+- `AETHER_BACKEND_URL`: Backend API URL (default: `http://localhost:3000`)
+
+## MCP Server Tools
+
+The Aether MCP server exposes 32 tools organized into the following categories:
+
+### System Health & Monitoring
+- `get_stack_health` - Get Aether stack health status and system information
+- `get_agent_status` - Get status of Aether agent system (curator, executor, evaluator)
+- `get_metrics` - Get Aether system metrics snapshot
+- `get_health_dashboard` - Get unified health dashboard with all system metrics
+- `get_vital_signs` - Get Aether system vital signs and throttle recommendations
+- `get_telemetry` - Get Aether system telemetry data (supports json, prometheus, csv formats)
+
+### Alert & Notification System
+- `get_alerts` - Get active alerts from the Aether alert engine
+- `create_alert` - Create a new alert in the Aether alert engine
+- `get_notifier_channels` - Get Aether notifier channel status
+- `send_notification` - Send a notification through Aether notifier
+
+### Workflow & Task Management
+- `get_workflows` - List available Aether workflows
+- `trigger_workflow` - Trigger an Aether workflow execution
+- `get_scheduler_status` - Get Aether scheduler status and pending tasks
+
+### Human Intervention & Triage
+- `get_human_queue` - Get pending items in Aether human intervention queue
+- `add_to_human_queue` - Add an item to the Aether human intervention queue
+- `get_triage_queue` - Get pending items in Aether triage queue
+- `add_to_triage` - Add an item to the Aether triage queue
+
+### Agent Reflection & Learning
+- `agent_reflect` - Write a lesson to the agent reflection system
+- `get_learned_patterns` - Get patterns learned by the agent reflection system
+- `compact_lessons` - Compact and optimize learned lessons
+
+### Council & Evaluation
+- `council_evaluate` - Evaluate a proposal using the Council of Evaluators
+- `evaluate_adversarial` - Evaluate a proposal for adversarial patterns
+
+### Dream & Journal System
+- `get_dream_status` - Get Aether dream state status and analysis
+- `get_journal` - Get Aether storyteller journal entries
+- `generate_auto_journal` - Generate an automatic journal entry based on recent events
+
+### Chaos Engineering
+- `execute_chaos` - Execute a chaos engineering scenario
+- `get_chaos_scenarios` - Get available chaos engineering scenarios
+
+### System Configuration
+- `get_rate_limits` - Get Aether rate limit status and configuration
+- `get_secrets_list` - Get list of Aether secret keys (names only, not values)
+- `get_profile` - Get Aether system profile (read-only external access)
+
+### Advanced Operations
+- `get_foresight_predictions` - Get pending foresight predictions and scores
+- `replay_events` - Replay historical events for analysis
+
+## Claude Desktop Configuration
+
+To use the Aether MCP server with Claude Desktop, add the following to your Claude Desktop configuration file:
+
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "aether": {
+      "command": "node",
+      "args": ["C:\\Users\\adamm\\Aether\\packages\\mcp-server\\build\\index.js"],
+      "env": {
+        "AETHER_BACKEND_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+**macOS/Linux Example**:
+```json
+{
+  "mcpServers": {
+    "aether": {
+      "command": "node",
+      "args": ["/Users/adamm/Aether/packages/mcp-server/build/index.js"],
+      "env": {
+        "AETHER_BACKEND_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+**Steps**:
+1. Build the MCP server: `cd packages/mcp-server && npm run build`
+2. Ensure the Aether backend is running: `npm run dev:backend`
+3. Add the configuration to your Claude Desktop config file
+4. Restart Claude Desktop
+5. The Aether tools will be available in Claude's tool palette
+
+## Docker Setup
+
+The MCP server can also run in Docker for isolation and easier deployment.
+
+**Using Docker Compose**:
+```bash
+cd packages/mcp-server
+docker-compose up -d
+```
+
+**Using Docker directly**:
+```bash
+cd packages/mcp-server
+docker build -t aether-mcp-server .
+docker run -d \
+  --name aether-mcp-server \
+  -e AETHER_BACKEND_URL=http://host.docker.internal:3000 \
+  --network aether-network \
+  aether-mcp-server
+```
+
+**Docker Configuration**:
+- The Dockerfile uses Node.js 20 Alpine for minimal image size
+- Backend URL defaults to `http://host.docker.internal:3000` for Docker Desktop
+- Requires `aether-network` to be created externally
+
+## Integration with Aether Backend
+
+The MCP server acts as a bridge between Claude Desktop and the Aether backend:
+
+1. **API Proxy**: All MCP tools make HTTP requests to the Aether backend API
+2. **Error Handling**: Failed requests return error messages instead of crashing
+3. **JSON Responses**: All responses are formatted as JSON for Claude to parse
+4. **Environment Configuration**: Backend URL is configurable via `AETHER_BACKEND_URL`
+
+**Backend Endpoints Used**:
+- `/api/stack` - Stack health
+- `/api/agents` - Agent status
+- `/api/metrics` - System metrics
+- `/api/alerts` - Alert management
+- `/api/workflows` - Workflow operations
+- `/api/health` - Health dashboard
+- `/api/vitals` - Vital signs
+- `/api/telemetry` - Telemetry data
+- `/api/dream` - Dream state
+- `/api/scheduler` - Scheduler status
+- `/api/notifier` - Notification channels
+- `/api/human-queue` - Human intervention queue
+- `/api/triage` - Triage queue
+- `/api/foresight` - Foresight predictions
+- `/api/journal` - Journal entries
+- `/api/rate-limits` - Rate limit status
+- `/api/secrets` - Secrets list
+- `/api/profile` - System profile
+- `/api/council/evaluate` - Council evaluation
+- `/api/agents/reflect` - Agent reflection
+- `/api/agents/chaos` - Chaos engineering
+- `/api/compactor` - Lesson compaction
+- `/api/adversarial` - Adversarial evaluation
+- `/api/replay` - Event replay
+
+## UAP Detection Subsystem Integration
+
+The MCP server provides access to the 20 UAP detection subsystems through the backend API. While the subsystems are implemented in the backend, the MCP server exposes them via:
+
+1. **System Monitoring Tools**: `get_stack_health`, `get_metrics`, `get_health_dashboard` provide overall system status including UAP detection subsystem health
+2. **Alert System**: `get_alerts`, `create_alert` interface with the UAP anomaly detection alerting system
+3. **Workflow Management**: `get_workflows`, `trigger_workflow` can trigger UAP analysis workflows
+4. **Telemetry**: `get_telemetry` provides UAP detection sensor data and analysis results
+5. **Historical Analysis**: `replay_events` allows replaying historical UAP detection events for analysis
+
+**The 20 UAP Detection Subsystems** (from UAP_ARCHITECTURE.md):
+1. Sensor Integration (LIGO, radio telescopes, satellites)
+2. Data Processing (real-time pipeline)
+3. Analysis Engine (ML & AI)
+4. Sensor Fusion (multi-sensor correlation)
+5. Data Quality (validation & cleaning)
+6. Analytics (spectral & statistical analysis)
+7. Historical Analysis (pattern detection)
+8. Visualization (geospatial mapping)
+9. Alerting (real-time notifications)
+10. Response (automated camera/radar activation)
+11. Reporting (automated documentation)
+12. External Integration (webhooks & APIs)
+13. Collaboration (multi-user access)
+14. Mobile (iOS/Android apps)
+15. Satellite (direct satellite feeds)
+16. Government (AARO integration)
+17. Security (encryption & access control)
+18. Hardware (sensor abstraction layer)
+19. Knowledge Base (case database)
+20. Testing (simulation framework)
+
+These subsystems are accessible through the MCP server's tools, enabling Claude Desktop to interact with the full UAP detection system for monitoring, analysis, and control operations.
+
 ## Key Endpoints
 
 | Endpoint | Method | Description |

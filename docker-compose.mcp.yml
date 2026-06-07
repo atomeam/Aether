@@ -1,0 +1,6 @@
+services:
+  mcp-duckduckgo:
+    image: mcp/duckduckgo:latest
+    container_name: mcp-duckduckgo
+    stdin_open: true
+    tty: true

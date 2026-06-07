@@ -3,14 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import LandingPage from './components/LandingPage';
 import SimpleDashboard from './components/SimpleDashboard';
 import './index.css';
 
 export default function App() {
+  const [showDashboard, setShowDashboard] = useState(false);
+
   useEffect(() => {
-    // Remove automatic admin authentication - users should authenticate properly
-    // This was causing everyone to be in enterprise admin mode
+    // Remove any old authentication tokens
     localStorage.removeItem('token');
     localStorage.removeItem('aether_token');
     localStorage.removeItem('user');
@@ -18,5 +20,9 @@ export default function App() {
     localStorage.removeItem('admin_user');
   }, []);
 
-  return <SimpleDashboard />;
+  if (showDashboard) {
+    return <SimpleDashboard />;
+  }
+
+  return <LandingPage onLaunchDashboard={() => setShowDashboard(true)} />;
 }

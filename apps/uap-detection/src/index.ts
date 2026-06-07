@@ -2,37 +2,93 @@
 // All 15 UAP/UFO Technologies Implementation
 
 // ============================================================================
-// REAL EXTERNAL API INTEGRATIONS
+// REAL EXTERNAL API INTEGRATIONS WITH CACHING
 // ============================================================================
 
-// Real-time earthquake data from USGS
+// Simple in-memory cache for UAP detection (since it runs in Cloudflare Workers)
+const uapCache = new Map<string, { data: any; expiresAt: number }>();
+const UAP_CACHE_TTL = {
+  USGS: 300000, // 5 minutes
+  NOAA: 300000, // 5 minutes
+  WEATHER: 300000, // 5 minutes
+};
+
+// Real-time earthquake data from USGS with caching
 async function fetchEarthquakeData(): Promise<number> {
+  const cacheKey = 'usgs:earthquakes';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] USGS earthquake data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] USGS earthquake data MISS');
   try {
     const response = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
     const data = await response.json();
-    return data.features?.length || 0;
+    const count = data.features?.length || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.USGS
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time solar activity from NOAA
+// Real-time solar activity from NOAA with caching
 async function fetchSolarActivity(): Promise<number> {
+  const cacheKey = 'noaa:solar-wind';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] NOAA solar wind data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] NOAA solar wind data MISS');
   try {
     const response = await fetch('https://services.swpc.noaa.gov/json/solar-wind.json');
     const data = await response.json();
-    return data[1]?.speed || 0;
+    const speed = data[1]?.speed || 0;
+    
+    uapCache.set(cacheKey, {
+      data: speed,
+      expiresAt: Date.now() + UAP_CACHE_TTL.NOAA
+    });
+    
+    return speed;
   } catch {
     return 0;
   }
 }
 
-// Real-time weather data from Open-Meteo
+// Real-time weather data from Open-Meteo with caching
 async function fetchWeatherData(lat: number, lon: number): Promise<number> {
+  const cacheKey = `weather:${lat.toFixed(2)}:${lon.toFixed(2)}`;
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Weather data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Weather data MISS');
   try {
     const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`);
     const data = await response.json();
-    return data.current?.temperature_2m || 0;
+    const temp = data.current?.temperature_2m || 0;
+    
+    uapCache.set(cacheKey, {
+      data: temp,
+      expiresAt: Date.now() + UAP_CACHE_TTL.WEATHER
+    });
+    
+    return temp;
   } catch {
     return 0;
   }
@@ -460,11 +516,37 @@ export function detectUAPAnomaly(sensorData: number[]): UAPAnomaly {
   };
 }
 
-// Enhanced anomaly detection with real external data correlation
+// Enhanced anomaly detection with real external data correlation and caching
 export async function detectUAPAnomalyWithRealData(sensorData: number[]): Promise<UAPAnomaly> {
+  // Generate correlation cache key from sensor data hash
+  const sensorHash = sensorData.reduce((acc, val, idx) => acc + val * Math.pow(2, idx % 32), 0);
+  const correlationCacheKey = `uap-correlation:${sensorHash}`;
+  
+  // Check correlation cache
+  const cachedCorrelation = uapCache.get(correlationCacheKey);
+  if (cachedCorrelation && cachedCorrelation.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Correlation HIT - reusing external data');
+    const anomaly = detectUAPAnomaly(sensorData);
+    anomaly.externalData = cachedCorrelation.data.externalData;
+    
+    // Apply cached correlation adjustments
+    if (cachedCorrelation.data.confidenceBoost > 0) {
+      anomaly.confidence = Math.min(anomaly.confidence + cachedCorrelation.data.confidenceBoost, 1.0);
+    }
+    
+    // Recalculate severity based on cached correlation
+    if (anomaly.confidence >= 0.9) anomaly.severity = 'CRITICAL';
+    else if (anomaly.confidence >= 0.6) anomaly.severity = 'HIGH';
+    else if (anomaly.confidence >= 0.3) anomaly.severity = 'MEDIUM';
+    else anomaly.severity = 'LOW';
+    
+    return anomaly;
+  }
+  
+  console.log('[UAP_CACHE] Correlation MISS - computing fresh correlation');
   const anomaly = detectUAPAnomaly(sensorData);
   
-  // Fetch real external data in parallel
+  // Fetch real external data in parallel (now cached individually)
   const [earthquakes, solarActivity, weather] = await Promise.all([
     fetchEarthquakeData(),
     fetchSolarActivity(),
@@ -478,19 +560,29 @@ export async function detectUAPAnomalyWithRealData(sensorData: number[]): Promis
     weather
   };
   
-  // Boost confidence if real-world anomalies detected
-  if (earthquakes > 10) anomaly.confidence += 0.1;
-  if (solarActivity > 500) anomaly.confidence += 0.1;
-  if (Math.abs(weather - 288) > 20) anomaly.confidence += 0.05;
+  // Calculate confidence boost from real-world anomalies
+  let confidenceBoost = 0;
+  if (earthquakes > 10) confidenceBoost += 0.1;
+  if (solarActivity > 500) confidenceBoost += 0.1;
+  if (Math.abs(weather - 288) > 20) confidenceBoost += 0.05;
   
-  // Cap confidence at 1.0
-  anomaly.confidence = Math.min(anomaly.confidence, 1.0);
+  // Boost confidence if real-world anomalies detected
+  anomaly.confidence = Math.min(anomaly.confidence + confidenceBoost, 1.0);
   
   // Recalculate severity based on real data
   if (anomaly.confidence >= 0.9) anomaly.severity = 'CRITICAL';
   else if (anomaly.confidence >= 0.6) anomaly.severity = 'HIGH';
   else if (anomaly.confidence >= 0.3) anomaly.severity = 'MEDIUM';
   else anomaly.severity = 'LOW';
+  
+  // Cache the correlation result (10 minute TTL for expensive computations)
+  uapCache.set(correlationCacheKey, {
+    data: {
+      externalData: anomaly.externalData,
+      confidenceBoost
+    },
+    expiresAt: Date.now() + 600000 // 10 minutes
+  });
   
   return anomaly;
 }

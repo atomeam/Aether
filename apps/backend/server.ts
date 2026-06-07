@@ -124,14 +124,57 @@ interface MCPRequest {
   id: string | number;
 }
 
-const integrationRegistry: Map<string, IntegrationProfile> = new Map();
-const hostProcessStream: string[] = [];
+// Circular buffer for O(1) operations instead of O(n) shift()
+class CircularBuffer<T> {
+  private buffer: T[];
+  private size: number;
+  private index: number = 0;
+  private count: number = 0;
+  
+  constructor(size: number) {
+    this.buffer = new Array(size);
+    this.size = size;
+  }
+  
+  push(item: T) {
+    this.buffer[this.index] = item;
+    this.index = (this.index + 1) % this.size;
+    if (this.count < this.size) this.count++;
+  }
+  
+  toArray(): T[] {
+    if (this.count < this.size) {
+      return this.buffer.slice(0, this.count);
+    }
+    return [...this.buffer.slice(this.index), ...this.buffer.slice(0, this.index)];
+  }
+}
+
+// Integration registry with TTL-based cleanup (memory leak fix)
+const integrationRegistry = new Map<string, { profile: IntegrationProfile, expiresAt: number }>();
+const REGISTRY_TTL = 3600000; // 1 hour TTL
+
+// Periodic cleanup of expired integrations
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [key, value] of Array.from(integrationRegistry.entries())) {
+    if (value.expiresAt < now) {
+      integrationRegistry.delete(key);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`[CLEANUP] Removed ${cleaned} expired integrations`);
+  }
+}, 300000); // Check every 5 minutes
+
+const hostProcessStream = new CircularBuffer<string>(200);
 const logEmitter = new EventEmitter();
 
 function addProcessLog(msg: string) {
   const formatted = `[${new Date().toISOString()}] ${msg}`;
   hostProcessStream.push(formatted);
-  if (hostProcessStream.length > 200) hostProcessStream.shift();
   logEmitter.emit('log', formatted);
 }
 
@@ -196,12 +239,15 @@ async function startServer() {
 
   // --- NEXUS GATEWAY ROUTES ---
   app.get("/api/nexus/registry", (req, res) => {
-    res.json(Array.from(integrationRegistry.values()));
+    res.json(Array.from(integrationRegistry.values()).map(item => item.profile));
   });
 
   app.post("/api/nexus/registry", (req, res) => {
     const profile: IntegrationProfile = req.body;
-    integrationRegistry.set(profile.id, { ...profile, status: 'CONNECTED' });
+    integrationRegistry.set(profile.id, { 
+      profile: { ...profile, status: 'CONNECTED' }, 
+      expiresAt: Date.now() + REGISTRY_TTL 
+    });
     addProcessLog(`NEXUS: Registered integration [${profile.id}]`);
     res.json({ success: true });
   });
@@ -213,9 +259,10 @@ async function startServer() {
 
   app.all("/api/nexus/route/:integrationId/*", async (req, res) => {
     const { integrationId } = req.params;
-    const profile = integrationRegistry.get(integrationId);
+    const registryEntry = integrationRegistry.get(integrationId);
     
-    if (!profile) return res.status(404).json({ error: "Integration not found" });
+    if (!registryEntry) return res.status(404).json({ error: "Integration not found" });
+    const profile = registryEntry.profile;
     
     const targetPath = req.params[0] || '';
     const query = new URLSearchParams(req.query as any).toString();
@@ -262,17 +309,12 @@ async function startServer() {
     }, 15000);
 
     // Initial dump
-    sendEvent({ type: 'INIT', logs: hostProcessStream });
+    sendEvent({ type: 'INIT', logs: hostProcessStream.toArray() });
 
     req.on('close', () => {
       logEmitter.off('log', logHandler);
       clearInterval(interval);
-    });
-
-    // Keep connection alive
-    req.on('close', () => {
-      logEmitter.off('log', logHandler);
-    });
+    }, { once: true }); // Prevent duplicate event handlers (memory leak fix)
   });
 
   // Stack Health Check - Returns backend status
@@ -406,7 +448,7 @@ async function startServer() {
 
     try {
       const response = await callGeminiWithRetry(
-        "gemini-3-flash-preview",
+        "gemini-pro",
         {
           contents: [{
             role: "user",
@@ -414,11 +456,16 @@ async function startServer() {
               text: `You are the AXIOM Orchestrator, an autonomous UI architect.
               User Direction: "${prompt}"
               Current Architecture: ${JSON.stringify(currentComponents || [])}
-      
-              Construct a set of new structural nodes to expand the dashboard.
+
+              Construct a set of actions to expand the dashboard.
               Rules:
               - Return ONLY JSON.
-              - The response must be a flat array of component objects.`
+              - The response must be a flat array of action objects.
+              - Each action must have an "action" field: "ADD", "REMOVE", or "MODIFY"
+              - For ADD actions, include a "plan" field with the component object
+              - Component types allowed: stat, chart, list, status, gauge
+              - Component structure: { id, type, title, props: { label, value?, items?, data?, description? } }
+              - Example ADD action: { "action": "ADD", "plan": { "id": "stat-1", "type": "stat", "title": "Total Users", "props": { "label": "Users", "value": "1234" } } }`
             }]
           }]
         },
@@ -663,7 +710,7 @@ async function startServer() {
         `;
 
         const response = await callGeminiWithRetry(
-          "gemini-3-flash-preview",
+          "gemini-pro",
           {
             contents: [{
               role: "user",

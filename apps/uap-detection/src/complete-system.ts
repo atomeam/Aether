@@ -2,115 +2,290 @@
 // All 20 Subsystems Integrated
 
 // ============================================================================
-// REAL EXTERNAL API INTEGRATIONS
+// REAL EXTERNAL API INTEGRATIONS WITH CACHING
 // ============================================================================
 
-// Real-time earthquake data from USGS
+// Simple in-memory cache for UAP detection (since it runs in Cloudflare Workers)
+const uapCache = new Map<string, { data: any; expiresAt: number }>();
+const UAP_CACHE_TTL = {
+  USGS: 300000, // 5 minutes
+  NOAA: 300000, // 5 minutes
+  WEATHER: 300000, // 5 minutes
+  AIR_QUALITY: 300000, // 5 minutes
+  FLIGHT: 60000, // 1 minute
+  SHIP: 60000, // 1 minute
+  SPACE_WEATHER: 300000, // 5 minutes
+  SATELLITE: 300000, // 5 minutes
+  WATER_QUALITY: 300000, // 5 minutes
+  GEOMAGNETIC: 300000, // 5 minutes
+};
+
+// Real-time earthquake data from USGS with caching
 async function fetchEarthquakeData(): Promise<number> {
+  const cacheKey = 'usgs:earthquakes';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] USGS earthquake data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] USGS earthquake data MISS');
   try {
     const response = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
     const data = await response.json();
-    return data.features?.length || 0;
+    const count = data.features?.length || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.USGS
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time solar activity from NOAA
+// Real-time solar activity from NOAA with caching
 async function fetchSolarActivity(): Promise<number> {
+  const cacheKey = 'noaa:solar-wind';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] NOAA solar wind data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] NOAA solar wind data MISS');
   try {
     const response = await fetch('https://services.swpc.noaa.gov/json/solar-wind.json');
     const data = await response.json();
-    return data[1]?.speed || 0;
+    const speed = data[1]?.speed || 0;
+    
+    uapCache.set(cacheKey, {
+      data: speed,
+      expiresAt: Date.now() + UAP_CACHE_TTL.NOAA
+    });
+    
+    return speed;
   } catch {
     return 0;
   }
 }
 
-// Real-time weather data from Open-Meteo
+// Real-time weather data from Open-Meteo with caching
 async function fetchWeatherData(lat: number, lon: number): Promise<number> {
+  const cacheKey = `weather:${lat.toFixed(2)}:${lon.toFixed(2)}`;
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Weather data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Weather data MISS');
   try {
     const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`);
     const data = await response.json();
-    return data.current?.temperature_2m || 0;
+    const temp = data.current?.temperature_2m || 0;
+    
+    uapCache.set(cacheKey, {
+      data: temp,
+      expiresAt: Date.now() + UAP_CACHE_TTL.WEATHER
+    });
+    
+    return temp;
   } catch {
     return 0;
   }
 }
 
-// Real-time air quality from OpenAQ
+// Real-time air quality from OpenAQ with caching
 async function fetchAirQuality(lat: number, lon: number): Promise<number> {
+  const cacheKey = `air-quality:${lat.toFixed(2)}:${lon.toFixed(2)}`;
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Air quality data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Air quality data MISS');
   try {
     const response = await fetch(`https://api.openaq.org/v2/measurements?coordinates=${lat},${lon}&limit=1`);
     const data = await response.json();
-    return data.results?.[0]?.value || 0;
+    const value = data.results?.[0]?.value || 0;
+    
+    uapCache.set(cacheKey, {
+      data: value,
+      expiresAt: Date.now() + UAP_CACHE_TTL.AIR_QUALITY
+    });
+    
+    return value;
   } catch {
     return 0;
   }
 }
 
-// Real-time flight tracking from OpenSky Network
+// Real-time flight tracking from OpenSky Network with caching
 async function fetchFlightCount(bbox: string): Promise<number> {
+  const cacheKey = `flight:${bbox}`;
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Flight data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Flight data MISS');
   try {
     const [lamin, lomin, lamax, lomax] = bbox.split(',');
     const response = await fetch(`https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`);
     const data = await response.json();
-    return data.states?.length || 0;
+    const count = data.states?.length || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.FLIGHT
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time ship tracking from Axiom
+// Real-time ship tracking from Axiom with caching
 async function fetchShipCount(): Promise<number> {
+  const cacheKey = 'ship:count';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Ship data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Ship data MISS');
   try {
     const response = await fetch('https://docs.axiomancer.io/overwatch/api/vessels');
     const data = await response.json();
-    return data.length || 0;
+    const count = data.length || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.SHIP
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time space weather from NASA
+// Real-time space weather from NASA with caching
 async function fetchSpaceWeather(): Promise<number> {
+  const cacheKey = 'space-weather:flares';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Space weather data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Space weather data MISS');
   try {
     const response = await fetch('https://api.nasa.gov/DONKI/FLR?startDate=2026-06-05&endDate=2026-06-06&api_key=DEMO_KEY');
     const data = await response.json();
-    return data.length || 0;
+    const count = data.length || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.SPACE_WEATHER
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time satellite positions from ESA
+// Real-time satellite positions from ESA with caching
 async function fetchSatellitePositions(): Promise<number> {
+  const cacheKey = 'satellite:positions';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Satellite data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Satellite data MISS');
   try {
     const response = await fetch('https://evdc.esa.int/api/v1/search/satellite/');
     const data = await response.json();
-    return data.count || 0;
+    const count = data.count || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.SATELLITE
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time water quality from USGS
+// Real-time water quality from USGS with caching
 async function fetchWaterQuality(): Promise<number> {
+  const cacheKey = 'water-quality:usgs';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Water quality data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Water quality data MISS');
   try {
     const response = await fetch('https://api.waterdata.usgs.gov/nwis/iv/?format=json&sites=01646500&parameterCd=00010');
     const data = await response.json();
-    return data.value?.timeSeries?.length || 0;
+    const count = data.value?.timeSeries?.length || 0;
+    
+    uapCache.set(cacheKey, {
+      data: count,
+      expiresAt: Date.now() + UAP_CACHE_TTL.WATER_QUALITY
+    });
+    
+    return count;
   } catch {
     return 0;
   }
 }
 
-// Real-time geomagnetic activity
+// Real-time geomagnetic activity with caching
 async function fetchGeomagneticActivity(): Promise<number> {
+  const cacheKey = 'geomagnetic:k-index';
+  const cached = uapCache.get(cacheKey);
+  
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[UAP_CACHE] Geomagnetic data HIT');
+    return cached.data;
+  }
+  
+  console.log('[UAP_CACHE] Geomagnetic data MISS');
   try {
     const response = await fetch('https://services.swpc.noaa.gov/json/planetary_k_index.json');
     const data = await response.json();
-    return data[0]?.kp || 0;
+    const kp = data[0]?.kp || 0;
+    
+    uapCache.set(cacheKey, {
+      data: kp,
+      expiresAt: Date.now() + UAP_CACHE_TTL.GEOMAGNETIC
+    });
+    
+    return kp;
   } catch {
     return 0;
   }

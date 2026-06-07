@@ -14,7 +14,8 @@
     "motion": "^12.23.24",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.6.0",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",
@@ -22,6 +23,7 @@
     "vite": "^6.2.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/node": "^20.0.0",
     "tailwindcss": "^4.1.14",
     "@tailwindcss/vite": "^4.1.14"
   }

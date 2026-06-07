@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  aether-mcp:
+    build: .
+    container_name: aether-mcp-server
+    environment:
+      - AETHER_BACKEND_URL=http://host.docker.internal:3000
+    networks:
+      - aether-network
+
+networks:
+  aether-network:
+    external: true
