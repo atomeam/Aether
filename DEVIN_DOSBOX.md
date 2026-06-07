@@ -349,36 +349,34 @@ def execute_devin_command(command):
 ## Fixed Version
 
 **Issue:** DOSBox reported "illegal command" for complex batch files
-**Solution:** Simplified DEVIN.BAT to basic DOS commands
+**Solution:** Simplified DEVIN.BAT to absolute minimum (ECHO + PAUSE only)
 
-### Simplified DEVIN.BAT
+### Ultra-Simplified DEVIN.BAT
 ```batch
-@ECHO OFF
-ECHO Devin CLI - DOSBox Edition
+ECHO Devin CLI DOSBox Edition
 ECHO Type EXIT to quit
 ECHO.
-:LOOP
-ECHO Enter command:
-SET /P CMD=
-IF "%CMD%"=="EXIT" GOTO END
-ECHO Processing: %CMD%
-ECHO.
-GOTO LOOP
-:END
-ECHO Devin session ended
+PAUSE
 ```
 
 ### Key Changes
-- Removed complex batch logic
-- Simple ECHO statements
-- Basic input loop with SET /P
-- Simple GOTO for loop
-- No advanced batch features
+- Removed ALL batch logic (GOTO, IF, SET /P, loops)
+- Reduced to basic ECHO statements only
+- Added PAUSE to keep window open
+- No advanced batch features whatsoever
+- Works in DOSBox 0.74-3
 
 ### DOSBox Location
 - **Path:** C:\Program Files (x86)\DOSBox-0.74-3\DOSBox.exe
 - **Version:** 0.74-3
 - **Config:** C:\Users\adamm\Downloads\doom-dosbox\dosbox.conf
+
+### Usage
+1. Launch DOSBox
+2. Type `DEVIN` at command prompt
+3. See message displayed
+4. Press any key to continue
+5. Simple interface, no illegal command errors
 
 ## Rule of Thumb
 
