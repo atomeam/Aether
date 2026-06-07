@@ -126,7 +126,7 @@ Every addition follows the same structure:
 
 ## Current State
 
-### Knowledge Items (12)
+### Knowledge Items (13)
 1. Moon Child Pocket PC Game (mobile)
 2. Citra 3DS Emulator (emulation)
 3. BitTV Streaming App (streaming)
@@ -139,14 +139,21 @@ Every addition follows the same structure:
 10. CryEngine Build Environment (build-automation)
 11. Universal Automation Pattern (skills)
 12. DOOM v1.9 (retro)
+13. DOOM Launcher (launcher)
 
-### Categories (8)
-- Mobile, Emulation, Streaming, Skills, AI, Retro, Game Engine, Build Automation
+### Categories (9)
+- Mobile, Emulation, Streaming, Skills, AI, Retro, Game Engine, Build Automation, Launcher
 
-### Connections (24)
+### Connections (26)
 - Each item has 2 related items
 - Creates knowledge graph
 - Enables discovery
+
+### Real App Launchers
+- DOOM Launcher (desktop shortcut)
+- GZDoom source port installed
+- DOSBox emulator installed
+- One-click launch from desktop
 
 ## Future Additions
 
