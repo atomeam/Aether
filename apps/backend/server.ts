@@ -477,6 +477,21 @@ async function startServer() {
         ],
         related: ['Citra Emulator', 'Dr. Sbaitso'],
         tags: ['game-engine', 'cpp', 'graphics', 'physics', 'aaa']
+      },
+      {
+        id: 'cryengine-build-skill',
+        title: 'CryEngine Build Environment',
+        type: 'skills',
+        source: 'Build Automation',
+        extractedAt: '2026-06-07T02:05:00Z',
+        insights: [
+          'Permanent build environment setup',
+          'Auto-recovery from 5 sources',
+          'Dependency management automation',
+          'Visual Studio, FBX SDK, CMake, Python setup'
+        ],
+        related: ['fast-backend', 'git-push-protection'],
+        tags: ['build-automation', 'dependency-management', 'cryengine']
       }
     ];
     res.json(knowledge);
