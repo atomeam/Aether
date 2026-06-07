@@ -553,6 +553,22 @@ async function startServer() {
         ],
         related: ['doom-v19', 'cracky-coco'],
         tags: ['launcher', 'doom', 'gaming', 'desktop']
+      },
+      {
+        id: 'doom-nc-integration',
+        title: 'DOOM + Norton Commander Integration',
+        type: 'integration',
+        source: 'Unified Retro Environment',
+        extractedAt: '2026-06-07T02:40:00Z',
+        insights: [
+          'Seamless DOOM and Norton Commander integration',
+          'Unified DOS environment with dual functionality',
+          'File management and gaming in one interface',
+          'Authentic 1990s retro experience',
+          'Enhanced productivity with keyboard shortcuts'
+        ],
+        related: ['doom-launcher', 'doom-v19'],
+        tags: ['integration', 'doom', 'norton-commander', 'retro', 'dosbox']
       }
     ];
     knowledgeCache.data = knowledge;

@@ -171,7 +171,7 @@ export function OneHub({ apiUrl }: OneHubProps) {
               <CardTitle className="text-slate-200 text-sm">Categories</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">9</div>
+              <div className="text-3xl font-bold text-white">10</div>
             </CardContent>
           </Card>
           <Card className="bg-slate-800/50 border-slate-700">
@@ -479,6 +479,22 @@ function getSampleKnowledge(): KnowledgeItem[] {
       ],
       related: ['doom-v19', 'cracky-coco'],
       tags: ['launcher', 'doom', 'gaming', 'desktop']
+    },
+    {
+      id: 'doom-nc-integration',
+      title: 'DOOM + Norton Commander Integration',
+      type: 'integration',
+      source: 'Unified Retro Environment',
+      extractedAt: '2026-06-07T02:40:00Z',
+      insights: [
+        'Seamless DOOM and Norton Commander integration',
+        'Unified DOS environment with dual functionality',
+        'File management and gaming in one interface',
+        'Authentic 1990s retro experience',
+        'Enhanced productivity with keyboard shortcuts'
+      ],
+      related: ['doom-launcher', 'doom-v19'],
+      tags: ['integration', 'doom', 'norton-commander', 'retro', 'dosbox']
     }
   ];
 }
