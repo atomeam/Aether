@@ -3,9 +3,10 @@ import { Zap, Workflow, Database, Cpu, Globe, Shield, BarChart, ArrowRight } fro
 
 interface LandingPageProps {
   onLaunchDashboard: () => void;
+  onShowKnowledgeHub: () => void;
 }
 
-export default function LandingPage({ onLaunchDashboard }: LandingPageProps) {
+export default function LandingPage({ onLaunchDashboard, onShowKnowledgeHub }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
@@ -31,6 +32,13 @@ export default function LandingPage({ onLaunchDashboard }: LandingPageProps) {
                 className="px-8 py-3 bg-purple-600 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
               >
                 Launch Dashboard
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={onShowKnowledgeHub}
+                className="px-8 py-3 bg-blue-600 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                Knowledge Hub
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button className="px-8 py-3 bg-white/10 rounded-lg font-medium hover:bg-white/20 transition-colors">

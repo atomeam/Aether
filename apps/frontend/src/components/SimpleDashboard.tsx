@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Activity, Zap, RefreshCw, Workflow, Database, Cpu, Globe, Shield, BarChart } from 'lucide-react';
+import { Activity, Zap, RefreshCw, Workflow, Database, Cpu, Globe, Shield, BarChart, Brain } from 'lucide-react';
 import AutomationDashboard from './AutomationDashboard';
 import { MCPDashboard } from './mcp';
 import { useOptimizedPolling } from '../hooks/useOptimizedPolling';
 
-export default function SimpleDashboard() {
+interface SimpleDashboardProps {
+  onShowKnowledgeHub?: () => void;
+}
+
+export default function SimpleDashboard({ onShowKnowledgeHub }: SimpleDashboardProps) {
   const [activeTab, setActiveTab] = useState<'automation' | 'mcp' | 'integrations'>('automation');
 
   // Optimized polling with Page Visibility API and request deduplication
@@ -37,6 +41,13 @@ export default function SimpleDashboard() {
                 {systemStatus ? 'System Online' : 'System Offline'}
               </span>
             </div>
+            <button
+              onClick={onShowKnowledgeHub}
+              className="p-2 bg-blue-600/20 rounded-lg hover:bg-blue-600/30 transition-colors"
+              title="Knowledge Hub"
+            >
+              <Brain className="w-4 h-4 text-blue-400" />
+            </button>
             <button
               onClick={manualRefresh}
               className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"

@@ -340,6 +340,103 @@ async function startServer() {
     });
   });
 
+  // Knowledge Hub API
+  app.get("/api/knowledge", (req, res) => {
+    const knowledge = [
+      {
+        id: 'moon-child',
+        title: 'Moon Child Pocket PC Game',
+        type: 'mobile',
+        source: 'Review Analysis',
+        extractedAt: '2026-06-07T01:15:00Z',
+        insights: [
+          'Dual control schemes (D-Pad + stylus)',
+          'Real-time interpolated graphics',
+          'Optical illusion level design',
+          'Performance tuning options'
+        ],
+        related: ['Citra Emulator', 'BitTV'],
+        tags: ['gaming', 'platformer', 'pocket-pc', 'retro']
+      },
+      {
+        id: 'citra-emulator',
+        title: 'Citra 3DS Emulator',
+        type: 'emulation',
+        source: 'APK Analysis',
+        extractedAt: '2026-06-07T01:30:00Z',
+        insights: [
+          'JIT compilation for performance',
+          'OpenGL ES rendering',
+          'Multi-threaded rendering pipeline',
+          'Thermal throttling management'
+        ],
+        related: ['Moon Child', 'BitTV'],
+        tags: ['emulation', '3ds', 'android', 'performance']
+      },
+      {
+        id: 'bittv-apk',
+        title: 'BitTV Streaming App',
+        type: 'streaming',
+        source: 'APK Analysis',
+        extractedAt: '2026-06-07T01:35:00Z',
+        insights: [
+          'Universal APK architecture',
+          'Mobile video streaming optimization',
+          'Creative Commons licensing',
+          'Android TV compatibility'
+        ],
+        related: ['Citra Emulator', 'Moon Child'],
+        tags: ['streaming', 'android', 'video', 'universal-apk']
+      },
+      {
+        id: 'fast-backend',
+        title: 'Fast Backend Manager',
+        type: 'skills',
+        source: 'Performance Skill',
+        extractedAt: '2026-06-07T01:00:00Z',
+        insights: [
+          'One-command backend restart',
+          'Port cleanup automation',
+          'Health check integration',
+          'PowerShell escaping fixes'
+        ],
+        related: ['ultra-fast-execution', 'git-push-protection'],
+        tags: ['performance', 'automation', 'devops']
+      },
+      {
+        id: 'ultra-fast',
+        title: 'Ultra Fast Execution',
+        type: 'skills',
+        source: 'Performance Skill',
+        extractedAt: '2026-06-07T01:00:00Z',
+        insights: [
+          'Batch command execution',
+          'Background process management',
+          'Aggressive optimization',
+          'Skip verification patterns'
+        ],
+        related: ['fast-backend', 'git-push-protection'],
+        tags: ['performance', 'automation', 'optimization']
+      },
+      {
+        id: 'git-protection',
+        title: 'Git Push Protection Handler',
+        type: 'skills',
+        source: 'Security Skill',
+        extractedAt: '2026-06-07T01:20:00Z',
+        insights: [
+          'Pre-push secret scanning',
+          'Automatic secret removal',
+          'Git secrets integration',
+          'Pre-commit hooks'
+        ],
+        related: ['fast-backend', 'ultra-fast'],
+        tags: ['security', 'git', 'automation']
+      }
+    ];
+    res.json(knowledge);
+  });
+
   // Curator decisions (recent)
   app.get("/api/agents/curator/decisions", async (req, res) => {
     try {
