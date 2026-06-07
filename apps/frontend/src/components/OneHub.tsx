@@ -359,6 +359,21 @@ function getSampleKnowledge(): KnowledgeItem[] {
       ],
       related: ['fast-backend', 'ultra-fast'],
       tags: ['security', 'git', 'automation']
+    },
+    {
+      id: 'dr-sbaitso',
+      title: 'Dr. Sbaitso CGA',
+      type: 'ai',
+      source: 'Internet Archive',
+      extractedAt: '2026-06-07T01:46:00Z',
+      insights: [
+        'Early AI speech synthesis (1991)',
+        'Text-to-speech technology evolution',
+        'Conversational AI patterns',
+        'SoundBlaster hardware integration'
+      ],
+      related: ['Citra Emulator', 'BitTV'],
+      tags: ['ai', 'speech-synthesis', 'msdos', 'retro', 'soundblaster']
     }
   ];
 }

@@ -19,5 +19,8 @@
   },
   "dependencies": {
     "puppeteer": "^25.1.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.98.0"
   }
 }
