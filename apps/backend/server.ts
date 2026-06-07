@@ -3,6 +3,7 @@ import { parseEnv, BackendEnvSchema } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
 import express from "express";
+import compression from "compression";
 import { GoogleGenAI } from "@google/genai";
 import { EventEmitter } from "events";
 import * as fs from "fs";
@@ -236,6 +237,7 @@ async function startServer() {
   const PORT = env.PORT;
 
   app.use(express.json());
+  app.use(compression());
 
   // --- NEXUS GATEWAY ROUTES ---
   app.get("/api/nexus/registry", (req, res) => {
@@ -340,8 +342,19 @@ async function startServer() {
     });
   });
 
-  // Knowledge Hub API
+  // Knowledge Hub API with caching
+  const knowledgeCache = {
+    data: null,
+    timestamp: 0,
+    ttl: 60000 // 1 minute cache
+  };
+
   app.get("/api/knowledge", (req, res) => {
+    const now = Date.now();
+    if (knowledgeCache.data && (now - knowledgeCache.timestamp) < knowledgeCache.ttl) {
+      return res.json(knowledgeCache.data);
+    }
+    
     const knowledge = [
       {
         id: 'moon-child',
@@ -510,6 +523,8 @@ async function startServer() {
         tags: ['automation', 'integration', 'scalability', 'uniapp']
       }
     ];
+    knowledgeCache.data = knowledge;
+    knowledgeCache.timestamp = now;
     res.json(knowledge);
   });
 

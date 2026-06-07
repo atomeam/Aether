@@ -42,9 +42,21 @@ export function OneHub({ apiUrl }: OneHubProps) {
 
   const fetchKnowledge = async () => {
     try {
+      // Check cache first
+      const cached = localStorage.getItem('knowledge');
+      const cachedTime = localStorage.getItem('knowledge-time');
+      
+      if (cached && cachedTime && (Date.now() - parseInt(cachedTime)) < 300000) {
+        setKnowledge(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
+      
       const response = await fetch(`${apiUrl}/api/knowledge`);
       const data = await response.json();
       setKnowledge(data);
+      localStorage.setItem('knowledge', JSON.stringify(data));
+      localStorage.setItem('knowledge-time', Date.now().toString());
     } catch (error) {
       console.error('Failed to fetch knowledge:', error);
       setKnowledge(getSampleKnowledge());
