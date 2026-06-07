@@ -171,7 +171,7 @@ export function OneHub({ apiUrl }: OneHubProps) {
               <CardTitle className="text-slate-200 text-sm">Categories</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white">8</div>
+              <div className="text-3xl font-bold text-white">9</div>
             </CardContent>
           </Card>
           <Card className="bg-slate-800/50 border-slate-700">
@@ -463,6 +463,22 @@ function getSampleKnowledge(): KnowledgeItem[] {
       ],
       related: ['Dr. Sbaitso', 'Cracky Coco'],
       tags: ['retro', 'fps', 'gaming', 'id-software', 'shareware']
+    },
+    {
+      id: 'doom-launcher',
+      title: 'DOOM Launcher',
+      type: 'launcher',
+      source: 'Desktop Shortcut',
+      extractedAt: '2026-06-07T02:35:00Z',
+      insights: [
+        'Desktop shortcut created',
+        'GZDoom source port installed',
+        'DOOM.WAD configured',
+        'One-click DOOM launch',
+        'Modern DOOM experience'
+      ],
+      related: ['doom-v19', 'cracky-coco'],
+      tags: ['launcher', 'doom', 'gaming', 'desktop']
     }
   ];
 }

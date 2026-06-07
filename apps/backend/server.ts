@@ -537,6 +537,22 @@ async function startServer() {
         ],
         related: ['Dr. Sbaitso', 'Cracky Coco'],
         tags: ['retro', 'fps', 'gaming', 'id-software', 'shareware']
+      },
+      {
+        id: 'doom-launcher',
+        title: 'DOOM Launcher',
+        type: 'launcher',
+        source: 'Desktop Shortcut',
+        extractedAt: '2026-06-07T02:35:00Z',
+        insights: [
+          'Desktop shortcut created',
+          'GZDoom source port installed',
+          'DOOM.WAD configured',
+          'One-click DOOM launch',
+          'Modern DOOM experience'
+        ],
+        related: ['doom-v19', 'cracky-coco'],
+        tags: ['launcher', 'doom', 'gaming', 'desktop']
       }
     ];
     knowledgeCache.data = knowledge;
