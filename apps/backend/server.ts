@@ -492,6 +492,22 @@ async function startServer() {
         ],
         related: ['fast-backend', 'git-push-protection'],
         tags: ['build-automation', 'dependency-management', 'cryengine']
+      },
+      {
+        id: 'universal-automation',
+        title: 'Universal Automation Pattern',
+        type: 'skills',
+        source: 'System Architecture',
+        extractedAt: '2026-06-07T02:15:00Z',
+        insights: [
+          'Infinite integration pattern',
+          'Clean schema for all items',
+          'Automatic organization via tags',
+          'System always works (no breaking changes)',
+          '25-minute integration cycle'
+        ],
+        related: ['fast-backend', 'ultra-fast'],
+        tags: ['automation', 'integration', 'scalability', 'uniapp']
       }
     ];
     res.json(knowledge);
