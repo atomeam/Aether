@@ -495,6 +495,22 @@ function getSampleKnowledge(): KnowledgeItem[] {
       ],
       related: ['doom-launcher', 'doom-v19'],
       tags: ['integration', 'doom', 'norton-commander', 'retro', 'dosbox']
+    },
+    {
+      id: 'devin-dosbox',
+      title: 'Devin for DOSBox',
+      type: 'integration',
+      source: 'Retro AI Terminal',
+      extractedAt: '2026-06-07T02:45:00Z',
+      insights: [
+        'Devin CLI interface for DOSBox',
+        'File-based communication bridge',
+        'Retro computing meets modern AI',
+        'DOS batch interface for Devin',
+        'Authentic terminal experience'
+      ],
+      related: ['doom-nc-integration', 'universal-automation'],
+      tags: ['devin', 'dosbox', 'retro', 'ai', 'terminal']
     }
   ];
 }
