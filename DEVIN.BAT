@@ -1,0 +1,10 @@
+@ECHO OFF
+ECHO Devin CLI - DOSBox Edition
+ECHO Type EXIT to quit
+:LOOP
+SET /P INPUT=
+IF "%INPUT%"=="EXIT" GOTO END
+ECHO You said: %INPUT%
+GOTO LOOP
+:END
+ECHO Goodbye

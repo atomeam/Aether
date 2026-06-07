@@ -346,25 +346,39 @@ def execute_devin_command(command):
 - Limited command set
 - No advanced Devin features
 
-## Alternative: Mock Interface
+## Fixed Version
 
-For a simpler approach, create a mock Devin interface that runs entirely in DOS:
+**Issue:** DOSBox reported "illegal command" for complex batch files
+**Solution:** Simplified DEVIN.BAT to basic DOS commands
 
+### Simplified DEVIN.BAT
 ```batch
-:MOCK
-ECHO Devin: I'm ready to help!
-ECHO What would you like me to do?
-SET /P USERINPUT=
+@ECHO OFF
+ECHO Devin CLI - DOSBox Edition
+ECHO Type EXIT to quit
 ECHO.
-ECHO Devin: I understand you want to: %USERINPUT%
-ECHO Let me work on that...
-TIMEOUT /T 2 >NUL
+:LOOP
+ECHO Enter command:
+SET /P CMD=
+IF "%CMD%"=="EXIT" GOTO END
+ECHO Processing: %CMD%
 ECHO.
-ECHO Devin: I've completed the task!
-ECHO.
-PAUSE
-GOTO START
+GOTO LOOP
+:END
+ECHO Devin session ended
 ```
+
+### Key Changes
+- Removed complex batch logic
+- Simple ECHO statements
+- Basic input loop with SET /P
+- Simple GOTO for loop
+- No advanced batch features
+
+### DOSBox Location
+- **Path:** C:\Program Files (x86)\DOSBox-0.74-3\DOSBox.exe
+- **Version:** 0.74-3
+- **Config:** C:\Users\adamm\Downloads\doom-dosbox\dosbox.conf
 
 ## Rule of Thumb
 
