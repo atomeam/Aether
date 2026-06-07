@@ -13,9 +13,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@aether/chaos": "workspace:*",
-    "@aether/components": "workspace:*",
-    "@aether/contracts": "workspace:*"
+    "@aether/chaos": "file:../chaos",
+    "@aether/components": "file:../components",
+    "@aether/contracts": "file:../contracts"
   },
   "devDependencies": {
     "typescript": "~5.8.2",

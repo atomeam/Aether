@@ -10,10 +10,10 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@aether/network-health": "workspace:*",
-    "@aether/vitalsigns": "workspace:*",
-    "@aether/convene": "workspace:*",
-    "@aether/curator": "workspace:*",
+    "@aether/network-health": "file:../network-health",
+    "@aether/vitalsigns": "file:../vitalsigns",
+    "@aether/convene": "file:../convene",
+    "@aether/curator": "file:../curator",
     "zod": "^3.22.4"
   },
   "devDependencies": {

@@ -10,7 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@aether/ledger": "workspace:*",
+    "@aether/ledger": "file:../../packages/ledger",
     "@notionhq/client": "^2.2.15",
     "zod": "^3.22.4"
   },

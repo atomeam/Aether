@@ -9,7 +9,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@aether/kv-writers": "workspace:*"
+    "@aether/kv-writers": "file:../../packages/kv-writers"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250525.0",
