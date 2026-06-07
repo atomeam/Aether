@@ -521,6 +521,22 @@ async function startServer() {
         ],
         related: ['fast-backend', 'ultra-fast'],
         tags: ['automation', 'integration', 'scalability', 'uniapp']
+      },
+      {
+        id: 'doom-v19',
+        title: 'DOOM v1.9',
+        type: 'retro',
+        source: 'id Software Installer',
+        extractedAt: '2026-06-07T02:30:00Z',
+        insights: [
+          'FPS genre pioneer and revolutionizer',
+          'Raycasting engine innovation (2.5D rendering)',
+          'WAD file format for modular game data',
+          'Shareware distribution model success',
+          'Network multiplayer and modding community'
+        ],
+        related: ['Dr. Sbaitso', 'Cracky Coco'],
+        tags: ['retro', 'fps', 'gaming', 'id-software', 'shareware']
       }
     ];
     knowledgeCache.data = knowledge;
