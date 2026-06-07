@@ -374,6 +374,21 @@ function getSampleKnowledge(): KnowledgeItem[] {
       ],
       related: ['Citra Emulator', 'BitTV'],
       tags: ['ai', 'speech-synthesis', 'msdos', 'retro', 'soundblaster']
+    },
+    {
+      id: 'cracky-coco',
+      title: 'Cracky Coco',
+      type: 'retro',
+      source: 'Internet Archive',
+      extractedAt: '2026-06-07T01:50:00Z',
+      insights: [
+        'MS-DOS game preservation',
+        'Disk image format (DSK)',
+        'DOSBox emulation compatibility',
+        'Software archival techniques'
+      ],
+      related: ['Dr. Sbaitso', 'Citra Emulator'],
+      tags: ['retro', 'gaming', 'msdos', 'disk-image', 'emulation']
     }
   ];
 }
