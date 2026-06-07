@@ -1,0 +1,14 @@
+$kind: http-request
+description: Replay historical events for analysis
+url: "{{baseUrl}}/api/replay"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "since": 0,
+      "limit": 10
+    }
+order: 2000

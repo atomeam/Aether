@@ -1,0 +1,17 @@
+$kind: http-request
+description: Write a file through Victus runtime
+url: http://localhost:8080/execute
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "operation": "write_file",
+      "args": {
+        "path": "/path/to/file",
+        "content": "file content"
+      }
+    }
+order: 4000

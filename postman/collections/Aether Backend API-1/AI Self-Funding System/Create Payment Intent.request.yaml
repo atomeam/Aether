@@ -1,0 +1,14 @@
+$kind: http-request
+description: Create Stripe payment intent for service
+url: http://localhost:3002/api/payment/create
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "service": "CodeReview",
+      "clientEmail": "test@example.com"
+    }
+order: 2000

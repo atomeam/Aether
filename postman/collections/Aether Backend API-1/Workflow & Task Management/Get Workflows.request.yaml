@@ -1,0 +1,5 @@
+$kind: http-request
+description: List available Aether workflows
+url: "{{baseUrl}}/api/workflows"
+method: GET
+order: 1000

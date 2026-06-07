@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether storyteller journal entries
+url: "{{baseUrl}}/api/journal"
+method: GET
+order: 2000

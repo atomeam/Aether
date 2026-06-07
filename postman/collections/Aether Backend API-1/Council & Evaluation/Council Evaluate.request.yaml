@@ -1,0 +1,14 @@
+$kind: http-request
+description: Evaluate a proposal using the Council of Evaluators
+url: "{{baseUrl}}/api/council/evaluate"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "proposal": "Proposed change description",
+      "context": "Additional context for evaluation"
+    }
+order: 1000

@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether system metrics snapshot
+url: "{{baseUrl}}/api/metrics"
+method: GET
+order: 3000

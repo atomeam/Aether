@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get Aether notifier channel status
+url: "{{baseUrl}}/api/notifier"
+method: GET
+order: 3000

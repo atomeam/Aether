@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get pending items in Aether triage queue
+url: "{{baseUrl}}/api/triage"
+method: GET
+order: 3000

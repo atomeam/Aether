@@ -1,12 +1,5 @@
 # Postman Resources Configuration
 # This file configures which collections and environments to sync with Postman workspace
 
-collections:
-  - path: postman/collections/Aether-Postman-Collection.json
-    name: Aether Backend API
-    description: Complete API collection for Aether backend with Victus integration
-
-environments:
-  - path: postman/environments/Aether-Postman-Environment.json
-    name: Aether Development
-    description: Development environment for Aether API testing
+workspace:
+  id: ""

@@ -1,0 +1,16 @@
+$kind: http-request
+description: Submit service request after payment
+url: http://localhost:3002/api/service/submit
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "service": "CodeReview",
+      "paymentIntentId": "pi_xxx",
+      "codeUrl": "https://github.com/user/repo",
+      "requirements": "Review for bugs and performance"
+    }
+order: 3000

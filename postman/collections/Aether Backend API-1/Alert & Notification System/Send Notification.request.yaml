@@ -1,0 +1,15 @@
+$kind: http-request
+description: Send a notification through Aether notifier
+url: "{{baseUrl}}/api/notifier"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "channel": "slack",
+      "message": "Test notification from Postman",
+      "priority": "info"
+    }
+order: 4000

@@ -1,0 +1,13 @@
+$kind: http-request
+description: Compact and optimize learned lessons
+url: "{{baseUrl}}/api/compactor"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "action": "compact"
+    }
+order: 3000

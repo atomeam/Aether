@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get status of Aether agent system (curator, executor, evaluator)
+url: "{{baseUrl}}/api/agents"
+method: GET
+order: 2000

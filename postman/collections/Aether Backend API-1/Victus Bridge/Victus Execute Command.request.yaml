@@ -1,0 +1,16 @@
+$kind: http-request
+description: Execute a command through Victus runtime
+url: http://localhost:8080/execute
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "operation": "execute",
+      "args": {
+        "command": "ls -la"
+      }
+    }
+order: 2000

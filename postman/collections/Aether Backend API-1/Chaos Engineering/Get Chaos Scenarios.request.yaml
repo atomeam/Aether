@@ -1,0 +1,5 @@
+$kind: http-request
+description: Get available chaos engineering scenarios
+url: "{{baseUrl}}/api/agents/chaos"
+method: GET
+order: 2000

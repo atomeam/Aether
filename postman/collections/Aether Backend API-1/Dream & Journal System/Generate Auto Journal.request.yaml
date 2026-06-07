@@ -1,0 +1,10 @@
+$kind: http-request
+description: Generate an automatic journal entry based on recent events
+url: "{{baseUrl}}/api/journal"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: "{}"
+order: 3000
