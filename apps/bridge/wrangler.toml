@@ -2,6 +2,10 @@ name = "aether-bridge"
 main = "src/worker.ts"
 compatibility_date = "2024-12-01"
 
+# Required secrets (set via: wrangler secret put BRIDGE_API_TOKEN)
+# BRIDGE_API_TOKEN - Authentication token for write endpoints (/proposals/write, /lessons/write, /api/ai/heartbeat, /api/council/log, /tasks)
+# NOTION_WEBHOOK_SECRET - HMAC secret for Notion webhook verification
+
 [[kv_namespaces]]
 binding = "STATE"
 id = "7319ee9195df4ccf8f4b2c8449dd7930"

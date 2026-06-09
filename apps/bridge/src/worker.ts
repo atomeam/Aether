@@ -117,6 +117,15 @@ async function invalidateCache(key: string): Promise<void> {
   } catch {}
 }
 
+// Authentication check for write endpoints
+async function verifyAuth(request: Request, env: Env): Promise<Response | null> {
+  const auth = request.headers.get("Authorization");
+  if (!auth || auth !== "Bearer " + env.BRIDGE_API_TOKEN) {
+    return json({ ok: false, error: "AUTH_DENIED" }, 401);
+  }
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // Rate limit
@@ -283,6 +292,9 @@ export default {
       
       // POST /proposals/write - write proposals snapshot (workflow writer)
       if (path === '/proposals/write' && method === 'POST' && env.STATE) {
+        const authError = await verifyAuth(request, env);
+        if (authError) return authError;
+
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -303,6 +315,9 @@ export default {
       
       // POST /lessons/write - write lessons index (workflow writer)
       if (path === '/lessons/write' && method === 'POST' && env.STATE_CACHE) {
+        const authError = await verifyAuth(request, env);
+        if (authError) return authError;
+
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -580,6 +595,9 @@ export default {
 
       // POST /api/ai/heartbeat - update AI presence
       if (path === '/api/ai/heartbeat' && method === 'POST') {
+        const authError = await verifyAuth(request, env);
+        if (authError) return authError;
+
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, name, status = 'active', role } = body as { ai_id?: string; name?: string; status?: string; role?: string };
@@ -603,6 +621,9 @@ export default {
 
       // POST /api/council/log - log a conversation message
       if (path === '/api/council/log' && method === 'POST') {
+        const authError = await verifyAuth(request, env);
+        if (authError) return authError;
+
         const body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
         const { session_id, agent_id, role, content } = body;
         if (!session_id || !agent_id || !role || !content) {
@@ -809,6 +830,9 @@ export default {
 
       // POST /tasks - create a task and log to BRIDGE_DB audit trail
       if (path === '/tasks' && method === 'POST') {
+        const authError = await verifyAuth(request, env);
+        if (authError) return authError;
+
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, title, description } = body as { ai_id?: string; title?: string; description?: string };
@@ -907,6 +931,7 @@ interface Env {
   NOTION_WEBHOOK_SECRET: string;
   CURATOR_QUEUE: any; // Cloudflare Queue producer
   _LOGS: R2Bucket; // R2 bucket for logs
+  BRIDGE_API_TOKEN: string; // Authentication token for write endpoints
 }
 
 // API Key + Tier helpers
