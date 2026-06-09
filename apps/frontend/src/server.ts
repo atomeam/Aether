@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import path from 'path';
 import { IntegrationManager } from './core/integration_manager';
 import { VictusBridge } from './core/victus_bridge';
@@ -19,6 +20,7 @@ let executionState = {
   error: ''
 };
 
+app.use(helmet());
 app.use(express.json());
 
 // Initialize services with correct constructor signatures
