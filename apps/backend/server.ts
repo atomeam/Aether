@@ -5,6 +5,56 @@ import { manifestPromptFragment } from "./promptManifest";
 import crypto from "crypto";
 import express from "express";
 
+// SSRF protection: validate URLs to prevent server-side request forgery
+function validateUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    
+    // Only allow HTTPS
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+    
+    // Block private IP addresses
+    const hostname = parsed.hostname;
+    const privateIpPatterns = [
+      /^127\./,           // Loopback
+      /^10\./,            // Private Class A
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // Private Class B
+      /^192\.168\./,      // Private Class C
+      /^0\./,             // Current network
+      /^localhost$/i,     // Localhost
+      /^::1$/,            // IPv6 loopback
+      /^fc00:/i,          // IPv6 private
+      /^fe80:/i           // IPv6 link-local
+    ];
+    
+    for (const pattern of privateIpPatterns) {
+      if (pattern.test(hostname)) {
+        return false;
+      }
+    }
+    
+    // Block metadata endpoints (cloud credentials)
+    const metadataPatterns = [
+      /metadata\.google\.internal/i,
+      /169\.254\.169\.254/,
+      /metadata\.aws\.amazon\.com/i,
+      /metadata\.azure\.net/i
+    ];
+    
+    for (const pattern of metadataPatterns) {
+      if (pattern.test(hostname)) {
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 dotenv.config();
 
 // Validate env on boot — fail fast if required vars missing
@@ -199,6 +249,12 @@ async function startServer() {
     const targetPath = req.params[0] || '';
     const query = new URLSearchParams(req.query as any).toString();
     const finalUrl = `${profile.baseUrl}/${targetPath}${query ? '?' + query : ''}`;
+    
+    // SSRF protection: validate the URL before making the request
+    if (!validateUrl(finalUrl)) {
+      addProcessLog(`NEXUS_ERR: SSRF blocked invalid URL [${integrationId}] -> ${finalUrl}`);
+      return res.status(400).json({ error: "Invalid URL - SSRF protection enabled" });
+    }
     
     const headers: any = { 'Content-Type': 'application/json' };
     if (profile.authConfig) {
