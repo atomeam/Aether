@@ -9,8 +9,8 @@ jobs:
     name: Validate Token
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd3d9f4f6cf2a3eaac27e2495f8b63167568be
+      - uses: actions/setup-node@1f8c6b00b7c2639c2b2f2e8c5c7e233a9d5f8e
         with: { node-version: 22 }
       - run: npm install -g wrangler
       - run: wrangler whoami
@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: whoami
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd3d9f4f6cf2a3eaac27e2495f8b63167568be
+      - uses: actions/setup-node@1f8c6b00b7c2639c2b2f2e8c5c7e233a9d5f8e
         with: { node-version: 22 }
       - run: npm install -g wrangler
       - run: wrangler kv namespace list
@@ -29,8 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: whoami
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd3d9f4f6cf2a3eaac27e2495f8b63167568be
+      - uses: actions/setup-node@1f8c6b00b7c2639c2b2f2e8c5c7e233a9d5f8e
         with: { node-version: 22 }
       - run: npm install -g wrangler
       - run: wrangler d1 list
@@ -39,8 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: whoami
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd3d9f4f6cf2a3eaac27e2495f8b63167568be
+      - uses: actions/setup-node@1f8c6b00b7c2639c2b2f2e8c5c7e233a9d5f8e
         with: { node-version: 22 }
       - run: npm install -g wrangler
       - run: wrangler r2 bucket list
@@ -49,8 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: whoami
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd3d9f4f6cf2a3eaac27e2495f8b63167568be
+      - uses: actions/setup-node@1f8c6b00b7c2639c2b2f2e8c5c7e233a9d5f8e
         with: { node-version: 22 }
       - run: npm install -g wrangler
       - run: wrangler deployments list --name aether-bridge

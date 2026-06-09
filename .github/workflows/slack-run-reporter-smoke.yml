@@ -8,7 +8,7 @@ jobs:
     name: Test RUN header posting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd3d9f4f6cf2a3eaac27e2495f8b63167568be
       
       - name: Generate test run_id
         id: run_id
