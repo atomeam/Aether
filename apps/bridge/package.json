@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "cloudflare": "^6.3.0",
     "express": "^4.21.2"
   },
   "devDependencies": {
@@ -19,6 +20,7 @@
     "esbuild": "^0.25.0",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.6",
+    "wrangler": "^4.95.0"
   }
 }
