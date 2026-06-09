@@ -33,9 +33,42 @@ const MOCK_SNAPSHOT: CrewSnapshot = {
 
 // ─── API Functions ───────────────────────────────────────────────────
 
+function buildValidatedUrl(baseUrl: string, path: string): string {
+  try {
+    // Minimal path validation
+    if (path.includes('/../') || /\/%2e%2e\//i.test(path)) {
+      throw new Error('Invalid path');
+    }
+    
+    const url = new URL(baseUrl || 'http://localhost');
+    
+    // Validate path parameter
+    if (!/^\/[A-Za-z0-9_\-\/\?=&]+$/.test(path)) {
+      throw new Error('Invalid parameter');
+    }
+    
+    // Set the pathname from the validated path
+    const pathParts = path.split('?');
+    url.pathname = pathParts[0];
+    
+    // Handle query string if present
+    if (pathParts[1]) {
+      const queryParams = new URLSearchParams(pathParts[1]);
+      for (const [key, value] of queryParams) {
+        url.searchParams.set(key, value);
+      }
+    }
+    
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 async function fetchJSON<T>(path: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`);
+    const validatedUrl = buildValidatedUrl(BASE_URL, path);
+    const res = await fetch(validatedUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json() as T;
   } catch {
