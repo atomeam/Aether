@@ -1,0 +1,192 @@
+name: Pre-Merge Validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  # Build and typecheck - reuses existing CI logic
+  build-validate:
+    name: Build & TypeCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          
+      - run: npm ci
+        working-directory: .
+        
+      - run: npx turbo run typecheck --parallel
+        working-directory: .
+        
+      - run: npx turbo run build
+        working-directory: .
+
+  # Agent Memory Worker Tests - auth + functional verification
+  agent-memory-tests:
+    name: Agent Memory Tests
+    runs-on: ubuntu-latest
+    needs: build-validate
+    steps:
+      - uses: actions/checkout@v4
+        
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          
+      - name: Install dependencies
+        run: |
+          cd apps/agent-memory
+          npm ci
+          
+      - name: Run authentication tests
+        run: |
+          cd apps/agent-memory
+          node test_auth_runtime.js
+          
+      - name: Run functional memory loop tests
+        run: |
+          cd apps/agent-memory
+          node test_memory_functional.js
+
+  # Brand string governance - diff-scoped, case-sensitive
+  enforce-governance:
+    name: Brand String Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Block deprecated brand string (atomind)
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # Only scan files this PR adds/modifies - not whole tree
+          # Exclude workflow files (they contain the pattern itself)
+          CHANGED=$(git diff --name-only --diff-filter=ACM "$BASE" "$HEAD" \
+            | grep -v '^\.github/workflows/' || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "✅ No changed files to scan."
+            exit 0
+          fi
+
+          # Case-SENSITIVE, word-bounded. Approved forms (AtoMind, a-to-mind)
+          # do NOT match the lowercase deprecated token 'atomind'
+          if echo "$CHANGED" | xargs -r grep -nE '\batomind\b' ; then
+            echo "::error::Deprecated brand 'atomind' in changed files. Use 'a-to-mind' or 'AtoMind'."
+            exit 1
+          fi
+          echo "✅ No deprecated brand string in PR diff."
+
+  # No console.log in production code
+  no-console-logs:
+    name: No Console Logs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check for console.log in source files
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          CHANGED=$(git diff --name-only --diff-filter=ACM "$BASE" "$HEAD" \
+            | grep -E '\.(ts|js|tsx|jsx)$' || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "✅ No TypeScript/JavaScript files changed."
+            exit 0
+          fi
+
+          # Allow console.log in test files, but not in source
+          if echo "$CHANGED" | xargs -r grep -n 'console\.log' \
+            | grep -v '\.test\.' \
+            | grep -v '\.spec\.' \
+            | grep -v '/test/' \
+            | grep -v '/tests/'; then
+            echo "::error::Found console.log in production code. Use proper logging."
+            exit 1
+          fi
+          echo "✅ No console.log in production code."
+
+  # Cloudflare Workers binding sanity check (use existing script)
+  cf-binding-check:
+    name: Cloudflare Binding Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Run wrangler consistency check
+        run: |
+          bash scripts/pre-merge/check-wrangler-consistency.sh
+
+  # Secrets leak check (use existing script)
+  secrets-check:
+    name: Secrets Leak Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Run secrets leak check
+        run: |
+          bash scripts/pre-merge/check-secrets-leak.sh
+
+  # Duplicate properties check (use existing script)
+  duplicate-properties-check:
+    name: Duplicate Properties Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Run duplicate properties check
+        run: |
+          bash scripts/pre-merge/check-duplicate-properties.sh
+
+  # Summary job - all checks must pass
+  pre-merge-summary:
+    name: Pre-Merge Summary
+    runs-on: ubuntu-latest
+    needs: [build-validate, agent-memory-tests, enforce-governance, no-console-logs, cf-binding-check, secrets-check, duplicate-properties-check]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [ "${{ needs.build-validate.result }}" != "success" ] || \
+             [ "${{ needs.agent-memory-tests.result }}" != "success" ] || \
+             [ "${{ needs.enforce-governance.result }}" != "success" ] || \
+             [ "${{ needs.no-console-logs.result }}" != "success" ] || \
+             [ "${{ needs.cf-binding-check.result }}" != "success" ] || \
+             [ "${{ needs.secrets-check.result }}" != "success" ] || \
+             [ "${{ needs.duplicate-properties-check.result }}" != "success" ]; then
+            echo "::error::Pre-merge validation failed. One or more checks did not pass."
+            exit 1
+          fi
+          echo "✅ All pre-merge validations passed."
