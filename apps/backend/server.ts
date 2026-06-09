@@ -3,6 +3,7 @@ import { parseEnv, BackendEnvSchema } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
 import express from "express";
+import helmet from "helmet";
 
 // SSRF protection: validate URLs to prevent server-side request forgery
 function validateUrl(url: string): boolean {
@@ -221,6 +222,27 @@ async function startServer() {
   const PORT = env.PORT;
 
   app.use(express.json());
+  
+  // Security headers for SSRF and XSS protection
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https:"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    noSniff: true,
+    xFrameOptions: { action: 'deny' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  }));
 
   // --- NEXUS GATEWAY ROUTES ---
   app.get("/api/nexus/registry", (req, res) => {
