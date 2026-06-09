@@ -1,0 +1,2 @@
+This file contains the deprecated brand string atomind to test the pre-merge gate.
+The gate should block this because atomind is deprecated in favor of a-to-mind or AtoMind.
