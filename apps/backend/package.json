@@ -2,7 +2,7 @@
   "name": "@aether/backend",
   "version": "1.0.0",
   "type": "module",
-  "main": "server.ts",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node dist/server.cjs",
