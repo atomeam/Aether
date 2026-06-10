@@ -12,10 +12,6 @@ main = "src/worker.ts"
 compatibility_date = "2024-12-01"
 
 # KV Namespaces
-routes = [
-  { pattern = "bridge.a-to-mind.com/*", custom_domain = true }
-]
-
 [[kv_namespaces]]
 binding = "STATE"
 id = "7319ee9195df4ccf8f4b2c8449dd7930"
