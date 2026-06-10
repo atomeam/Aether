@@ -165,4 +165,57 @@ The root cause was a combination of:
 4. Overconfidence from previous successful infrastructure changes
 
 This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
-This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
+
+---
+
+## Lane Discipline
+
+### Rule: No Parallel Work on Owned Lanes
+
+**Precedent**: PR #44 closure (2026-05-29)
+
+**What Happened**: Viktor opened PR #44 and #45 to implement Worker custom domain routes using zone_id syntax. However, Devin had already been assigned the PLAN-B lane for custom domain configuration using custom_domain = true syntax. The parallel work caused confusion and was resolved by closing Viktor's PRs in favor of Devin's approach.
+
+**Rule**: No agent shall work on a lane that another agent has been explicitly assigned. If lane ownership is unclear, the issue must be escalated to the coordinator for clarification before proceeding.
+
+**Enforcement**:
+- Check the dispatch queue and active assignments before starting work
+- If you see another agent working on a related area, confirm ownership first
+- Parallel work on the same technical domain is prohibited unless explicitly coordinated
+
+**Exceptions**: None. Lane ownership is absolute to prevent conflicts and wasted effort.
+
+---
+
+## Hallucinated Resource IDs
+
+### Precedent: METRICS KV ID Drift (2026-05-29)
+
+**What Happened**: Viktor's audit identified a discrepancy between the METRICS KV namespace ID in wrangler.toml (`49202b2460a74d2dbd6d747d35dda5b7`) and CANONICAL_BINDINGS_MAP.md (`60b673736ef943949cd8df154105e11e`). CF agent verification confirmed the wrangler.toml ID was correct and the documentation was stale.
+
+**Mandate**: Before any wrangler.toml binding update (KV, D1, Queue, R2, Service), you MUST run the appropriate wrangler list command to verify the resource actually exists:
+
+```bash
+# KV namespaces
+wrangler kv namespace list
+
+# D1 databases
+wrangler d1 list
+
+# Queues
+wrangler queues list
+
+# R2 buckets
+wrangler r2 bucket list
+
+# Services
+wrangler deployment list
+```
+
+**Verification Steps**:
+1. Run the appropriate list command
+2. Cross-reference the actual output with the ID you intend to use
+3. Only proceed if the ID exists in the live output
+4. If there's a discrepancy, escalate to CF agent for verification
+
+**Root Cause Prevention**: This prevents the type of hallucination that occurred in commit a3c134e where a queue ID was fabricated without verification.
