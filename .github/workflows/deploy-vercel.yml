@@ -56,8 +56,13 @@ jobs:
       - run: npm ci
         working-directory: .
 
+      # Build all packages first (required for workspace dependencies)
       - run: npx turbo run build
         working-directory: .
+
+      # Explicitly build backend to ensure dist/server.cjs exists
+      - run: npm run build
+        working-directory: apps/backend
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
