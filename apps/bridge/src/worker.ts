@@ -283,6 +283,11 @@ export default {
       
       // POST /proposals/write - write proposals snapshot (workflow writer)
       if (path === '/proposals/write' && method === 'POST' && env.STATE) {
+        const authCheck = await requireAuth(env, request, 'nucleus');
+        if (!authCheck.ok) {
+          return json({ ok: false, error: authCheck.error }, authCheck.error === 'Unauthorized' ? 401 : 403);
+        }
+        
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -303,6 +308,11 @@ export default {
       
       // POST /lessons/write - write lessons index (workflow writer)
       if (path === '/lessons/write' && method === 'POST' && env.STATE_CACHE) {
+        const authCheck = await requireAuth(env, request, 'nucleus');
+        if (!authCheck.ok) {
+          return json({ ok: false, error: authCheck.error }, authCheck.error === 'Unauthorized' ? 401 : 403);
+        }
+        
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -343,42 +353,46 @@ export default {
           return json({ ok: true }, 200);
         }
         
-        // Check signature for all non-handshake requests
-        if (signature && env.NOTION_WEBHOOK_SECRET) {
-          // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
-          const enc = new TextEncoder();
-          const key = await crypto.subtle.importKey(
-            'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-          );
-          const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
-          const expectedHex = Array.from(new Uint8Array(sigBuf))
-            .map(b => b.toString(16).padStart(2, '0')).join('');
-          const providedHex = signature.replace(/^sha256=/, '');
-          
-          // Constant-time comparison via double-HMAC
-          if (expectedHex.length !== providedHex.length) {
-            console.log('[Webhook] HMAC verification FAILED');
-            return json({ ok: false, error: 'Invalid signature' }, 401);
-          }
-          const cmpKey = await crypto.subtle.importKey(
-            'raw', enc.encode('hmac-cmp'),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-          );
-          const mac1 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex)));
-          const mac2 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex)));
-          let eq = true;
-          for (let i = 0; i < mac1.length; i++) eq = eq && (mac1[i] === mac2[i]);
-          if (!eq) {
-            console.log('[Webhook] HMAC verification FAILED');
-            return json({ ok: false, error: 'Invalid signature' }, 401);
-          }
-          console.log('[Webhook] HMAC verification PASSED');
-        } else if (!env.NOTION_WEBHOOK_SECRET) {
-          console.log('[Webhook] WARNING: NOTION_WEBHOOK_SECRET not configured');
-        } else {
-          console.log('[Webhook] WARNING: No signature header');
+        // HMAC verification is mandatory for all non-handshake requests
+        if (!signature) {
+          console.log('[Webhook] HMAC verification FAILED - no signature header');
+          return json({ ok: false, error: 'Signature required' }, 401);
         }
+        
+        if (!env.NOTION_WEBHOOK_SECRET) {
+          console.log('[Webhook] HMAC verification FAILED - NOTION_WEBHOOK_SECRET not configured');
+          return json({ ok: false, error: 'Server configuration error' }, 500);
+        }
+        
+        // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+        const expectedHex = Array.from(new Uint8Array(sigBuf))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        const providedHex = signature.replace(/^sha256=/, '');
+        
+        // Constant-time comparison via double-HMAC
+        if (expectedHex.length !== providedHex.length) {
+          console.log('[Webhook] HMAC verification FAILED');
+          return json({ ok: false, error: 'Invalid signature' }, 401);
+        }
+        const cmpKey = await crypto.subtle.importKey(
+          'raw', enc.encode('hmac-cmp'),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        const mac1 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex)));
+        const mac2 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex)));
+        let eq = true;
+        for (let i = 0; i < mac1.length; i++) eq = eq && (mac1[i] === mac2[i]);
+        if (!eq) {
+          console.log('[Webhook] HMAC verification FAILED');
+          return json({ ok: false, error: 'Invalid signature' }, 401);
+        }
+        console.log('[Webhook] HMAC verification PASSED');
         
         try {
           const event = parsed;
@@ -609,6 +623,11 @@ export default {
 
       // POST /api/ai/heartbeat - update AI presence
       if (path === '/api/ai/heartbeat' && method === 'POST') {
+        const authCheck = await requireAuth(env, request, 'service');
+        if (!authCheck.ok) {
+          return json({ ok: false, error: authCheck.error }, authCheck.error === 'Unauthorized' ? 401 : 403);
+        }
+        
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, name, status = 'active', role } = body as { ai_id?: string; name?: string; status?: string; role?: string };
@@ -632,6 +651,11 @@ export default {
 
       // POST /api/council/log - log a conversation message
       if (path === '/api/council/log' && method === 'POST') {
+        const authCheck = await requireAuth(env, request, 'nucleus');
+        if (!authCheck.ok) {
+          return json({ ok: false, error: authCheck.error }, authCheck.error === 'Unauthorized' ? 401 : 403);
+        }
+        
         const body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
         const { session_id, agent_id, role, content } = body;
         if (!session_id || !agent_id || !role || !content) {
@@ -838,6 +862,11 @@ export default {
 
       // POST /tasks - create a task and log to BRIDGE_DB audit trail
       if (path === '/tasks' && method === 'POST') {
+        const authCheck = await requireAuth(env, request, 'service');
+        if (!authCheck.ok) {
+          return json({ ok: false, error: authCheck.error }, authCheck.error === 'Unauthorized' ? 401 : 403);
+        }
+        
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, title, description } = body as { ai_id?: string; title?: string; description?: string };
@@ -1791,7 +1820,7 @@ async function logAdminAction(
 }
 
 // API Key + Tier helpers
-async function getApiKeyTier(env: Env, auth: string): Promise<{tier: string, key: string} | null> {
+async function getApiKeyTier(env: Env, auth: string): Promise<{tier: string, key: string, writeScope: string} | null> {
   if (!auth || !auth.startsWith('Bearer ')) return null;
   const key = auth.slice(7);
   const hash = await hashKey(key);
@@ -1799,7 +1828,7 @@ async function getApiKeyTier(env: Env, auth: string): Promise<{tier: string, key
   if (!storedStr) return null;
   try {
     const stored = JSON.parse(storedStr);
-    return { tier: stored.tier || 'free', key: hash };
+    return { tier: stored.tier || 'free', key: hash, writeScope: stored.writeScope || 'none' };
   } catch { return null; }
 }
 
@@ -1836,6 +1865,39 @@ async function incrementUsage(env: Env, key: string, endpoint: string, tier: str
   await env.DB.prepare(
     "INSERT INTO events (type, payload, timestamp) VALUES (?, ?, ?)"
   ).bind('USAGE_RECORDED', JSON.stringify({ key, endpoint, tier }), timestamp).run();
+}
+
+// Auth middleware - default-deny choke point
+async function requireAuth(env: Env, request: Request, requiredScope: 'nucleus' | 'service' | 'none'): Promise<{ok: boolean, tier?: string, error?: string}> {
+  const auth = request.headers.get('Authorization');
+  if (!auth) {
+    return { ok: false, error: 'Unauthorized' };
+  }
+  const keyInfo = await getApiKeyTier(env, auth);
+  
+  if (!keyInfo) {
+    return { ok: false, error: 'Unauthorized' };
+  }
+  
+  // Check rate limit
+  const withinLimit = await checkTierLimit(env, keyInfo.key, keyInfo.tier);
+  if (!withinLimit) {
+    return { ok: false, error: 'Rate limit exceeded' };
+  }
+  
+  // Check write scope
+  if (requiredScope === 'nucleus' && keyInfo.writeScope !== 'nucleus') {
+    return { ok: false, error: 'Forbidden - nucleus scope required' };
+  }
+  
+  if (requiredScope === 'service' && keyInfo.writeScope !== 'nucleus' && keyInfo.writeScope !== 'service') {
+    return { ok: false, error: 'Forbidden - service scope required' };
+  }
+  
+  // Increment usage
+  await incrementUsage(env, keyInfo.key, request.url, keyInfo.tier);
+  
+  return { ok: true, tier: keyInfo.tier };
 }
 
 // Queue message type
