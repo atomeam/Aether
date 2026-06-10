@@ -629,8 +629,17 @@ export default {
             let parsed = JSON.parse(rawStr);
             // Handle double-encoded values (string after first parse)
             if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) raw = parsed as Record<string, unknown>;
-          } catch { /* start fresh if corrupt */ }
+            // Ensure parsed is an object, not a string
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              raw = parsed as Record<string, unknown>;
+            } else {
+              // If parsed is not an object, start fresh
+              raw = {};
+            }
+          } catch (e) {
+            // If parse fails, start fresh
+            raw = {};
+          }
         }
         raw[ai_id] = { name: name || ai_id, status, role, last_seen: new Date().toISOString(), expires_at: new Date(Date.now() + 300000).toISOString() };
         await env.STATE_CACHE.put('ai:presence', JSON.stringify(raw));
