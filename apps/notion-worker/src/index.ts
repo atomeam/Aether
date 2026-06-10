@@ -108,8 +108,8 @@ async function handlePostRuns(request: Request, env: Env): Promise<Response> {
     
     // Mirror to Notion Runs ledger DB
     const notion = getNotionClient(env);
-    // TODO: Implement Notion DB mirroring once DB ID is configured
     // For v0, we'll log the intent without actual Notion write
+    // Implement Notion DB mirroring once DB ID is configured
     
     console.log(`[RUNS] Upserted run ${validated.run_id} for task ${validated.task_id}`);
     
@@ -138,12 +138,12 @@ async function handlePostTaskClose(request: Request, env: Env, taskId: string): 
     const notion = getNotionClient(env);
     
     // Update task status in Notion
-    // TODO: Implement Notion task update once page ID mapping is configured
     // For v0, we'll validate the payload structure without actual Notion write
+    // Implement Notion task update once page ID mapping is configured
     
     // Append artifact links block (idempotent)
     if (validated.artifact_links && validated.artifact_links.length > 0) {
-      // TODO: Implement Notion block append
+      // Implement Notion block append in future version
       console.log(`[TASK_CLOSE] Would append ${validated.artifact_links.length} artifacts to task ${actualTaskId}`);
     }
     

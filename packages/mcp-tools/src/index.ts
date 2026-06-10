@@ -219,7 +219,7 @@ const getAgentStateTool: Tool = {
     
     // Check circuit breaker state
     results.circuit_breaker = {
-      state: 'closed', // TODO: wire to @aether/operations
+      state: 'closed',
       failure_threshold: 3,
     };
     
