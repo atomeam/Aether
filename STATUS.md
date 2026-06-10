@@ -42,6 +42,13 @@ The bridge worker already has **API-key tiers** (`getApiKeyTier`, hashed keys in
 2. **Next:** Stripe checkout issuing API keys into STATE KV (tier: free/pro). ProfitLoopMetrics component already references Stripe + HubSpot.
 3. **Then:** productize the council (crew-room, weekly-digest, notion-worker apps) as a hosted automation dashboard subscription.
 
+## Added 2026-06-10 (round 2)
+
+- **Billing**: bridge routes `POST /api/billing/webhook` (Stripe signature-verified; checkout.session.completed → hashed API key in STATE KV, tier from metadata) and `GET /api/billing/key?session_id=` (one-time key retrieval). Needs `STRIPE_WEBHOOK_SECRET` wrangler secret + a Stripe Payment Link/Checkout with `metadata.tier`.
+- **Leads**: bridge `POST /api/leads` → D1 `leads` table; SPA now has a pricing + contact section posting to it.
+- **Webhook hygiene**: notion-webhook now skips bot-echo events and titleless junk; dedups and caps proposals/lessons snapshots at 200.
+- **Proposal review**: new `POST /api/proposals/review` {id, action: approve|reject} — the 12 stuck proposals finally have a transition path.
+
 ## Known remaining issues
 
 - notion-worker.atomicmoonbeam88.workers.dev unreachable (since ~2026-06-10).
