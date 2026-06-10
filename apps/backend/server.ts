@@ -4,6 +4,11 @@ import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
 import crypto from "crypto";
 import express from "express";
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as path from "path";
+import { exec } from "child_process";
+import * as os from "os";
 
 dotenv.config();
 
@@ -84,7 +89,39 @@ function validateMigration(plan: any, currentComponents: any[]) {
 // Neural Bridge (Decoupling Logic)
 const NEURAL_BRIDGE_URL = process.env.NEURAL_BRIDGE_URL || null;
 
-// --- MCP & NEXUS REGISTRY ---
+// --- ERROR LOGGING SYSTEM ---
+
+interface ErrorLog {
+  timestamp: string;
+  level: 'error' | 'warn' | 'info';
+  source: string;
+  message: string;
+  stack?: string;
+  taskId?: string;
+  context?: Record<string, any>;
+}
+
+const ERROR_LOG_FILE = path.join(process.cwd(), 'relay_errors.log');
+
+function logError(level: ErrorLog['level'], source: string, message: string, context?: Record<string, any>) {
+  const logEntry: ErrorLog = {
+    timestamp: new Date().toISOString(),
+    level,
+    source,
+    message,
+    context
+  };
+  
+  try {
+    const logLine = JSON.stringify(logEntry) + '\n';
+    fs.appendFileSync(ERROR_LOG_FILE, logLine);
+    console.log(`[${level.toUpperCase()}] [${source}] ${message}`);
+  } catch (e) {
+    console.error(`Failed to write to error log: ${e}`);
+  }
+}
+
+// --- END ERROR LOGGING SYSTEM ---
 interface IntegrationProfile {
   id: string;
   baseUrl: string;
@@ -247,11 +284,6 @@ async function startServer() {
       logEmitter.off('log', logHandler);
       clearInterval(interval);
     });
-
-    // Keep connection alive
-    req.on('close', () => {
-      logEmitter.off('log', logHandler);
-    });
   });
 
   // Stack Health Check - Returns backend status
@@ -358,6 +390,158 @@ async function startServer() {
       res.status(500).json({ jsonrpc: "2.0", error: { code: -32000, message: e.message }, id: req.body.id });
     }
   });
+
+  // --- RELAY SYSTEM ENDPOINTS ---
+  
+  // POST /relay/assign - Assign task to agent
+  app.post("/relay/assign", (req, res) => {
+    try {
+      const { to, from, task, priority = 'normal', deadline } = req.body;
+      
+      if (!to || !task) {
+        logError('warn', 'relay/assign', 'Missing required fields: to, task');
+        return res.status(400).json({ error: "Missing required fields: to, task" });
+      }
+      
+      const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const timestamp = new Date().toISOString();
+      
+      // Log task assignment
+      logError('info', 'relay/assign', `Task ${taskId} assigned to ${to} from ${from || 'manual'}`, {
+        taskId,
+        to,
+        from,
+        task,
+        priority,
+        deadline
+      });
+      
+      res.json({
+        success: true,
+        taskId,
+        to,
+        from,
+        task,
+        priority,
+        deadline,
+        status: 'unread',
+        assignedAt: timestamp
+      });
+    } catch (e: any) {
+      logError('error', 'relay/assign', e.message, { stack: e.stack });
+      res.status(500).json({ error: e.message });
+    }
+  });
+  
+  // POST /relay/status - Update task status
+  app.post("/relay/status", (req, res) => {
+    try {
+      const { taskId, status, result, error } = req.body;
+      
+      if (!taskId || !status) {
+        logError('warn', 'relay/status', 'Missing required fields: taskId, status');
+        return res.status(400).json({ error: "Missing required fields: taskId, status" });
+      }
+      
+      const timestamp = new Date().toISOString();
+      
+      logError('info', 'relay/status', `Task ${taskId} status updated to ${status}`, {
+        taskId,
+        status,
+        result,
+        error
+      });
+      
+      res.json({
+        success: true,
+        taskId,
+        status,
+        result,
+        error,
+        updatedAt: timestamp
+      });
+    } catch (e: any) {
+      logError('error', 'relay/status', e.message, { stack: e.stack });
+      res.status(500).json({ error: e.message });
+    }
+  });
+  
+  // GET /relay/queue - View task queue
+  app.get("/relay/queue", (req, res) => {
+    try {
+      const { agent } = req.query;
+      
+      logError('info', 'relay/queue', `Queue requested for agent: ${agent || 'all'}`);
+      
+      // For now, return empty queue (will query D1 in next step)
+      res.json({
+        tasks: [],
+        agent: agent || 'all',
+        timestamp: new Date().toISOString()
+      });
+    } catch (e: any) {
+      logError('error', 'relay/queue', e.message, { stack: e.stack });
+      res.status(500).json({ error: e.message });
+    }
+  });
+  
+  // GET /relay/health - Health check for relay system
+  app.get("/relay/health", (req, res) => {
+    try {
+      const health = {
+        status: 'healthy',
+        poller: 'active',
+        lastPoll: new Date().toISOString(),
+        queueDepth: 0,
+        agent: 'Devin',
+        uptime: process.uptime()
+      };
+      
+      logError('info', 'relay/health', 'Health check requested', health);
+      
+      res.json(health);
+    } catch (e: any) {
+      logError('error', 'relay/health', e.message, { stack: e.stack });
+      res.status(500).json({ error: e.message });
+    }
+  });
+  
+  // GET /relay/errors - Retrieve error logs
+  app.get("/relay/errors", (req, res) => {
+    try {
+      const { limit = 50, level } = req.query;
+      
+      if (!fs.existsSync(ERROR_LOG_FILE)) {
+        return res.json({ errors: [] });
+      }
+      
+      const logContent = fs.readFileSync(ERROR_LOG_FILE, 'utf8');
+      const logLines = logContent.trim().split('\n').filter(line => line);
+      
+      let errors = logLines.map(line => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+      
+      // Filter by level if specified
+      if (level) {
+        errors = errors.filter((e: ErrorLog) => e.level === level);
+      }
+      
+      // Limit results
+      errors = errors.slice(-parseInt(limit as string));
+      
+      res.json({ errors, count: errors.length });
+    } catch (e: any) {
+      logError('error', 'relay/errors', e.message, { stack: e.stack });
+      res.status(500).json({ error: e.message });
+    }
+  });
+  
+  // --- END RELAY SYSTEM ENDPOINTS ---
 
   // API Endpoints
   app.post("/api/build", async (req, res) => {
@@ -1234,7 +1418,7 @@ app.get("/api/vitals", async (req, res) => {
 });
 
 // Time Capsule endpoint
-app.get("/api-capsule", async (req, res) => {
+app.get("/api/capsule", async (req, res) => {
   try {
     const { getLatestCapsule, getCapsuleByDate } = await import('@aether/timecapsule');
     res.json(req.query.date ? getCapsuleByDate(req.query.date as string) : getLatestCapsule());
@@ -1243,7 +1427,7 @@ app.get("/api-capsule", async (req, res) => {
   }
 });
 
-app.post("/api-capsule", async (req, res) => {
+app.post("/api/capsule", async (req, res) => {
   try {
     const { createCapsule } = await import('@aether/timecapsule');
     res.json(await createCapsule());
@@ -1441,13 +1625,15 @@ app.post("/api/tombstone", async (req, res) => {
 app.get("/api/tombstone/:id", async (req, res) => {
   try {
     const { isDeleted, listTombstones, getDeletionStats } = await import('@aether/tombstone');
-    
-    if (req.query.id) {
-      res.json(isDeleted(req.query.id as string));
-    } else if (req.query.stats === 'true') {
+
+    // Use the declared route param (was reading req.query.id, so the :id
+    // segment was silently ignored)
+    if (req.params.id === 'stats') {
       res.json(getDeletionStats());
-    } else {
+    } else if (req.params.id === 'all') {
       res.json({ tombstones: listTombstones() });
+    } else {
+      res.json(isDeleted(req.params.id));
     }
   } catch (e: any) {
     res.json({ error: e.message });

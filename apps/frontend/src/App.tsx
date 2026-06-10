@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { UserButton } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   Terminal, 
@@ -1399,13 +1400,16 @@ export default function App() {
 
         <div className="pt-8 border-t border-white/5 flex flex-col gap-2 relative group">
           <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity blur-xl rounded-full" />
-          <div className="relative">
-            <div className="text-[8px] uppercase tracking-widest text-white/20 mb-1">Genetic Seed</div>
-            <div className="text-[10px] font-mono text-gold/60 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
-              {displayInstanceId}
-              <span className="text-[6px] border border-gold/20 px-1 rounded-sm opacity-40">SOVEREIGN</span>
+          <div className="relative flex items-center justify-between">
+            <div>
+              <div className="text-[8px] uppercase tracking-widest text-white/20 mb-1">Genetic Seed</div>
+              <div className="text-[10px] font-mono text-gold/60 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
+                {displayInstanceId}
+                <span className="text-[6px] border border-gold/20 px-1 rounded-sm opacity-40">SOVEREIGN</span>
+              </div>
             </div>
+            <UserButton afterSignOutUrl="/#/auth" />
           </div>
         </div>
       </aside>

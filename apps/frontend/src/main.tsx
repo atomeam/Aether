@@ -1,8 +1,13 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/react';
 import App from './App.tsx';
 import CrewPage from './components/CrewPage';
+import AuthPage from './components/AuthPage';
 import './index.css';
+
+// Clerk publishable key from environment
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 // Simple hash-based router
 function Router() {
@@ -17,16 +22,35 @@ function Router() {
   }, []);
 
   // Route to component mapping
-  if (route === '#/crew') {
-    return <CrewPage />;
+  if (route === '#/auth') {
+    return <AuthPage />;
   }
 
-  // Default to main App
-  return <App />;
+  if (route === '#/crew') {
+    return (
+      <SignedIn>
+        <CrewPage />
+      </SignedIn>
+    );
+  }
+
+  // Default to main App (protected)
+  return (
+    <>
+      <SignedIn>
+        <App />
+      </SignedIn>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+    </>
+  );
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Router />
+    <ClerkProvider publishableKey={clerkPubKey}>
+      <Router />
+    </ClerkProvider>
   </StrictMode>,
 );
