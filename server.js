@@ -11,6 +11,36 @@ var __export = (target, all) => {
 // ../../packages/logger/src/ledger.ts
 import fs from "fs";
 import path from "path";
+
+// Command validation allowlist for security
+const SAFE_COMMANDS = [
+  'git',
+  'ls',
+  'cat',
+  'echo',
+  'pwd',
+  'node',
+  'npm',
+  'pnpm',
+  'python',
+  'python3',
+  'pip',
+  'pip3',
+  'powershell',
+  'pwsh',
+];
+
+function validateCommand(command) {
+  if (!command || typeof command !== 'string') {
+    return false;
+  }
+  
+  const parts = command.trim().split(/\s+/);
+  const baseCommand = parts[0];
+  
+  return SAFE_COMMANDS.includes(baseCommand);
+}
+
 function commitToLedger(record2) {
   const fullRecord = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -4681,6 +4711,11 @@ async function handleMCPRequest(req) {
       }
       if (name === "execute_powershell_bus") {
         return new Promise((resolve2, reject) => {
+          if (!validateCommand(args.command)) {
+            addProcessLog(`MCP_EXEC_ERR: Unsafe command blocked - ${args.command}`);
+            return resolve2({ success: false, error: 'Unsafe command' });
+          }
+          
           addProcessLog(`MCP_EXEC: Invoking PowerShell bus - ${args.command}`);
           exec(args.command, (error, stdout, stderr) => {
             if (error) {
@@ -5211,6 +5246,14 @@ async function startServer() {
         `git add .`,
         `git commit -m "${commitMessage}"`
       ];
+
+      // Validate all commands before execution
+      for (const cmd of commands) {
+        if (!validateCommand(cmd)) {
+          return res.json({ success: false, error: `Unsafe command blocked: ${cmd}` });
+        }
+      }
+
       exec(commands.join(" && "), (error, stdout, stderr) => {
         if (error) {
           return res.json({ success: false, error: stderr || error.message });
@@ -5227,6 +5270,12 @@ async function startServer() {
       try {
         addProcessLog(`EXEC: ${command}`);
         if (process.env.LOCAL_EXEC_ENABLED === "true") {
+          // Validate command before execution
+          if (!validateCommand(command)) {
+            addProcessLog(`ERR: Unsafe command blocked - ${command}`);
+            return res.json({ success: false, error: 'Unsafe command' });
+          }
+          
           return new Promise((resolve2) => {
             exec(command, (error, stdout, stderr) => {
               addProcessLog(error ? `ERR: ${stderr}` : `SUCCESS: ${command}`);
@@ -5279,6 +5328,10 @@ async function startServer() {
   });
   async function getGitBranch() {
     return new Promise((resolve2) => {
+      if (!validateCommand("git rev-parse --abbrev-ref HEAD")) {
+        resolve2("detached");
+        return;
+      }
       exec("git rev-parse --abbrev-ref HEAD", (error, stdout) => {
         resolve2(error ? "detached" : stdout.trim());
       });
@@ -5286,6 +5339,10 @@ async function startServer() {
   }
   async function getGitStatus() {
     return new Promise((resolve2) => {
+      if (!validateCommand("git status --short")) {
+        resolve2("unknown");
+        return;
+      }
       exec("git status --short", (error, stdout) => {
         resolve2(error ? "unknown" : stdout.trim() || "clean");
       });
