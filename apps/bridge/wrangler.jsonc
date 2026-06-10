@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aether-bridge",
+  "main": "src/worker.ts",
+  "compatibility_date": "2024-12-01",
+  "account_id": "95745fedbea06314e24c27233033a37d"
+}

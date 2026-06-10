@@ -8,3 +8,9 @@ coverage/
 !.env.example
 .aider*
 .wrangler/
+.vercel/
+.turbo/
+.credential-vault/
+.devin/
+.agents_tmp/
+.learning/
