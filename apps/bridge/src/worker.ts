@@ -633,11 +633,13 @@ export default {
             if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
               raw = parsed as Record<string, unknown>;
             } else {
-              // If parsed is not an object, start fresh
+              // If parsed is not an object, log and start fresh
+              console.error(`[heartbeat] Malformed KV value, resetting registry: ${typeof parsed}`);
               raw = {};
             }
           } catch (e) {
-            // If parse fails, start fresh
+            // If parse fails, log and start fresh
+            console.error(`[heartbeat] KV parse failed, resetting registry: ${e}`);
             raw = {};
           }
         }
