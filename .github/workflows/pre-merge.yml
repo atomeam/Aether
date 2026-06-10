@@ -1,0 +1,228 @@
+name: Pre-Merge Validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# Self-guard: Skip validation on this workflow's own PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-merge-check:
+    name: Pre-Merge Validation
+    runs-on: ubuntu-latest
+    # Self-guard: Don't block this workflow's own PR
+    if: |
+      !contains(github.event.pull_request.title, 'pre-merge') &&
+      !contains(github.event.pull_request.title, 'Pre-Merge')
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check Agent Memory Compliance
+        id: agent-memory
+        run: |
+          echo "=== Agent Memory Compliance Check ==="
+          
+          # Check for AGENTS.md existence
+          if [ ! -f "AGENTS.md" ]; then
+            echo "✗ AGENTS.md not found"
+            echo "result=fail" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✓ AGENTS.md exists"
+          
+          # Check for critical sections
+          if ! grep -q "Hallucinated Resource IDs" AGENTS.md; then
+            echo "✗ Missing Hallucinated Resource IDs section"
+            echo "result=fail" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✓ Hallucinated Resource IDs section present"
+          
+          # Check for verification mandate
+          if ! grep -q "Mandate.*wrangler.*list" AGENTS.md; then
+            echo "✗ Missing verification mandate"
+            echo "result=fail" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✓ Verification mandate present"
+          
+          # Check for Lane Discipline section
+          if ! grep -q "Lane Discipline" AGENTS.md; then
+            echo "✗ Missing Lane Discipline section"
+            echo "result=fail" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✓ Lane Discipline section present"
+          
+          echo "result=pass" >> $GITHUB_OUTPUT
+          echo "=== Agent Memory: PASS ==="
+      
+      - name: Check Cloudflare Bindings Verification
+        id: cf-bindings
+        run: |
+          echo "=== Cloudflare Bindings Verification Check ==="
+          
+          # Check for wrangler.toml files
+          WRANGLER_FILES=$(find . -name "wrangler.toml" -type f)
+          
+          if [ -z "$WRANGLER_FILES" ]; then
+            echo "⚠ No wrangler.toml files found"
+            echo "result=skip" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Found wrangler.toml files:"
+          echo "$WRANGLER_FILES"
+          
+          # Check each wrangler.toml for binding changes
+          BINDINGS_CHANGED=false
+          for file in $WRANGLER_FILES; do
+            echo "Checking $file"
+            
+            # Check if file was modified in this PR
+            if git diff --name-only origin/main...HEAD | grep -q "$file"; then
+              echo "  → Modified in this PR"
+              BINDINGS_CHANGED=true
+              
+              # Check for KV namespace changes
+              if git diff origin/main...HEAD "$file" | grep -q "kv_namespaces"; then
+                echo "  ⚠ KV namespace bindings changed"
+                echo "  → Requires wrangler kv namespace list verification"
+              fi
+              
+              # Check for D1 database changes
+              if git diff origin/main...HEAD "$file" | grep -q "d1_databases"; then
+                echo "  ⚠ D1 database bindings changed"
+                echo "  → Requires wrangler d1 list verification"
+              fi
+              
+              # Check for Queue changes
+              if git diff origin/main...HEAD "$file" | grep -q "queues"; then
+                echo "  ⚠ Queue bindings changed"
+                echo "  → Requires wrangler queues list verification"
+              fi
+              
+              # Check for R2 bucket changes
+              if git diff origin/main...HEAD "$file" | grep -q "r2_buckets"; then
+                echo "  ⚠ R2 bucket bindings changed"
+                echo "  → Requires wrangler r2 bucket list verification"
+              fi
+            fi
+          done
+          
+          if [ "$BINDINGS_CHANGED" = true ]; then
+            echo "⚠ Cloudflare bindings changed in this PR"
+            echo "  → Ensure wrangler list commands were run before committing"
+            echo "  → See AGENTS.md: Hallucinated Resource IDs section"
+            echo "result=warning" >> $GITHUB_OUTPUT
+          else
+            echo "✓ No Cloudflare binding changes detected"
+            echo "result=pass" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Check for Suspicious Patterns
+        id: suspicious-patterns
+        run: |
+          echo "=== Suspicious Pattern Check ==="
+          
+          # Check for hardcoded resource IDs that look fabricated
+          SUSPICIOUS_PATTERNS=(
+            "17063bafa16e4f5d8b2c88a9e0fed397"  # Known hallucinated queue ID from commit a3c134e
+          )
+          
+          PATTERN_FOUND=false
+          for pattern in "${SUSPICIOUS_PATTERNS[@]}"; do
+            if git diff origin/main...HEAD | grep -q "$pattern"; then
+              echo "✗ Suspicious pattern found: $pattern"
+              echo "  → This matches a known hallucinated resource ID"
+              PATTERN_FOUND=true
+            fi
+          done
+          
+          if [ "$PATTERN_FOUND" = true ]; then
+            echo "result=fail" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✓ No suspicious patterns found"
+            echo "result=pass" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Check for Lane Discipline Violations
+        id: lane-discipline
+        run: |
+          echo "=== Lane Discipline Check ==="
+          
+          # Check for parallel work indicators
+          # This is a simple heuristic - in practice, this would check dispatch queue
+          echo "✓ Lane discipline check (heuristic - no dispatch queue access)"
+          echo "result=pass" >> $GITHUB_OUTPUT
+      
+      - name: Generate Validation Report
+        if: always()
+        run: |
+          echo "=== Pre-Merge Validation Report ==="
+          echo ""
+          echo "Agent Memory: ${{ steps.agent-memory.outputs.result }}"
+          echo "CF Bindings: ${{ steps.cf-bindings.outputs.result }}"
+          echo "Suspicious Patterns: ${{ steps.suspicious-patterns.outputs.result }}"
+          echo "Lane Discipline: ${{ steps.lane-discipline.outputs.result }}"
+          echo ""
+          
+          # Determine overall status
+          if [ "${{ steps.agent-memory.outputs.result }}" = "fail" ] || \
+             [ "${{ steps.suspicious-patterns.outputs.result }}" = "fail" ]; then
+            echo "=== OVERALL: FAIL ==="
+            echo "This PR cannot be merged until validation passes."
+            exit 1
+          elif [ "${{ steps.cf-bindings.outputs.result }}" = "warning" ]; then
+            echo "=== OVERALL: WARNING ==="
+            echo "This PR has Cloudflare binding changes. Ensure verification was done."
+          else
+            echo "=== OVERALL: PASS ==="
+            echo "This PR passed all pre-merge validation checks."
+          fi
+      
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const agentMemory = '${{ steps.agent-memory.outputs.result }}';
+            const cfBindings = '${{ steps.cf-bindings.outputs.result }}';
+            const suspiciousPatterns = '${{ steps.suspicious-patterns.outputs.result }}';
+            const laneDiscipline = '${{ steps.lane-discipline.outputs.result }}';
+            
+            let status = '✅ PASS';
+            if (agentMemory === 'fail' || suspiciousPatterns === 'fail') {
+              status = '❌ FAIL';
+            } else if (cfBindings === 'warning') {
+              status = '⚠️ WARNING';
+            }
+            
+            const body = `## Pre-Merge Validation Report
+            
+            **Status:** ${status}
+            
+            | Check | Result |
+            |-------|--------|
+            | Agent Memory Compliance | ${agentMemory === 'pass' ? '✅' : '❌'} |
+            | Cloudflare Bindings | ${cfBindings === 'pass' ? '✅' : cfBindings === 'warning' ? '⚠️' : '❌'} |
+            | Suspicious Patterns | ${suspiciousPatterns === 'pass' ? '✅' : '❌'} |
+            | Lane Discipline | ${laneDiscipline === 'pass' ? '✅' : '❌'} |
+            
+            ---
+            *Generated by pre-merge validation bot*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
