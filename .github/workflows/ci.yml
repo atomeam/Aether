@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       
-      - uses: actions/setup-node@1d0ff469b5ceaf9d42421da094586ffc1d1a4d77 # v4.2.2
+      - uses: actions/setup-node@b39ff52e0246c2c3ec9ce4f9efb7b4a6f0e8ac8f # v4.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       
-      - uses: actions/setup-node@1d0ff469b5ceaf9d42421da094586ffc1d1a4d77 # v4.2.2
+      - uses: actions/setup-node@b39ff52e0246c2c3ec9ce4f9efb7b4a6f0e8ac8f # v4.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       
-      - uses: actions/setup-node@1d0ff469b5ceaf9d42421da094586ffc1d1a4d77 # v4.2.2
+      - uses: actions/setup-node@b39ff52e0246c2c3ec9ce4f9efb7b4a6f0e8ac8f # v4.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
