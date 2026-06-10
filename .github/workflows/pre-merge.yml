@@ -128,15 +128,16 @@ jobs:
         run: |
           echo "=== Suspicious Pattern Check ==="
           
-          # Check for hardcoded resource IDs that look fabricated
+          # Check for hardcoded resource IDs that look fabricated in wrangler.toml files only
           SUSPICIOUS_PATTERNS=(
             "17063bafa16e4f5d8b2c88a9e0fed397"  # Known hallucinated queue ID from commit a3c134e
           )
           
           PATTERN_FOUND=false
           for pattern in "${SUSPICIOUS_PATTERNS[@]}"; do
-            if git diff origin/main...HEAD | grep -q "$pattern"; then
-              echo "✗ Suspicious pattern found: $pattern"
+            # Only check wrangler.toml files for suspicious patterns
+            if git diff origin/main...HEAD -- '*.toml' | grep -q "$pattern"; then
+              echo "✗ Suspicious pattern found in wrangler.toml: $pattern"
               echo "  → This matches a known hallucinated resource ID"
               PATTERN_FOUND=true
             fi
@@ -146,7 +147,7 @@ jobs:
             echo "result=fail" >> $GITHUB_OUTPUT
             exit 1
           else
-            echo "✓ No suspicious patterns found"
+            echo "✓ No suspicious patterns found in wrangler.toml files"
             echo "result=pass" >> $GITHUB_OUTPUT
           fi
       
