@@ -29,7 +29,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           
-      - run: npm ci
+      - run: npm install
         working-directory: .
         
       - run: npx turbo run test --parallel
@@ -46,7 +46,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           
-      - run: npm ci
+      - run: npm install
         working-directory: .
         
       - run: npx turbo run typecheck --parallel
@@ -64,7 +64,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           
-      - run: npm ci
+      - run: npm install
         working-directory: .
         
       - run: npx turbo run build
