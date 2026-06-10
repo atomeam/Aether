@@ -15,7 +15,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "start": "npm run start -w @aether/backend",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "smoke": "node scripts/smoke-endpoints.mjs"
   },
   "engines": {
     "node": ">=18.0.0"
