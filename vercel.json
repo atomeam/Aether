@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "framework": "express",
+  "framework": null,
+  "rootDirectory": ".",
   "builds": [
     {
       "src": "apps/backend/dist/server.cjs",
