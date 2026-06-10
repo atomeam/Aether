@@ -155,7 +155,7 @@ const lessonsWriteTool: Tool = {
   name: 'lessons_write',
   description: 'Write a lesson to the Lessons DB',
   async execute(args) {
-    const { reflect } = await import('./src/agents/reflector.js');
+    const { reflect } = await import('../../../apps/backend/src/agents/reflector.js');
     const result = await reflect({
       pattern: args.pattern as string,
       suggestion: args.suggestion as string,

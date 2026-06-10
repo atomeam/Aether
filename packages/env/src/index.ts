@@ -44,6 +44,12 @@ export function parseEnv<T>(
       const path = issue.path.join(".") || "(root)"
       console.error(`  - ${path}: ${issue.message}`)
     }
+    // Degraded mode: keep serving non-AI routes (health, static) instead of dying.
+    // Opt in with ALLOW_DEGRADED=1 (set on Vercel so a missing key can't kill /api/*).
+    if (process.env.ALLOW_DEGRADED === "1") {
+      console.warn(`[${label}] ALLOW_DEGRADED=1 — continuing with partial env; AI features disabled`)
+      return source as T
+    }
     process.exit(1)
   }
   return result.data
