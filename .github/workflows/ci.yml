@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    # Run health checks every hour
+    - cron: '0 * * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +15,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
+  BRIDGE_URL: "https://bridge.a-to-mind.com"
 
 jobs:
   test:
@@ -65,3 +69,35 @@ jobs:
         
       - run: npx turbo run build
         working-directory: .
+
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Bridge Worker
+        run: |
+          echo "Testing Bridge Worker..."
+          curl -f ${{ env.BRIDGE_URL }}/health
+          curl -f ${{ env.BRIDGE_URL }}/api/stack
+          curl -f ${{ env.BRIDGE_URL }}/crew/status
+          echo "✓ Bridge Worker is healthy"
+
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Check Bridge Worker Health
+        run: |
+          echo "=== Health Check ==="
+          status=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.BRIDGE_URL }}/health)
+          if [ "$status" -eq 200 ]; then
+            echo "✓ Bridge Worker is healthy"
+          else
+            echo "✗ Bridge Worker is down (HTTP $status)"
+            exit 1
+          fi
