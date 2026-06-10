@@ -36,6 +36,7 @@ export class AlertEngine extends EventEmitter {
   private rules = new Map<string, AlertRule>();
   
   constructor() {
+    super();
     for (const rule of DEFAULT_RULES) {
       this.rules.set(rule.id, rule);
     }

@@ -28,7 +28,8 @@ describe('parseEnv', () => {
 
   it('exits with error on missing required GEMINI_API_KEY', () => {
     const exitMock = vi.fn()
-    vi.stubGlobal('process', { ...process, exit: exitMock })
+    // vitest config sets ALLOW_DEGRADED=1 globally; this test needs the strict path
+    vi.stubGlobal('process', { ...process, env: { ...process.env, ALLOW_DEGRADED: undefined }, exit: exitMock })
     
     parseEnv(BackendEnvSchema as z.ZodSchema<any>, {
       NODE_ENV: 'development',
@@ -36,6 +37,19 @@ describe('parseEnv', () => {
     }, 'test')
     
     expect(exitMock).toHaveBeenCalledWith(1)
+  })
+
+  it('continues with partial env when ALLOW_DEGRADED=1', () => {
+    const exitMock = vi.fn()
+    vi.stubGlobal('process', { ...process, env: { ...process.env, ALLOW_DEGRADED: '1' }, exit: exitMock })
+    
+    const env = parseEnv(BackendEnvSchema as z.ZodSchema<any>, {
+      NODE_ENV: 'development',
+      LOG_LEVEL: 'info',
+    }, 'test')
+    
+    expect(exitMock).not.toHaveBeenCalled()
+    expect(env).toBeDefined()
   })
 
   it('transforms CURATOR_ALLOW_LIST from comma-separated string', () => {

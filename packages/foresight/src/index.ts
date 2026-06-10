@@ -49,14 +49,14 @@ export function scorePredictions(windowDays = 7): { scored: number; accuracy: nu
       // In production, get actual outcome from lessons
       // For now, simulate based on confidence
       const actual = pred.predictedConfidence > 0.5 ? 'success' : 'failure';
-      const correct = actual === pred.predictedOutcome;
+      const isCorrect = actual === pred.predictedOutcome;
       
       pred.actualOutcome = actual;
-      pred.actualConfidence = correct ? 1.0 : 0.0;
+      pred.actualConfidence = isCorrect ? 1.0 : 0.0;
       pred.scoredAt = now;
       
       scored++;
-      if (correct) correct++;
+      if (isCorrect) correct++;
     }
     
     newLines.push(JSON.stringify(pred));

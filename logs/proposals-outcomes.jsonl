@@ -9,3 +9,12 @@
 {"timestamp":"2026-05-19T01:59:08.259Z","traceId":"trace_abc","prompt":"Add a stat","promptHash":"hash123","verdict":"APPROVED","reason":"valid","rejectedIds":[],"rawActions":[{"action":"ADD","plan":{"type":"stat"}}]}
 {"timestamp":"2026-05-19T01:59:08.260Z","traceId":"trace_rejected","prompt":"Invalid","promptHash":"bad","verdict":"REJECTED","reason":"Unknown component type","rejectedIds":["stat-fake-1"],"rawActions":[{"action":"ADD"}]}
 {"timestamp":"2026-05-19T01:59:08.261Z","traceId":"trace_123","prompt":"Use API key abc123","promptHash":"hash","verdict":"APPROVED","reason":"ok","rejectedIds":[],"rawActions":[]}
+{"timestamp":"2026-06-10T22:49:23.346Z","traceId":"trace_abc","prompt":"Add a stat","promptHash":"hash123","verdict":"APPROVED","reason":"valid","rejectedIds":[],"rawActions":[{"action":"ADD","plan":{"type":"stat"}}]}
+{"timestamp":"2026-06-10T22:49:23.348Z","traceId":"trace_rejected","prompt":"Invalid","promptHash":"bad","verdict":"REJECTED","reason":"Unknown component type","rejectedIds":["stat-fake-1"],"rawActions":[{"action":"ADD"}]}
+{"timestamp":"2026-06-10T22:49:23.352Z","traceId":"trace_123","prompt":"Use API key abc123","promptHash":"hash","verdict":"APPROVED","reason":"ok","rejectedIds":[],"rawActions":[]}
+{"timestamp":"2026-06-10T22:50:15.098Z","traceId":"trace_abc","prompt":"Add a stat","promptHash":"hash123","verdict":"APPROVED","reason":"valid","rejectedIds":[],"rawActions":[{"action":"ADD","plan":{"type":"stat"}}]}
+{"timestamp":"2026-06-10T22:50:15.117Z","traceId":"trace_rejected","prompt":"Invalid","promptHash":"bad","verdict":"REJECTED","reason":"Unknown component type","rejectedIds":["stat-fake-1"],"rawActions":[{"action":"ADD"}]}
+{"timestamp":"2026-06-10T22:50:15.140Z","traceId":"trace_123","prompt":"Use API key abc123","promptHash":"hash","verdict":"APPROVED","reason":"ok","rejectedIds":[],"rawActions":[]}
+{"timestamp":"2026-06-10T22:51:21.805Z","traceId":"trace_abc","prompt":"Add a stat","promptHash":"hash123","verdict":"APPROVED","reason":"valid","rejectedIds":[],"rawActions":[{"action":"ADD","plan":{"type":"stat"}}]}
+{"timestamp":"2026-06-10T22:51:21.814Z","traceId":"trace_rejected","prompt":"Invalid","promptHash":"bad","verdict":"REJECTED","reason":"Unknown component type","rejectedIds":["stat-fake-1"],"rawActions":[{"action":"ADD"}]}
+{"timestamp":"2026-06-10T22:51:21.822Z","traceId":"trace_123","prompt":"Use API key abc123","promptHash":"hash","verdict":"APPROVED","reason":"ok","rejectedIds":[],"rawActions":[]}

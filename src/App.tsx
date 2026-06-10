@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import PricingContact from './components/PricingContact';
 import { 
   Sparkles, 
   Terminal, 
@@ -1838,6 +1839,8 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PricingContact />
 
     </motion.div>
   );

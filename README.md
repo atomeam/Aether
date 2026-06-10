@@ -36,13 +36,22 @@ http://localhost:5173
 ```text
 aether/
 ├── apps/
-│   ├── backend/    # @aether/backend (port 3000)
-│   ├── frontend/  # @aether/frontend (port 5173)
-│   └── bridge/    # @aether/bridge
-├── packages/      # Shared packages
-├── turbo.json    # Turborepo configuration
-└── package.json  # Root with workspaces config
+│   ├── backend/        # @aether/backend — express API, deployed to Vercel (port 3000 local)
+│   ├── frontend/       # @aether/frontend (port 5173)
+│   ├── bridge/         # @aether/bridge — Cloudflare Worker (bridge.a-to-mind.com)
+│   ├── aether-verifier/  crew-room/  homebase/  notion-worker/  weekly-digest/
+├── packages/           # 40+ shared packages (council, curator, alerts, …)
+├── src/                # Apex SPA (Vite + React) served at a-to-mind.com
+├── docs/               # See docs/README.md for the index
+├── STATUS.md           # Current state + money roadmap — read this first
+├── vercel.json         # Apex deploy (backend bundle + /api/* routes)
+└── wrangler.toml       # Bridge worker deploy (via CI only)
 ```
+
+## Deploy & env
+
+- Vercel (apex): set `GEMINI_API_KEY`, `ALLOW_DEGRADED=1`, `NODE_ENV=production`.
+- Bridge (Cloudflare): deploys via CI — never `wrangler deploy` from local. Billing needs `STRIPE_WEBHOOK_SECRET` secret.
 
 ## Scripts
 

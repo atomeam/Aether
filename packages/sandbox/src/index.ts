@@ -82,7 +82,7 @@ export interface PathPolicy {
 }
 
 // Default path policy
-const DEFAULT_PATH_POLICY: PathPolicy[] = [
+export const DEFAULT_PATH_POLICY: PathPolicy[] = [
   {
     tool: 'file_read',
     basePaths: {

@@ -37,3 +37,25 @@ export function commitToLedger(record: Omit<ProposalRecord, "timestamp">): void 
     console.error("TELEMETRY ERROR: Failed to commit transaction to ledger:", err)
   }
 }
+/**
+ * Reads ledger records newer than `since` ms ago. Fail-soft: returns [] on error.
+ */
+export async function readRecords(since: number = 3600000): Promise<Array<Record<string, unknown>>> {
+  try {
+    if (!fs.existsSync(LEDGER_PATH)) return []
+    const cutoff = Date.now() - since
+    return fs
+      .readFileSync(LEDGER_PATH, "utf8")
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        try { return JSON.parse(line) as Record<string, unknown> } catch { return null }
+      })
+      .filter((r): r is Record<string, unknown> => r !== null)
+      .filter((r) => !r.timestamp || new Date(String(r.timestamp)).getTime() >= cutoff)
+  } catch (err) {
+    console.error("TELEMETRY ERROR: Failed to read ledger:", err)
+    return []
+  }
+}
