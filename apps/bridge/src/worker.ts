@@ -42,7 +42,38 @@ function getBindings(env: Env) {
   };
 }
 
-// Cloudflare Workers export
+// ─── Authentication Middleware ─────────────────────────────────────
+
+interface AuthScope {
+  scope: 'nucleus' | 'service';
+}
+
+function requireAuth(env: Env, scope: AuthScope['scope']): (request: Request) => Response | null {
+  return (request: Request) => {
+    const authHeader = request.headers.get('Authorization');
+    
+    if (!authHeader) {
+      return json({ error: 'Missing Authorization header' }, 401);
+    }
+    
+    const key = authHeader.replace('Bearer ', '');
+    const expectedKey = scope === 'nucleus' 
+      ? env.BRIDGE_NUCLEUS_KEY 
+      : env.BRIDGE_SERVICE_KEY;
+    
+    if (!expectedKey) {
+      return json({ error: 'Auth key not configured' }, 500);
+    }
+    
+    if (key !== expectedKey) {
+      return json({ error: 'Invalid auth key' }, 403);
+    }
+    
+    return null; // Auth passed
+  };
+}
+
+// ─── Cloudflare Workers export ─────────────────────────────────────
 // ─── Rate Limiter ────────────────────────────────────────────────────
 const rateLimiter = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 60;       // requests per minute per IP
@@ -281,8 +312,11 @@ export default {
         return json({ ok: true, hash, collision });
       }
       
-      // POST /proposals/write - write proposals snapshot (workflow writer)
+      // POST /proposals/write - write proposals snapshot (workflow writer) - AUTH REQUIRED
       if (path === '/proposals/write' && method === 'POST' && env.STATE) {
+        const authError = requireAuth(env, 'nucleus')(request);
+        if (authError) return authError;
+        
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -301,8 +335,11 @@ export default {
         }
       }
       
-      // POST /lessons/write - write lessons index (workflow writer)
+      // POST /lessons/write - write lessons index (workflow writer) - AUTH REQUIRED
       if (path === '/lessons/write' && method === 'POST' && env.STATE_CACHE) {
+        const authError = requireAuth(env, 'nucleus')(request);
+        if (authError) return authError;
+        
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -343,42 +380,45 @@ export default {
           return json({ ok: true }, 200);
         }
         
-        // Check signature for all non-handshake requests
-        if (signature && env.NOTION_WEBHOOK_SECRET) {
-          // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
-          const enc = new TextEncoder();
-          const key = await crypto.subtle.importKey(
-            'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-          );
-          const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
-          const expectedHex = Array.from(new Uint8Array(sigBuf))
-            .map(b => b.toString(16).padStart(2, '0')).join('');
-          const providedHex = signature.replace(/^sha256=/, '');
-          
-          // Constant-time comparison via double-HMAC
-          if (expectedHex.length !== providedHex.length) {
-            console.log('[Webhook] HMAC verification FAILED');
-            return json({ ok: false, error: 'Invalid signature' }, 401);
-          }
-          const cmpKey = await crypto.subtle.importKey(
-            'raw', enc.encode('hmac-cmp'),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-          );
-          const mac1 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex)));
-          const mac2 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex)));
-          let eq = true;
-          for (let i = 0; i < mac1.length; i++) eq = eq && (mac1[i] === mac2[i]);
-          if (!eq) {
-            console.log('[Webhook] HMAC verification FAILED');
-            return json({ ok: false, error: 'Invalid signature' }, 401);
-          }
-          console.log('[Webhook] HMAC verification PASSED');
-        } else if (!env.NOTION_WEBHOOK_SECRET) {
-          console.log('[Webhook] WARNING: NOTION_WEBHOOK_SECRET not configured');
-        } else {
-          console.log('[Webhook] WARNING: No signature header');
+        // Check signature for all non-handshake requests - MANDATORY
+        if (!signature) {
+          console.log('[Webhook] ERROR: Missing signature header');
+          return json({ ok: false, error: 'Missing signature header' }, 401);
         }
+        
+        if (!env.NOTION_WEBHOOK_SECRET) {
+          console.log('[Webhook] ERROR: NOTION_WEBHOOK_SECRET not configured');
+          return json({ ok: false, error: 'Webhook secret not configured' }, 500);
+        }
+        
+        // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+        const expectedHex = Array.from(new Uint8Array(sigBuf))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        const providedHex = signature.replace(/^sha256=/, '');
+        
+        // Constant-time comparison via XOR accumulation
+        if (expectedHex.length !== providedHex.length) {
+          console.log('[Webhook] HMAC verification FAILED');
+          return json({ ok: false, error: 'Invalid signature' }, 401);
+        }
+        
+        let xor = 0;
+        for (let i = 0; i < expectedHex.length; i++) {
+          xor |= expectedHex.charCodeAt(i) ^ providedHex.charCodeAt(i);
+        }
+        
+        if (xor !== 0) {
+          console.log('[Webhook] HMAC verification FAILED');
+          return json({ ok: false, error: 'Invalid signature' }, 401);
+        }
+        
+        console.log('[Webhook] HMAC verification PASSED');
         
         try {
           const event = parsed;
@@ -607,8 +647,11 @@ export default {
         return json({ ok: true, count: aiList.length, ais: Object.fromEntries(aiList) });
       }
 
-      // POST /api/ai/heartbeat - update AI presence
+      // POST /api/ai/heartbeat - update AI presence - AUTH REQUIRED
       if (path === '/api/ai/heartbeat' && method === 'POST') {
+        const authError = requireAuth(env, 'service')(request);
+        if (authError) return authError;
+        
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, name, status = 'active', role } = body as { ai_id?: string; name?: string; status?: string; role?: string };
@@ -630,8 +673,11 @@ export default {
         return json({ ok: true, ai_id, status });
       }
 
-      // POST /api/council/log - log a conversation message
+      // POST /api/council/log - log a conversation message - AUTH REQUIRED
       if (path === '/api/council/log' && method === 'POST') {
+        const authError = requireAuth(env, 'service')(request);
+        if (authError) return authError;
+        
         const body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
         const { session_id, agent_id, role, content } = body;
         if (!session_id || !agent_id || !role || !content) {
@@ -836,8 +882,11 @@ export default {
         }
       }
 
-      // POST /tasks - create a task and log to BRIDGE_DB audit trail
+      // POST /tasks - create a task and log to BRIDGE_DB audit trail - AUTH REQUIRED
       if (path === '/tasks' && method === 'POST') {
+        const authError = requireAuth(env, 'service')(request);
+        if (authError) return authError;
+        
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, title, description } = body as { ai_id?: string; title?: string; description?: string };
@@ -1656,6 +1705,8 @@ interface Env {
   NOTION_API_TOKEN: string;
   NOTION_BRIDGE_COMMANDS_DB_ID: string;
   NOTION_BRIDGE_LOGS_DB_ID: string;
+  BRIDGE_NUCLEUS_KEY: string; // Auth key for nucleus scope endpoints
+  BRIDGE_SERVICE_KEY: string; // Auth key for service scope endpoints
   ATOMIND_DEVIN_SECRET: string;
   ATOMIND_GEMINI_SECRET: string;
   ATOMIND_VIKTOR_SECRET: string;

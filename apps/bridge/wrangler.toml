@@ -85,6 +85,9 @@ service = "aether"
 
 [vars]
 WORKER_ROLE = "executor"
+# Auth keys for write endpoints (set via wrangler secret put in production)
+# BRIDGE_NUCLEUS_KEY = "" # Set via: wrangler secret put BRIDGE_NUCLEUS_KEY
+# BRIDGE_SERVICE_KEY = "" # Set via: wrangler secret put BRIDGE_SERVICE_KEY
 [[routes]]
 pattern = "bridge.a-to-mind.com"
 custom_domain = true
