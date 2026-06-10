@@ -610,7 +610,14 @@ export default {
       // POST /api/ai/heartbeat - update AI presence
       if (path === '/api/ai/heartbeat' && method === 'POST') {
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
-        const body = await request.json() as Record<string, unknown>;
+        
+        let body: Record<string, unknown>;
+        try {
+          body = await request.json() as Record<string, unknown>;
+        } catch (e) {
+          return json({ error: 'Invalid JSON body' }, 400);
+        }
+        
         const { ai_id, name, status = 'active', role } = body as { ai_id?: string; name?: string; status?: string; role?: string };
         if (!ai_id) return json({ error: 'ai_id required' }, 400);
 
@@ -632,7 +639,13 @@ export default {
 
       // POST /api/council/log - log a conversation message
       if (path === '/api/council/log' && method === 'POST') {
-        const body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
+        let body: { session_id: string; agent_id: string; role: string; content: string };
+        try {
+          body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
+        } catch (e) {
+          return json({ error: 'Invalid JSON body' }, 400);
+        }
+        
         const { session_id, agent_id, role, content } = body;
         if (!session_id || !agent_id || !role || !content) {
           return json({ error: 'session_id, agent_id, role, content required' }, 400);
