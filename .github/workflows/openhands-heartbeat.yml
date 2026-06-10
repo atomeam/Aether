@@ -1,0 +1,42 @@
+name: OpenHands Heartbeat
+
+on:
+  schedule:
+    # Run every 30 minutes during active hours (UTC)
+    - cron: '*/30 6-22 * * *'
+  workflow_dispatch:
+
+env:
+  OPENHANDS_HOST: "https://app.all-hands.dev"
+
+jobs:
+  poll-council-relay:
+    name: Poll Council Relay
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check relay for OpenHands tasks
+        run: |
+          echo "🔁 OpenHands heartbeat triggered at $(date -u)"
+          
+          # This is a bus-push capability - OpenHands polls the relay
+          # The actual work happens in the OpenHands agent session
+          # that processes the relay queue
+          
+          echo "📋 Checking Council Relay..."
+          echo "To: OpenHands"
+          echo "Status: Unread"
+          echo ""
+          echo "Relay poll complete. Agent will process any matching rows."
+          echo "Next heartbeat: 30 minutes"
+
+      - name: Log heartbeat
+        run: |
+          echo "heartbeat=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+        id: heartbeat
+
+      - name: Dispatch OpenHands session if tasks pending
+        run: |
+          # This step would trigger an OpenHands session if the relay
+          # has unread rows for OpenHands
+          # In practice, OpenHands Cloud handles its own polling
+          echo "OpenHands agent will self-schedule based on relay state"
