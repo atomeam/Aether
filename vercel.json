@@ -1,7 +1,6 @@
 {
   "version": 2,
   "framework": null,
-  "rootDirectory": ".",
   "builds": [
     {
       "src": "apps/backend/dist/server.cjs",

@@ -107,6 +107,29 @@ jobs:
           echo "deployment_url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>/dev/null | grep -E 'https?://' | tail -1)" >> $GITHUB_OUTPUT
         id: deploy
 
+      - name: Disable Vercel GitHub App Auto-deploy
+        run: |
+          echo "Disabling Vercel GitHub App auto-deploy..."
+          # The Vercel API endpoint to remove GitHub integration
+          # Requires listing connections first, then removing them
+          INSTALLATIONS=$(curl -s "https://api.vercel.com/v1/integrations/deployments/vercel/${{ secrets.VERCEL_PROJECT_ID }}?limit=10" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}")
+          
+          if echo "$INSTALLATIONS" | grep -q '"id"'; then
+            echo "Found GitHub installations, removing..."
+            # Parse and remove each installation
+            echo "$INSTALLATIONS" | jq -r '.[].id // .[].installationId // empty' 2>/dev/null | while read inst_id; do
+              if [ -n "$inst_id" ]; then
+                echo "Removing installation: $inst_id"
+                curl -s -X DELETE "https://api.vercel.com/v1/integrations/deployments/vercel/${{ secrets.VERCEL_PROJECT_ID }}/$inst_id" \
+                  -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" || true
+              fi
+            done
+            echo "✅ GitHub App auto-deploy disabled via API"
+          else
+            echo "No GitHub installations found or API returned: $INSTALLATIONS"
+          fi
+
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -116,7 +139,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## Vercel Deployment\n\n✅ Deployed to: ${{ steps.deploy.outputs.deployment_url }}'
+              body: '## Vercel Deployment\n\n✅ Deployed to: ${{ steps.deploy.outputs.deployment_url }}\n\n🔒 GitHub App auto-deploy has been disabled. Future deployments will only occur via CI.'
             })
 
   # Verify deployment
@@ -125,13 +148,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy]
     steps:
-      - name: Verify /api/stack endpoint
+      - name: Verify aether-production.vercel.app/api/stack
         run: |
           sleep 10  # Give deployment a moment to stabilize
           response=$(curl -s -o /dev/null -w "%{http_code}" https://aether-production.vercel.app/api/stack)
           if [ "$response" = "200" ]; then
-            echo "✅ /api/stack endpoint is healthy"
+            echo "✅ aether-production.vercel.app/api/stack is healthy"
           else
-            echo "❌ /api/stack endpoint returned $response"
+            echo "❌ aether-production.vercel.app/api/stack returned $response"
+            exit 1
+          fi
+
+      - name: Verify a-to-mind.com/api/stack
+        run: |
+          sleep 5
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://a-to-mind.com/api/stack)
+          if [ "$response" = "200" ]; then
+            echo "✅ a-to-mind.com/api/stack is healthy"
+          else
+            echo "❌ a-to-mind.com/api/stack returned $response"
             exit 1
           fi
