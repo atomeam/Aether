@@ -4,6 +4,11 @@ import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
 import crypto from "crypto";
 import express from "express";
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as path from "path";
+import { exec } from "child_process";
+import * as os from "os";
 
 dotenv.config();
 
@@ -21,6 +26,35 @@ const ai = new GoogleGenAI({
     }
   }
 });
+
+// Command validation allowlist for security
+const SAFE_COMMANDS = [
+  'git',
+  'ls',
+  'cat',
+  'echo',
+  'pwd',
+  'node',
+  'npm',
+  'pnpm',
+  'python',
+  'python3',
+  'pip',
+  'pip3',
+  'powershell',
+  'pwsh',
+];
+
+function validateCommand(command: string): boolean {
+  if (!command || typeof command !== 'string') {
+    return false;
+  }
+  
+  const parts = command.trim().split(/\s+/);
+  const baseCommand = parts[0];
+  
+  return SAFE_COMMANDS.includes(baseCommand);
+}
 
 // Robust Gemini API Wrapper with Exponential Backoff
 async function callGeminiWithRetry(modelName: string, prompt: any, config: any = {}, maxRetries = 3) {
@@ -148,6 +182,11 @@ async function handleMCPRequest(req: MCPRequest) {
       
       if (name === 'execute_powershell_bus') {
         return new Promise((resolve, reject) => {
+          if (!validateCommand(args.command)) {
+            addProcessLog(`MCP_EXEC_ERR: Unsafe command blocked - ${args.command}`);
+            return resolve({ success: false, error: 'Unsafe command' });
+          }
+          
           addProcessLog(`MCP_EXEC: Invoking PowerShell bus - ${args.command}`);
           exec(args.command, (error, stdout, stderr) => {
             if (error) {
@@ -779,6 +818,13 @@ async function startServer() {
         `git commit -m "${commitMessage}"`
       ];
 
+      // Validate all commands before execution
+      for (const cmd of commands) {
+        if (!validateCommand(cmd)) {
+          return res.json({ success: false, error: `Unsafe command blocked: ${cmd}` });
+        }
+      }
+
       exec(commands.join(" && "), (error, stdout, stderr) => {
         if (error) {
           return res.json({ success: false, error: stderr || error.message });
@@ -799,6 +845,12 @@ async function startServer() {
         addProcessLog(`EXEC: ${command}`);
         // If we are actually on a host capable of execution (determined by env)
         if (process.env.LOCAL_EXEC_ENABLED === 'true') {
+           // Validate command before execution
+           if (!validateCommand(command)) {
+             addProcessLog(`ERR: Unsafe command blocked - ${command}`);
+             return res.json({ success: false, error: 'Unsafe command' });
+           }
+           
            // Real execution logic
            return new Promise((resolve) => {
              exec(command, (error, stdout, stderr) => {
@@ -856,6 +908,10 @@ async function startServer() {
 
   async function getGitBranch(): Promise<string> {
     return new Promise((resolve) => {
+      if (!validateCommand("git rev-parse --abbrev-ref HEAD")) {
+        resolve("detached");
+        return;
+      }
       exec("git rev-parse --abbrev-ref HEAD", (error, stdout) => {
         resolve(error ? "detached" : stdout.trim());
       });
@@ -864,6 +920,10 @@ async function startServer() {
 
   async function getGitStatus(): Promise<string> {
     return new Promise((resolve) => {
+      if (!validateCommand("git status --short")) {
+        resolve("unknown");
+        return;
+      }
       exec("git status --short", (error, stdout) => {
         resolve(error ? "unknown" : stdout.trim() || "clean");
       });
