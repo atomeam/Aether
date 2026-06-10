@@ -51,7 +51,7 @@ The bridge worker already has **API-key tiers** (`getApiKeyTier`, hashed keys in
 
 ## Known remaining issues
 
-- notion-worker.atomicmoonbeam88.workers.dev unreachable (since ~2026-06-10).
+- ~~notion-worker unreachable~~ RESOLVED: it lives at notion.a-to-mind.com (healthy, verified 2026-06-10 23:06 UTC); the workers.dev alias is intentionally disabled. Duplicate route block in its wrangler.toml removed.
 - Deployed bridge runs uncommitted local code (drift); standing rule: no `wrangler deploy` from local.
 - Curator: 12 proposals stuck pending_review; notion-webhook writes junk rows (echo-loop suspicion).
 - Backend tests fail under vitest due to env hard-exit — run with `ALLOW_DEGRADED=1`.
