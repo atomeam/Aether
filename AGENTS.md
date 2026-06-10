@@ -166,3 +166,11 @@ The root cause was a combination of:
 
 This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
 This error would have caused runtime failures when the worker tried to access the non-existent queue binding. The correction involved commenting out the queue bindings until the actual queue is created via Cloudflare API.
+
+## Cross-agent push relay (added 2026-06-10)
+
+Cowork/Claude sessions have no SSH or direct push access. Protocol:
+1. Cowork commits locally in `C:\Users\adamm\Claude\Projects\a-to-mind.com` (full Aether clone).
+2. A local agent (Devin CLI, gh-authed as atomeam) fetches from that path:
+   `git -C C:\Users\adamm\Aether fetch C:\Users\adamm\Claude\Projects\a-to-mind.com main:cowork-import`
+3. Push as a feature branch and open a PR. **main is hard-protected** (1 review + CodeRabbit, CI Test/TypeCheck/Build, Pre-Merge Validation; linear history) — never target main directly.
