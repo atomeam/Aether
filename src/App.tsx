@@ -26,7 +26,8 @@ import {
   Monitor,
   Info,
   TriangleAlert,
-  GitPullRequest
+  GitPullRequest,
+  Users
 } from 'lucide-react';
 
 import { PrimitiveRenderer, ComponentSpec } from './components/Primitives';
@@ -127,7 +128,7 @@ const CognitiveNodeGraph = ({ activeNodeTitle, cpu, directives }: { activeNodeTi
           transition={{ duration: 2, repeat: Infinity }}
         />
         <text x="50%" y="50%" textAnchor="middle" dy=".3em" className="fill-gold font-mono text-[6px] uppercase font-bold tracking-tighter">
-          AXIOM_CORE
+          ALPHA_CORE
         </text>
 
         {/* Dynamic Directive Nodes */}
@@ -393,7 +394,7 @@ export default function App() {
     const saved = localStorage.getItem('axiom_snapshots');
     return saved ? JSON.parse(saved) : [];
   });
-  const [logs, setLogs] = useState<string[]>(['Axiom Orchestrator Initialized.']);
+  const [logs, setLogs] = useState<string[]>(['ALPHA Orchestrator Initialized.']);
   const [rejectedIntents, setRejectedIntents] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('axiom_rejected_intents');
     return new Set(saved ? JSON.parse(saved) : []);
@@ -755,14 +756,14 @@ export default function App() {
         } else {
           setIsQuotaExhausted(false);
           setRetryDelay(30000); // Reset to 30s for healthy neural link
-          addLog(`Axiom Analysis: ${data.actions.length} operations ready.`);
+          addLog(`ALPHA Analysis: ${data.actions.length} operations ready.`);
           const patches = data.actions.filter(a => a.action === 'PATCH');
           if (patches.length > 0) {
             addLog(`Core Kernel: Distributed ${patches.length} logical patches.`);
           }
         }
       } else {
-        addLog(`Axiom Sync Error: ${response.status}`);
+        addLog(`ALPHA Sync Error: ${response.status}`);
       }
     } catch (err: any) {
       console.error("Evolution cycle failed", err);
@@ -982,7 +983,7 @@ export default function App() {
     });
     setMigration(null);
     setInstanceId(newId);
-    setLogs(['Axiom Orchestrator Reset. Root instance purged.']);
+    setLogs(['ALPHA Orchestrator Reset. Root instance purged.']);
     setAutonomous(false);
     setIsCoolingDown(false);
     setIsQuotaExhausted(false);
@@ -1094,7 +1095,7 @@ export default function App() {
             }}
             transition={{ duration: 2 + i % 3, repeat: Infinity }}
           >
-            {`0x${(i * 1234).toString(16)}: CORE_DRIFT_${(Math.random() * 10).toFixed(0)} >> ${isQuotaExhausted ? 'HEUR_LOCAL' : (autonomous ? 'ACTIVE' : 'IDLE')}`}
+            {`0x${(i * 1234).toString(16)}: ALPHA_DRIFT_${(Math.random() * 10).toFixed(0)} >> ${isQuotaExhausted ? 'HEUR_LOCAL' : (autonomous ? 'ACTIVE' : 'IDLE')}`}
           </motion.div>
         ))}
       </div>
@@ -1116,7 +1117,7 @@ export default function App() {
       <aside className="w-80 border-r border-white/5 bg-black/50 backdrop-blur-xl flex flex-col p-8 z-20">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-3 h-3 bg-gold rounded-full animate-pulse shadow-[0_0_10px_rgba(196,166,97,0.8)]" />
-          <h1 className="text-[14px] font-bold tracking-[0.2em] uppercase text-white/90">Axiom v3.1</h1>
+          <h1 className="text-[14px] font-bold tracking-[0.2em] uppercase text-white/90">ALPHA Core v3.1</h1>
           <div className="ml-auto flex items-center gap-2">
             <motion.div 
               animate={{ opacity: homeBaseSynced ? [0.4, 0.8, 0.4] : 0.2 }}
@@ -1682,7 +1683,7 @@ export default function App() {
           <button 
             onClick={clearDashboard}
             className="w-12 h-12 flex items-center justify-center border border-white/10 bg-white/5 text-white/20 hover:text-red-400 hover:border-red-400/30 transition-all duration-500 rounded-sm group"
-            title="Reset Axiom Core"
+            title="Reset ALPHA Core"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -1837,6 +1838,16 @@ export default function App() {
             </div>
           </motion.div>
         )}
+
+        {/* Crew Dashboard Toggle Button */}
+        <button
+          onClick={() => window.location.href = '/crew.html'}
+          className="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 flex items-center gap-2 z-50"
+          title="Open Crew Dashboard"
+        >
+          <Users className="w-6 h-6" />
+          <span className="font-semibold">Crew</span>
+        </button>
       </AnimatePresence>
 
     </motion.div>

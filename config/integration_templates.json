@@ -1,0 +1,241 @@
+{
+  "templates": [
+    {
+      "id": "openai-template",
+      "name": "OpenAI",
+      "description": "GPT models, DALL-E image generation, Whisper speech recognition",
+      "category": "ai",
+      "icon": "🤖",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api.openai.com/v1",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["chat", "image-generation", "speech-to-text", "text-to-speech"],
+          "models": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "dall-e-3", "whisper-1"]
+        }
+      },
+      "envVar": "OPENAI_API_KEY",
+      "setupUrl": "https://platform.openai.com/api-keys",
+      "testEndpoint": "/models"
+    },
+    {
+      "id": "anthropic-template",
+      "name": "Anthropic Claude",
+      "description": "Advanced AI assistant with strong reasoning capabilities",
+      "category": "ai",
+      "icon": "🧠",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api.anthropic.com/v1",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json",
+          "anthropic-version": "2023-06-01"
+        },
+        "metadata": {
+          "capabilities": ["chat", "analysis", "code-generation"],
+          "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]
+        }
+      },
+      "envVar": "ANTHROPIC_API_KEY",
+      "setupUrl": "https://console.anthropic.com/settings/keys",
+      "testEndpoint": "/messages"
+    },
+    {
+      "id": "google-ai-template",
+      "name": "Google AI Gemini",
+      "description": "Multimodal AI with text, image, and code understanding",
+      "category": "ai",
+      "icon": "✨",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "authType": "api_key",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["chat", "multimodal", "code-generation"],
+          "models": ["gemini-pro", "gemini-pro-vision"]
+        }
+      },
+      "envVar": "GOOGLE_AI_API_KEY",
+      "setupUrl": "https://makersuite.google.com/app/apikey",
+      "testEndpoint": "/models"
+    },
+    {
+      "id": "cohere-template",
+      "name": "Cohere",
+      "description": "Enterprise-grade NLP with embedding and reranking",
+      "category": "ai",
+      "icon": "📝",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api.cohere.ai/v1",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Client-Name": "alpha-orchestrator"
+        },
+        "metadata": {
+          "capabilities": ["chat", "text-generation", "embedding", "rerank"],
+          "models": ["command", "command-light", "embed-english-v3.0"]
+        }
+      },
+      "envVar": "COHERE_API_KEY",
+      "setupUrl": "https://dashboard.cohere.ai/api-keys",
+      "testEndpoint": "/models"
+    },
+    {
+      "id": "huggingface-template",
+      "name": "HuggingFace",
+      "description": "Access to thousands of open-source models",
+      "category": "ai",
+      "icon": "🤗",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api-inference.huggingface.co",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["text-generation", "image-generation", "audio", "embeddings"],
+          "models": ["gpt2", "bert-base-uncased", "stable-diffusion"]
+        }
+      },
+      "envVar": "HUGGINGFACE_API_KEY",
+      "setupUrl": "https://huggingface.co/settings/tokens",
+      "testEndpoint": "/models"
+    },
+    {
+      "id": "replicate-template",
+      "name": "Replicate",
+      "description": "Run open-source models with simple API",
+      "category": "ai",
+      "icon": "🎨",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api.replicate.com/v1",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["image-generation", "video", "audio", "text-generation"],
+          "models": ["stability-ai/sdxl", "meta/llama-2-70b-chat"]
+        }
+      },
+      "envVar": "REPLICATE_API_TOKEN",
+      "setupUrl": "https://replicate.com/account/api-tokens",
+      "testEndpoint": "/collections"
+    },
+    {
+      "id": "slack-template",
+      "name": "Slack",
+      "description": "Team communication and notifications",
+      "category": "communication",
+      "icon": "💬",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://slack.com/api",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["messaging", "notifications", "file-sharing"]
+        }
+      },
+      "envVar": "SLACK_BOT_TOKEN",
+      "setupUrl": "https://api.slack.com/apps",
+      "testEndpoint": "/auth.test"
+    },
+    {
+      "id": "stripe-template",
+      "name": "Stripe",
+      "description": "Payment processing and financial services",
+      "category": "business",
+      "icon": "💳",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api.stripe.com/v1",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["payments", "subscriptions", "invoices"]
+        }
+      },
+      "envVar": "STRIPE_API_KEY",
+      "setupUrl": "https://dashboard.stripe.com/apikeys",
+      "testEndpoint": "/charges"
+    },
+    {
+      "id": "cloudflare-ai-template",
+      "name": "Cloudflare Workers AI",
+      "description": "Run machine learning models on Cloudflare's global network",
+      "category": "ai",
+      "icon": "☁️",
+      "config": {
+        "type": "api",
+        "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["chat", "image-generation", "text-to-image", "translation", "summarization"],
+          "models": ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/recraft/recraftv3", "@cf/baai/bge-large-en-v1.5"]
+        }
+      },
+      "envVar": "CLOUDFLARE_API_TOKEN",
+      "setupUrl": "https://dash.cloudflare.com/",
+      "testEndpoint": "/models"
+    },
+    {
+      "id": "custom-api-template",
+      "name": "Custom API",
+      "description": "Add any custom REST API endpoint",
+      "category": "custom",
+      "icon": "🔧",
+      "config": {
+        "type": "api",
+        "baseUrl": "",
+        "authType": "bearer",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "metadata": {
+          "capabilities": ["custom"]
+        }
+      },
+      "envVar": "CUSTOM_API_KEY",
+      "setupUrl": "",
+      "testEndpoint": "/"
+    },
+    {
+      "id": "mcp-server-template",
+      "name": "MCP Server",
+      "description": "Connect to a Model Context Protocol server",
+      "category": "system",
+      "icon": "🔌",
+      "config": {
+        "type": "mcp",
+        "mcpServerUrl": "",
+        "mcpTools": [],
+        "metadata": {
+          "capabilities": ["tools"]
+        }
+      },
+      "envVar": "MCP_SERVER_TOKEN",
+      "setupUrl": "https://modelcontextprotocol.io",
+      "testEndpoint": "/rpc"
+    }
+  ]
+}

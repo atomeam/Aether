@@ -1,0 +1,207 @@
+.homebase {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.homebase-header {
+  margin-bottom: 24px;
+}
+
+.homebase-header h1 {
+  margin: 0 0 16px 0;
+  font-size: 28px;
+  color: #1a1a1a;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab:hover {
+  color: #374151;
+}
+
+.tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.tab-content {
+  padding: 20px 0;
+}
+
+.control-panel {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.control-panel input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.control-panel input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.control-panel button {
+  padding: 12px 24px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.control-panel button:hover {
+  background: #1d4ed8;
+}
+
+.control-panel button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.quick-actions button {
+  padding: 10px 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.quick-actions button:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.status-panel {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.status-panel h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: #1a1a1a;
+}
+
+.status-header {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.status-header span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.steps-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.step.pending {
+  opacity: 0.6;
+}
+
+.step.completed {
+  border-left: 3px solid #10b981;
+}
+
+.step.failed {
+  border-left: 3px solid #ef4444;
+}
+
+.step-num {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.step-name {
+  flex: 1;
+  color: #374151;
+}
+
+.step-status {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.result-panel {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.result-panel h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: #1a1a1a;
+}
+
+.result-panel pre {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}

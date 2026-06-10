@@ -453,7 +453,7 @@ describe('Routing Logic', () => {
 
       const client = manager.createMCPClient('test-mcp');
       expect(client).toBeDefined();
-      expect(client?.listTools()).resolves.toEqual(['read_file', 'write_file']);
+      await expect(client?.listTools()).resolves.toEqual(['read_file', 'write_file']);
     });
 
     it('should return null for non-MCP integration when creating MCP client', async () => {

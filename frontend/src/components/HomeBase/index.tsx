@@ -2,10 +2,14 @@
  * HomeBase Component
  * 
  * Main control panel for Alpha execution engine.
- * Provides objective input, execution controls, and status display.
+ * Provides objective input, execution controls, AI dashboard, and workflow builder.
  */
 
 import { useState, useEffect } from 'react';
+import { AIDashboard } from '../AIDashboard';
+import { WorkflowBuilder } from '../WorkflowBuilder';
+import { RealTimeMonitor } from '../RealTimeMonitor';
+import './HomeBase.css';
 
 interface ExecutionStatus {
   status: string;
@@ -22,7 +26,10 @@ interface HomeBaseProps {
   runtimeUrl?: string;
 }
 
+type Tab = 'execute' | 'dashboard' | 'workflows' | 'monitor';
+
 export function HomeBase({ runtimeUrl = '' }: HomeBaseProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('execute');
   const [objective, setObjective] = useState('');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -67,45 +74,120 @@ export function HomeBase({ runtimeUrl = '' }: HomeBaseProps) {
     setLoading(false);
   };
 
+  const handleWorkflowCreate = (workflowSteps: any[]) => {
+    // Convert workflow steps to objective
+    const workflowDescription = workflowSteps
+      .map(step => `${step.service}: ${step.action}`)
+      .join(' → ');
+    setObjective(`Execute workflow: ${workflowDescription}`);
+    setActiveTab('execute');
+  };
+
   return (
     <div className="homebase">
-      <h1>⚡ Alpha - HomeBase</h1>
+      <div className="homebase-header">
+        <h1>⚡ Alpha - AI Connection Hub</h1>
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'execute' ? 'active' : ''}`}
+            onClick={() => setActiveTab('execute')}
+          >
+            🚀 Execute
+          </button>
+          <button
+            className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            🔗 Dashboard
+          </button>
+          <button
+            className={`tab ${activeTab === 'workflows' ? 'active' : ''}`}
+            onClick={() => setActiveTab('workflows')}
+          >
+            🔧 Workflows
+          </button>
+          <button
+            className={`tab ${activeTab === 'monitor' ? 'active' : ''}`}
+            onClick={() => setActiveTab('monitor')}
+          >
+            📊 Monitor
+          </button>
+        </div>
+      </div>
       
-      <section className="control-panel">
-        <input
-          value={objective}
-          onChange={(e) => setObjective(e.target.value)}
-          placeholder="Enter objective..."
-          onKeyDown={(e) => e.key === 'Enter' && execute()}
-        />
-        <button onClick={execute} disabled={loading}>
-          {loading ? '◌ Launching...' : '▶ Launch Objective'}
-        </button>
-      </section>
+      {activeTab === 'execute' && (
+        <div className="tab-content">
+          <section className="control-panel">
+            <input
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              placeholder="Enter objective or describe your AI task..."
+              onKeyDown={(e) => e.key === 'Enter' && execute()}
+            />
+            <button onClick={execute} disabled={loading}>
+              {loading ? '◌ Launching...' : '▶ Launch Objective'}
+            </button>
+          </section>
 
-      {(loading || execStatus) && (
-        <section className="status-panel">
-          <h3>Execution Log</h3>
-          <div className="status-header">
-            <span>Status: {execStatus?.status || 'idle'}</span>
-            <span>Step: {execStatus?.currentStep || 0} / {execStatus?.totalSteps || 0}</span>
+          <div className="quick-actions">
+            <button onClick={() => setObjective('Analyze this data using OpenAI and provide insights')}>
+              📊 Data Analysis
+            </button>
+            <button onClick={() => setObjective('Generate content using multiple AI models')}>
+              ✍️ Content Generation
+            </button>
+            <button onClick={() => setObjective('Process customer support query with AI classification')}>
+              🎧 Customer Support
+            </button>
+            <button onClick={() => setObjective('Translate and summarize document using AI')}>
+              🌐 Document Processing
+            </button>
           </div>
-          <div className="steps-log">
-            {execStatus?.steps?.map((step: any, i: number) => (
-              <div key={i} className={`step ${step.status || 'pending'}`}>
-                <span className="step-num">[{i + 1}]</span>
-                <span className="step-name">{step.name || step.action || 'pending'}</span>
-                <span className="step-status">{step.status || ''}</span>
+
+          {(loading || execStatus) && (
+            <section className="status-panel">
+              <h3>Execution Log</h3>
+              <div className="status-header">
+                <span>Status: {execStatus?.status || 'idle'}</span>
+                <span>Step: {execStatus?.currentStep || 0} / {execStatus?.totalSteps || 0}</span>
               </div>
-            ))}
-          </div>
-        </section>
+              <div className="steps-log">
+                {execStatus?.steps?.map((step: any, i: number) => (
+                  <div key={i} className={`step ${step.status || 'pending'}`}>
+                    <span className="step-num">[{i + 1}]</span>
+                    <span className="step-name">{step.name || step.action || 'pending'}</span>
+                    <span className="step-status">{step.status || ''}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {result && (
+            <section className="result-panel">
+              <h3>Execution Result</h3>
+              <pre>{JSON.stringify(result, null, 2)}</pre>
+            </section>
+          )}
+        </div>
       )}
 
-      {result && (
-        <section className="result-panel">
-          <pre>{JSON.stringify(result, null, 2)}</pre>
-        </section>
+      {activeTab === 'dashboard' && (
+        <div className="tab-content">
+          <AIDashboard runtimeUrl={runtimeUrl} />
+        </div>
+      )}
+
+      {activeTab === 'workflows' && (
+        <div className="tab-content">
+          <WorkflowBuilder onWorkflowCreate={handleWorkflowCreate} />
+        </div>
+      )}
+
+      {activeTab === 'monitor' && (
+        <div className="tab-content">
+          <RealTimeMonitor />
+        </div>
       )}
     </div>
   );

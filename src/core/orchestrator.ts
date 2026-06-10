@@ -9,18 +9,20 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import { IntegrationManager, RouteRequest, RouteResponse } from './integration_manager';
 import { VictusBridge, VictusCommand, VictusResponse } from './victus_bridge';
+import { AIPlanner, PlanRequest, PlanResponse } from './ai_planner';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Types for Orchestrator
-export type StepType = 'api' | 'local' | 'conditional';
+export type StepType = 'api' | 'local' | 'conditional' | 'ai';
 export type StepStatus = 'pending' | 'completed' | 'failed' | 'skipped';
 
 export interface OrchestratorStep {
   id?: string;
   type: StepType;
   action: string;
+  service?: string; // AI service or integration name
   params?: Record<string, unknown>;
   condition?: {
     // Condition for conditional steps
@@ -90,6 +92,7 @@ const defaultLogger: Logger = {
 export class Orchestrator {
   private integrationManager: IntegrationManager;
   private victusBridge: VictusBridge;
+  private aiPlanner: AIPlanner;
   private config: OrchestratorConfig;
   private state: OrchestratorState;
   private logger: Logger;
@@ -109,6 +112,11 @@ export class Orchestrator {
   ) {
     this.integrationManager = integrationManager;
     this.victusBridge = victusBridge;
+    this.aiPlanner = new AIPlanner(integrationManager, {
+      defaultAI: 'openai',
+      maxRetries: 3,
+      timeout: 30000,
+    });
     this.config = config || {
       continueOnError: false,
       stopOnFailure: true,
@@ -209,6 +217,18 @@ export class Orchestrator {
           method: (step.params?.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH') || 'GET',
           headers: step.params?.headers as Record<string, string> | undefined,
           body: step.params?.body,
+        };
+        const response: RouteResponse = await this.integrationManager.route(request);
+        result = response;
+      } else if (step.type === 'ai') {
+        // Route to AI service via IntegrationManager
+        const serviceName = step.service || step.action;
+        const request: RouteRequest = {
+          integration: serviceName,
+          endpoint: step.params?.endpoint as string || '/chat/completions',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: step.params || {},
         };
         const response: RouteResponse = await this.integrationManager.route(request);
         result = response;
@@ -384,6 +404,116 @@ export class Orchestrator {
    */
   getState(): OrchestratorState {
     return { ...this.state };
+  }
+
+  /**
+   * Auto-generate a plan using AI based on the objective
+   * @param request - Planning request with objective and constraints
+   * @returns Generated plan with reasoning
+   */
+  async autoPlan(request: PlanRequest): Promise<PlanResponse> {
+    this.logger.info(`Auto-generating plan for objective: ${request.objective}`);
+    
+    try {
+      const plan = await this.aiPlanner.generatePlan(request);
+      
+      // Validate the generated plan
+      const validation = await this.aiPlanner.validatePlan(plan);
+      
+      if (!validation.valid) {
+        this.logger.warn('Generated plan has validation errors:', validation.errors);
+        // Still set the plan but log warnings
+      }
+      
+      // Set the objective and plan
+      this.setObjective(request.objective);
+      this.setPlan(plan.steps);
+      
+      this.logger.info(`Auto-generated ${plan.steps.length} steps with ${plan.confidence} confidence`);
+      this.logger.debug(`Plan reasoning: ${plan.reasoning}`);
+      
+      return plan;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Auto-planning failed:', errorMessage);
+      throw error;
+    }
+  }
+
+  /**
+   * Execute an objective with auto-planning
+   * @param objective - Natural language objective
+   * @param context - Optional context for planning
+   * @returns Execution result
+   */
+  async executeWithAutoPlan(
+    objective: string,
+    context?: Record<string, unknown>
+  ): Promise<PlanResult> {
+    this.logger.info(`Executing objective with auto-planning: ${objective}`);
+    
+    try {
+      // Generate plan automatically
+      const plan = await this.autoPlan({
+        objective,
+        context,
+        availableIntegrations: this.integrationManager.listIntegrations()
+          .filter(i => i.enabled)
+          .map(i => i.name),
+      });
+      
+      // Execute the generated plan
+      return await this.executePlan();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Auto-plan execution failed:', errorMessage);
+      
+      return {
+        objective,
+        steps: [],
+        success: false,
+        totalSteps: 0,
+        completedSteps: 0,
+        failedSteps: 1,
+        duration: 0,
+      };
+    }
+  }
+
+  /**
+   * Optimize the current plan using AI
+   * @returns Optimized plan
+   */
+  async optimizeCurrentPlan(): Promise<PlanResponse> {
+    if (this.state.plan.length === 0) {
+      throw new Error('No plan to optimize');
+    }
+    
+    this.logger.info('Optimizing current plan');
+    
+    const currentPlan: PlanResponse = {
+      steps: this.state.plan,
+      reasoning: 'Current plan',
+      estimatedDuration: this.state.plan.length * 10,
+      confidence: 0.7,
+    };
+    
+    const request: PlanRequest = {
+      objective: this.state.objective,
+      availableIntegrations: this.integrationManager.listIntegrations()
+        .filter(i => i.enabled)
+        .map(i => i.name),
+    };
+    
+    try {
+      const optimized = await this.aiPlanner.optimizePlan(currentPlan, request);
+      this.setPlan(optimized.steps);
+      this.logger.info('Plan optimized successfully');
+      return optimized;
+    } catch (error) {
+      this.logger.error('Plan optimization failed:', error);
+      return currentPlan;
+    }
   }
 }
 
