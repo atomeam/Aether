@@ -305,7 +305,9 @@ Once DNS NS swap completes to `a-to-mind.com`:
 
 ---
 
-## Todo: Live Verification
+## Live Verification (Requires CF API Credentials)
+
+The following verification tasks require Cloudflare API credentials:
 
 - [ ] CF API credentials needed to verify bindings
 - [ ] D1 schema verification for all Workers

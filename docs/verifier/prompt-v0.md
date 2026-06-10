@@ -191,7 +191,9 @@ You are VERIFY-0001, an automated verification agent for the Aether/Loxa crew.
 
 ---
 
-## TODO
+## Outstanding Tasks
+
+The following features are planned but not yet implemented:
 
 - [ ] Add `http_response` artifact type with status code extraction
 - [ ] Add `screenshot` artifact type with visual diff capability

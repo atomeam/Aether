@@ -238,7 +238,9 @@ Datadog integration will be considered when **any** of these conditions are met:
 
 ---
 
-## Todo
+## Outstanding Configuration Tasks
+
+The following configuration tasks are pending:
 
 - [ ] Wire Slack webhook URL in tail-alerts-worker (post-NS-swap)
 - [ ] Apply per-Worker sampling configs to wrangler.toml
