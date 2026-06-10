@@ -694,9 +694,18 @@ export default {
         const hmacKey = await crypto.subtle.importKey('raw', enc.encode(env.STRIPE_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
         const mac = await crypto.subtle.sign('HMAC', hmacKey, enc.encode(`${t}.${payload}`));
         const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
-        if (expected !== v1) return json({ error: 'invalid signature' }, 401);
+        // Constant-time comparison — string !== leaks timing information
+        const expBytes = new TextEncoder().encode(expected);
+        const gotBytes = new TextEncoder().encode(v1);
+        let diff = expBytes.length ^ gotBytes.length;
+        for (let i = 0; i < expBytes.length; i++) diff |= expBytes[i] ^ (gotBytes[i] ?? 0);
+        if (diff !== 0) return json({ error: 'invalid signature' }, 401);
 
         const event = JSON.parse(payload);
+        // Idempotency: Stripe retries webhooks; never double-issue for the same event
+        const seenKey = `billing_evt:${event.id}`;
+        if (await env.STATE.get(seenKey)) return json({ received: true, duplicate: true });
+        await env.STATE.put(seenKey, '1', { expirationTtl: 86400 });
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object;
           const tier = (session.metadata && session.metadata.tier) || 'pro';
@@ -736,6 +745,10 @@ export default {
       // POST /api/proposals/review — transition a stuck proposal (approve/reject)
       if (path === '/api/proposals/review' && method === 'POST') {
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
+        // Council-only: require a known agent secret
+        const reviewAuth = request.headers.get('x-council-secret') || '';
+        const validSecrets = [env.ATOMIND_DEVIN_SECRET, env.ATOMIND_GEMINI_SECRET, env.ATOMIND_VIKTOR_SECRET, env.ADMIN_HMAC_SECRET].filter(Boolean);
+        if (!validSecrets.some(sec => sec === reviewAuth)) return json({ error: 'unauthorized' }, 401);
         const body = await request.json().catch(() => null) as { id?: string; action?: string; reviewer?: string } | null;
         if (!body?.id || !['approve', 'reject'].includes(body.action || '')) {
           return json({ error: 'id and action (approve|reject) required' }, 400);

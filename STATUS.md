@@ -49,6 +49,13 @@ The bridge worker already has **API-key tiers** (`getApiKeyTier`, hashed keys in
 - **Webhook hygiene**: notion-webhook now skips bot-echo events and titleless junk; dedups and caps proposals/lessons snapshots at 200.
 - **Proposal review**: new `POST /api/proposals/review` {id, action: approve|reject} — the 12 stuck proposals finally have a transition path.
 
+## Stripe go-live staging (one pass, post-merge)
+
+1. Stripe dashboard → Developers → Webhooks → Add endpoint: `https://bridge.a-to-mind.com/api/billing/webhook`, event `checkout.session.completed`. Copy the `whsec_...` signing secret.
+2. `wrangler secret put STRIPE_WEBHOOK_SECRET` (bridge worker, via CI/operator — not the sandbox).
+3. Create a Payment Link or Checkout for the Pro tier with `metadata.tier=pro`; set success URL to `https://a-to-mind.com/welcome?session_id={CHECKOUT_SESSION_ID}` (key retrieval uses that session_id).
+4. Evidence: `STRIPE_WEBHOOK_SECRET=whsec_... npm run verify:billing` — 6 PASS lines expected.
+
 ## Known remaining issues
 
 - ~~notion-worker unreachable~~ RESOLVED: it lives at notion.a-to-mind.com (healthy, verified 2026-06-10 23:06 UTC); the workers.dev alias is intentionally disabled. Duplicate route block in its wrangler.toml removed.

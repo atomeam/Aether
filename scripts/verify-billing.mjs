@@ -52,7 +52,12 @@ const kj = await r.json().catch(() => ({}));
 const key = kj.api_key || '';
 check('issues amk_ key via session_id', r.ok && key.startsWith('amk_') && key.length > 20, key ? key.slice(0, 12) + '…' : `HTTP ${r.status}`);
 
-// 5. Second retrieval must 404
+// 5. Replayed webhook (same event id) must be deduped, not re-issue
+r = await fetch(`${BRIDGE}/api/billing/webhook`, { method: 'POST', body: payload, headers: { 'stripe-signature': sign(payload, SECRET) } });
+const dj = await r.json().catch(() => ({}));
+check('duplicate event deduped', r.ok && dj.duplicate === true, JSON.stringify(dj).slice(0, 60));
+
+// 6. Second retrieval must 404
 r = await fetch(`${BRIDGE}/api/billing/key?session_id=${sessionId}`);
 check('second retrieval denied (one-time)', r.status === 404, `HTTP ${r.status}`);
 
