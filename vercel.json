@@ -1,14 +1,16 @@
 {
   "version": 2,
-  "framework": "express",
+  "buildCommand": "npm run build -w @aether/backend",
   "builds": [
     {
       "src": "apps/backend/dist/server.cjs",
       "use": "@vercel/node"
     }
   ],
-  "install": "npm install",
   "routes": [
-    { "src": "/api/(.*)", "dest": "/apps/backend/dist/server.cjs" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/apps/backend/dist/server.cjs"
+    }
   ]
 }

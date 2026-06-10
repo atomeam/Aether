@@ -1,8 +1,11 @@
 import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
+import { EventEmitter } from "node:events";
 import { parseEnv, BackendEnvSchema } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
 import { manifestPromptFragment } from "./promptManifest";
 import crypto from "crypto";
+import path from "node:path";
 import express from "express";
 
 dotenv.config();
@@ -13,14 +16,15 @@ const env = parseEnv(BackendEnvSchema, process.env, "backend")
 // Component manifest fragment for Gemini prompts
 const COMPONENT_MANIFEST = manifestPromptFragment()
 
-const ai = new GoogleGenAI({
+// Lazy init — null when GEMINI_API_KEY is absent (degraded mode keeps non-AI routes alive)
+const ai = env.GEMINI_API_KEY ? new GoogleGenAI({
   apiKey: env.GEMINI_API_KEY,
   httpOptions: {
     headers: {
       'User-Agent': 'aistudio-build',
     }
   }
-});
+}) : (null as unknown as GoogleGenAI);
 
 // Robust Gemini API Wrapper with Exponential Backoff
 async function callGeminiWithRetry(modelName: string, prompt: any, config: any = {}, maxRetries = 3) {
@@ -167,8 +171,9 @@ async function handleMCPRequest(req: MCPRequest) {
 }
 // --- END MCP & NEXUS ---
 
+const app = express();
+
 async function startServer() {
-  const app = express();
   const PORT = env.PORT;
 
   app.use(express.json());
@@ -749,6 +754,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -875,7 +881,6 @@ async function startServer() {
   });
 }
 
-startServer();
 
 // Workflow webhook endpoints
 app.post("/api/workflows/trigger", async (req, res) => {
@@ -1632,3 +1637,10 @@ app.post("/api/convene/assistants", async (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
+
+
+// Vercel/serverless: export the app; only bind a port when running standalone.
+if (!process.env.VERCEL) {
+  startServer();
+}
+export default app;
