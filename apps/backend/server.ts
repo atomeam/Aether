@@ -1,17 +1,21 @@
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { EventEmitter } from "node:events";
-import { parseEnv, BackendEnvSchema } from "@aether/env";
+import { parseEnv, BackendEnvSchema, type BackendEnv } from "@aether/env";
 import { createTraceLogger, commitToLedger } from "@aether/logger";
+import { curateActions, logCuratorVerdict } from "@aether/curator";
 import { manifestPromptFragment } from "./promptManifest";
 import crypto from "crypto";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { exec } from "node:child_process";
 import express from "express";
 
 dotenv.config();
 
 // Validate env on boot — fail fast if required vars missing
-const env = parseEnv(BackendEnvSchema, process.env, "backend")
+const env: BackendEnv = parseEnv(BackendEnvSchema, process.env, "backend")
 
 // Component manifest fragment for Gemini prompts
 const COMPONENT_MANIFEST = manifestPromptFragment()
@@ -83,6 +87,19 @@ function validateMigration(plan: any, currentComponents: any[]) {
   }
 
   return { valid: true };
+}
+
+function parseBuildRequest(body: any) {
+  if (!body || typeof body !== "object") {
+    throw new Error("Request body must be a JSON object");
+  }
+  if (typeof body.prompt !== "string" || body.prompt.trim().length === 0) {
+    throw new Error("Missing or empty 'prompt' field");
+  }
+  return {
+    prompt: body.prompt.trim(),
+    currentComponents: Array.isArray(body.currentComponents) ? body.currentComponents : [],
+  };
 }
 
 // Neural Bridge (Decoupling Logic)
@@ -201,7 +218,7 @@ async function startServer() {
 
     if (!profile) return res.status(404).json({ error: "Integration not found" });
 
-    const targetPath = req.params[0] || '';
+    const targetPath = (req.params as any)[0] || '';
     const query = new URLSearchParams(req.query as any).toString();
     const finalUrl = `${profile.baseUrl}/${targetPath}${query ? '?' + query : ''}`;
 
@@ -410,7 +427,7 @@ async function startServer() {
       // Parse LLM response - extract actions from the response
       let generatedActions: any[] = [];
       try {
-        const parsed = JSON.parse(response.text);
+        const parsed = JSON.parse(response.text ?? '');
         // Handle both array and {actions: [...]} response shapes
         generatedActions = Array.isArray(parsed) ? parsed : (parsed.actions || []);
       } catch {
@@ -423,15 +440,19 @@ async function startServer() {
 
       // Commit to ledger - fail-soft, never block response
       const promptHash = crypto.createHash("md5").update(prompt).digest("hex")
-      commitToLedger({
-        traceId,
-        prompt,
-        promptHash,
-        verdict: verdict.approved ? "APPROVED" : "REJECTED",
-        reason: verdict.reason,
-        rejectedIds: verdict.rejectedActionIds,
-        rawActions: generatedActions,
-      }).catch((err) => txLog.error({ err }, "Ledger commit failed"))
+      try {
+        commitToLedger({
+          traceId,
+          prompt,
+          promptHash,
+          verdict: verdict.approved ? "APPROVED" : "REJECTED",
+          reason: verdict.reason,
+          rejectedIds: verdict.rejectedActionIds,
+          rawActions: generatedActions,
+        })
+      } catch (err) {
+        txLog.error({ err }, "Ledger commit failed")
+      }
 
       // Fail-closed: deny any unauthorized actions
       if (!verdict.approved) {
@@ -654,7 +675,7 @@ async function startServer() {
           { responseMimeType: "application/json" }
         );
 
-        const migrationPlan = JSON.parse(response.text);
+        const migrationPlan = JSON.parse(response.text ?? '');
 
         const validation = validateMigration(migrationPlan, currentComponents);
         if (!validation.valid) {
@@ -779,6 +800,17 @@ async function startServer() {
     <p>Enterprise AI automation platform. Autonomous agents, intelligent workflows, and real-time orchestration.</p>
     <p><a href="/api/health">API Health</a> &middot; <a href="/api/stack">System Status</a></p>
     <div class="status">System operational</div>
+    <button id="copyBtn" onclick="copyApi()">📋 Copy API URL</button>
+    <script>
+      function copyApi() {
+        const url = window.location.origin + '/api/health';
+        navigator.clipboard.writeText(url).then(() => {
+          const btn = document.getElementById('copyBtn');
+          btn.textContent = '✅ Copied!';
+          setTimeout(() => btn.textContent = '📋 Copy API URL', 2000);
+        });
+      }
+    </script>
   </div>
 </body>
 </html>`);
@@ -852,7 +884,7 @@ async function startServer() {
                   integrity: 0.99
                 } : undefined
               });
-              resolve(null);
+              resolve();
             });
           });
         }
@@ -971,7 +1003,6 @@ app.get("/api/dream", async (req, res) => {
     touch();
 
     const status = getDreamStatus();
-    status.shouldDream = shouldDream();
 
     if (req.query.trigger === 'true' && shouldDream()) {
       const result = await dream();
