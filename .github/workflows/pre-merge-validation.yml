@@ -1,0 +1,45 @@
+name: Pre-Merge Validation
+
+# Restores the "Pre-Merge Validation" required status check (app_id 15368 =
+# GitHub Actions). Branch protection on main requires a check by this exact
+# name; no workflow defined it, so every PR stalled with the check "missing".
+# AD logged in Bridge Architecture Decisions Log.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pre-merge-validation:
+    name: Pre-Merge Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No cache or build artifacts committed
+        run: |
+          set -e
+          if git ls-files | grep -E '(^|/)\.turbo/|(^|/)node_modules/|(^|/)dist/.*\.map$' ; then
+            echo "::error::Cache/build artifacts are committed; remove them."
+            exit 1
+          fi
+          echo "OK: no committed artifacts"
+
+      - name: Lockfile present and parseable
+        run: |
+          set -e
+          test -f package-lock.json
+          node -e "JSON.parse(require('fs').readFileSync('package-lock.json','utf8')); console.log('OK: lockfile valid')"
+
+      - name: Workflow & wrangler config sanity
+        run: |
+          set -e
+          npx --yes yaml-lint .github/workflows/*.yml
+          for f in $(git ls-files '*wrangler.toml'); do
+            node -e "
+              const s = require('fs').readFileSync('$f','utf8');
+              const routes = (s.match(/^\s*routes?\s*=/gm) || []).length;
+              if (routes > 1) { console.error('$f: duplicate route blocks'); process.exit(1); }
+            "
+          done
+          echo "OK: config sane"
