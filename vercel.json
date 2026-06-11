@@ -1,7 +1,14 @@
 {
   "version": 2,
-  "buildCommand": "npm run build -w @aether/backend",
+  "buildCommand": "npm run build",
   "builds": [
+    {
+      "src": "apps/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
     {
       "src": "apps/backend/dist/server.cjs",
       "use": "@vercel/node"
@@ -14,7 +21,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/apps/backend/dist/server.cjs"
+      "dest": "/apps/frontend/dist/index.html"
     }
   ]
 }
