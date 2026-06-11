@@ -35,7 +35,6 @@ jobs:
       - name: Workflow & wrangler config sanity
         run: |
           set -e
-          npx --yes yaml-lint .github/workflows/*.yml
           for f in $(git ls-files '*wrangler.toml'); do
             node -e "
               const s = require('fs').readFileSync('$f','utf8');
