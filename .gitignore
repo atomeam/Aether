@@ -12,4 +12,5 @@ coverage/
 # Vercel deploys the committed backend bundle
 !apps/backend/dist/
 !apps/backend/dist/server.cjs
+apps/backend/dist/*.map
 .turbo/
