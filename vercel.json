@@ -11,6 +11,10 @@
     {
       "src": "/api/(.*)",
       "dest": "/apps/backend/dist/server.cjs"
+    },
+    {
+      "src": "/",
+      "dest": "/apps/backend/dist/server.cjs"
     }
   ]
 }
