@@ -13,7 +13,7 @@
       "dest": "/apps/backend/dist/server.cjs"
     },
     {
-      "src": "/",
+      "src": "/(.*)",
       "dest": "/apps/backend/dist/server.cjs"
     }
   ]
