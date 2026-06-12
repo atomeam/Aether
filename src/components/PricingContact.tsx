@@ -3,9 +3,9 @@ import { useState } from 'react';
 const BRIDGE_URL = 'https://bridge.a-to-mind.com';
 
 const TIERS = [
-  { name: 'Free', price: '$0', tagline: 'Explore the bridge API', features: ['Public bridge endpoints', 'Community support', 'Rate-limited access'] },
-  { name: 'Pro', price: '$49/mo', tagline: 'Automation for one business', features: ['API key + priority rate limits', 'Council session logs & replay', 'Email support'] },
-  { name: 'Enterprise', price: 'Custom', tagline: 'Your own agent council', features: ['Dedicated agent team', 'Custom integrations (Slack, Notion, Jira)', 'SLA + direct line'] },
+  { name: 'Free', price: '$0', tagline: 'Explore the bridge API', features: ['Public bridge endpoints', 'Community support', 'Rate-limited access'], cta: 'Get started' },
+  { name: 'Pro', price: '$49/mo', tagline: 'Automation for one business', features: ['API key + priority rate limits', 'Council session logs & replay', 'Email support'], cta: 'Start trial', priceId: 'price_pro_monthly' },
+  { name: 'Enterprise', price: 'Custom', tagline: 'Your own agent council', features: ['Dedicated agent team', 'Custom integrations (Slack, Notion, Jira)', 'SLA + direct line'], cta: 'Contact sales' },
 ];
 
 export default function PricingContact() {
@@ -29,10 +29,36 @@ export default function PricingContact() {
     }
   };
 
+  const startCheckout = async (priceId: string) => {
+    try {
+      const r = await fetch(`${BRIDGE_URL}/api/billing/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId, email }),
+      });
+      if (!r.ok) throw new Error('Checkout failed');
+      const { url } = await r.json();
+      window.location.href = url;
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Checkout failed. Please try again or contact support.');
+    }
+  };
+
   return (
     <section id="pricing" className="relative z-10 max-w-5xl mx-auto px-6 py-20">
       <h2 className="text-2xl font-black uppercase tracking-[0.3em] text-white/90 text-center mb-2">Run Your Ops on AtoMind</h2>
       <p className="text-center text-white/40 text-xs uppercase tracking-widest mb-12">Autonomous agent teams. Measurable output. No babysitting.</p>
+
+      <div className="max-w-md mx-auto mb-12">
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter your email to start"
+          type="email"
+          className="w-full bg-white/[0.03] border border-white/10 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-blue-500/50 outline-none text-center"
+        />
+      </div>
 
       <div className="grid md:grid-cols-3 gap-6 mb-16">
         {TIERS.map((t) => (
@@ -43,9 +69,19 @@ export default function PricingContact() {
             <ul className="space-y-2 text-white/60 text-xs flex-1">
               {t.features.map((f) => <li key={f}>— {f}</li>)}
             </ul>
-            <a href="#contact" className="mt-6 block text-center py-2 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all">
-              Get started
-            </a>
+            {t.priceId ? (
+              <button
+                onClick={() => startCheckout(t.priceId)}
+                disabled={!email}
+                className="mt-6 block w-full text-center py-2 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {t.cta}
+              </button>
+            ) : (
+              <a href="#contact" className="mt-6 block text-center py-2 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all">
+                {t.cta}
+              </a>
+            )}
           </div>
         ))}
       </div>

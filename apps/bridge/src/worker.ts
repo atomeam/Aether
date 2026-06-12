@@ -680,6 +680,43 @@ export default {
 
 
       // ─── Billing: Stripe checkout → API key issuance ───────────────
+      // POST /api/billing/checkout — create Stripe checkout session
+      if (path === '/api/billing/checkout' && method === 'POST') {
+        if (!env.STRIPE_SECRET_KEY) return json({ error: 'billing not configured - Stripe not activated' }, 503);
+        const body = await request.json().catch(() => null) as { priceId?: string; email?: string } | null;
+        const priceId = body?.priceId || 'price_pro_monthly';
+        const email = body?.email || '';
+
+        try {
+          const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              mode: 'payment',
+              payment_method_types: 'card',
+              line_items: JSON.stringify([{ price: priceId, quantity: 1 }]),
+              success_url: 'https://aether.a-to-mind.com?checkout=success&session_id={CHECKOUT_SESSION_ID}',
+              cancel_url: 'https://aether.a-to-mind.com?checkout=cancelled',
+              customer_email: email,
+              metadata: JSON.stringify({ tier: 'pro' }),
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.text();
+            return json({ error: 'Stripe API error', details: error }, 500);
+          }
+
+          const session = await response.json();
+          return json({ url: session.url, sessionId: session.id });
+        } catch (err) {
+          return json({ error: 'checkout failed', details: err instanceof Error ? err.message : 'unknown' }, 500);
+        }
+      }
+
       // POST /api/billing/webhook — Stripe webhook (checkout.session.completed)
       if (path === '/api/billing/webhook' && method === 'POST') {
         if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: 'billing not configured' }, 503);
@@ -1785,6 +1822,8 @@ interface Env {
   ATOMIND_GEMINI_SECRET: string;
   ATOMIND_VIKTOR_SECRET: string;
   CURATOR_QUEUE: any; // Cloudflare Queue producer
+  STRIPE_SECRET_KEY?: string; // Stripe API key for checkout
+  STRIPE_WEBHOOK_SECRET?: string; // Stripe webhook signing secret
   DISPATCHER: Fetcher; // service binding → aether worker
   _LOGS: R2Bucket; // R2 bucket for logs
   // Admin actuator secrets
