@@ -156,8 +156,54 @@ export default {
       if (path === '/pay' && method === 'GET') {
         const amount = parseInt(url.searchParams.get('amount') || '49', 10);
         const email = url.searchParams.get('email') || '';
+        const paymentMethod = url.searchParams.get('method') || 'crypto';
 
-        // Aether wallet address (USDC on Base)
+        // Stripe payment
+        if (paymentMethod === 'stripe') {
+          try {
+            const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+              },
+              body: new URLSearchParams({
+                'payment_method_types': 'card',
+                'line_items[0][price_data][currency]': 'usd',
+                'line_items[0][price_data][product_data][name]': 'Aether Pro Access',
+                'line_items[0][price_data][product_data][description]': 'Autonomous agent teams, priority rate limits, council session logs',
+                'line_items[0][price_data][unit_amount]': (amount * 100).toString(),
+                'line_items[0][quantity]': '1',
+                'mode': 'payment',
+                'success_url': 'https://aether.a-to-mind.com?checkout=success',
+                'cancel_url': 'https://aether.a-to-mind.com?checkout=cancelled',
+                'customer_email': email,
+                'metadata[email]': email,
+                'metadata[tier]': amount === 29 ? 'starter' : amount === 99 ? 'enterprise' : 'pro',
+              }),
+            });
+
+            if (!stripeResponse.ok) {
+              const error = await stripeResponse.text();
+              return json({ error: 'Stripe API error', details: error }, 500);
+            }
+
+            const session = await stripeResponse.json();
+            return Response.redirect(session.url, 303);
+          } catch (err) {
+            return json({ error: 'Stripe checkout failed', details: err instanceof Error ? err.message : 'unknown' }, 500);
+          }
+        }
+
+        // PayPal payment (placeholder - needs PayPal integration)
+        if (paymentMethod === 'paypal') {
+          return json({ 
+            error: 'PayPal integration coming soon',
+            message: 'Please use Credit Card or Crypto for now'
+          }, 501);
+        }
+
+        // XPTP crypto payment (existing)
         const walletAddress = '0xDe497AF77d0edf1cC8B902Ae854987F67c375Fa0';
 
         try {
@@ -1924,6 +1970,9 @@ interface Env {
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
   NOTION_RUNS_DB_ID: string;
+  // Stripe keys for payment processing
+  STRIPE_PUBLISHABLE_KEY: string;
+  STRIPE_SECRET_KEY: string;
   // Stripe (deprecated — billing now via XPTP)
   STRIPE_WEBHOOK_SECRET?: string; // billing: Stripe webhook signing secret
 }

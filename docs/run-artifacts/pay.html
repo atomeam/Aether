@@ -417,7 +417,7 @@
       loading.classList.add('active');
       
       if (selectedPayment === 'stripe') {
-        // Redirect to Stripe (you'll need to set this up)
+        // Redirect to Stripe checkout
         window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}&method=stripe`;
       } else if (selectedPayment === 'paypal') {
         // Redirect to PayPal (you'll need to set this up)
