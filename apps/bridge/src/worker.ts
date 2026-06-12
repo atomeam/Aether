@@ -880,6 +880,209 @@ export default {
         return handleAToMindRequest(request, path);
       }
 
+      // GET /a-to-mind - a-to-mind landing page
+      if (path === '/a-to-mind') {
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>a-to-mind - Comprehensive Automation API</title>
+  <meta name="description" content="Analyze text, generate content, transform data, validate input, extract patterns, and compare documents. 7 endpoints with multiple options.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 2rem;
+      font-size: 1.2rem;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+    .features {
+      text-align: left;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+    }
+    .features h2 {
+      color: #ffffff;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+    .features ul {
+      list-style: none;
+    }
+    .features li {
+      padding: 0.75rem 0;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .features li:before {
+      content: "✨ ";
+    }
+    .endpoints {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .endpoint {
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .endpoint:hover {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .endpoint h3 {
+      color: #ffffff;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .endpoint p {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .try-button {
+      width: 100%;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2rem;
+    }
+    .try-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    .info {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .rapidapi-link {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>a-to-mind</h1>
+    <p class="subtitle">Comprehensive Automation API - Analyze, Generate, Transform, Validate, Extract, Compare</p>
+    
+    <div class="badge">🚀 7 Endpoints • Multiple Options • Full Documentation</div>
+
+    <div class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>✨ Analyze text for metrics, sentiment, and keywords</li>
+        <li>🎨 Generate summaries, titles, and hashtags</li>
+        <li>🔄 Transform data (uppercase, lowercase, reverse, base64, JSON)</li>
+        <li>✅ Validate emails, URLs, phone numbers, and JSON</li>
+        <li>📤 Extract emails, URLs, phone numbers, hashtags, mentions</li>
+        <li>📊 Compare texts and JSON objects for similarity</li>
+        <li>💪 Health check for API monitoring</li>
+      </ul>
+    </div>
+
+    <div class="endpoints">
+      <div class="endpoint">
+        <h3>Health Check</h3>
+        <p>Monitor API status</p>
+      </div>
+      <div class="endpoint">
+        <h3>Analyze</h3>
+        <p>Text analysis</p>
+      </div>
+      <div class="endpoint">
+        <h3>Generate</h3>
+        <p>Content generation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Transform</h3>
+        <p>Data transformation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Validate</h3>
+        <p>Data validation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Extract</h3>
+        <p>Pattern extraction</p>
+      </div>
+      <div class="endpoint">
+        <h3>Compare</h3>
+        <p>Data comparison</p>
+      </div>
+    </div>
+
+    <button class="try-button" onclick="openRapidAPI()">
+      Get API Key on RapidAPI
+    </button>
+
+    <div class="info">
+      <p>Available on <a href="https://rapidapi.com/atom-bomb-a-to-mind/api" target="_blank" class="rapidapi-link">RapidAPI</a> • Free tier available • Easy integration</p>
+    </div>
+  </div>
+
+  <script>
+    function openRapidAPI() {
+      window.open('https://rapidapi.com/atom-bomb-a-to-mind/api', '_blank');
+    }
+  </script>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+
       // GET /crew/status - summary with all bindings
       if (path === '/crew/status' || path === '/crew') {
         const bindings = getBindings(env);
