@@ -9,6 +9,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const UltimateBrowserAPIRoutes = require('./ultimate-browser-api-routes');
 
 class UltimateBrowserService {
   constructor() {
@@ -2260,45 +2261,80 @@ class UltimateBrowserService {
   // ==================== API SERVER ====================
   
   startServer() {
+    const routes = new UltimateBrowserAPIRoutes(this);
+    
     const server = http.createServer(async (req, res) => {
-      try {
-        const url = new URL(req.url, `http://localhost:${this.port}`);
-        const pathname = url.pathname;
-        
-        res.setHeader('Content-Type', 'application/json');
-        
-        // This would need to include all 150+ endpoints
-        // For brevity, I'll include the most important ones
-        
-        if (pathname === '/navigate') {
-          const targetUrl = url.searchParams.get('url');
-          if (!targetUrl) {
-            res.writeHead(400);
-            res.end(JSON.stringify({ error: 'URL parameter required' }));
-            return;
-          }
-          await this.navigateTo(targetUrl);
-          res.writeHead(200);
-          res.end(JSON.stringify({ success: true }));
-        } else if (pathname === '/close') {
-          await this.close();
-          res.writeHead(200);
-          res.end(JSON.stringify({ success: true }));
-          process.exit(0);
-        } else {
-          res.writeHead(404);
-          res.end(JSON.stringify({ error: 'Not found' }));
-        }
-      } catch (error) {
-        await this.takeErrorScreenshot(error);
-        res.writeHead(500);
-        res.end(JSON.stringify({ error: error.message }));
-      }
+      await routes.handleRequest(req, res);
     });
     
     server.listen(this.port, () => {
       console.log(`🚀 Ultimate browser service listening on port ${this.port}`);
       console.log(`📡 150+ API endpoints available`);
+      console.log(`📡 Categories:`);
+      console.log(`   Multi-Browser: /start-firefox, /start-webkit`);
+      console.log(`   Multi-Page: /new-page, /get-page, /close-page, /switch-to-page, /get-all-pages`);
+      console.log(`   Multi-Context: /new-context, /get-context, /close-context`);
+      console.log(`   Video: /start-video, /stop-video`);
+      console.log(`   Trace: /start-trace, /stop-trace`);
+      console.log(`   Testing: /run-test, /expect, /generate-report, /run-parallel`);
+      console.log(`   Fixtures: /use-fixture`);
+      console.log(`   Hooks: /before-all, /after-all, /before-each, /after-each`);
+      console.log(`   Coverage: /collect-coverage`);
+      console.log(`   Accessibility: /check-accessibility`);
+      console.log(`   Remote: /connect-remote`);
+      console.log(`   Custom Binary: /use-custom-binary`);
+      console.log(`   Extensions: /load-extension`);
+      console.log(`   CDP: /execute-cdp`);
+      console.log(`   Selectors: /get-by-xpath, /get-by-react, /get-by-vue`);
+      console.log(`   Locators: /get-first, /get-last, /get-nth, /get-has, /get-filter`);
+      console.log(`   Chaining: /chain-locators`);
+      console.log(`   Visibility: /get-visible, /get-hidden`);
+      console.log(`   Touch: /tap, /long-press, /swipe, /pinch, /zoom`);
+      console.log(`   Multi-Touch: /multi-touch`);
+      console.log(`   Wheel: /wheel`);
+      console.log(`   Mouse: /mouse-move, /mouse-down, /mouse-up`);
+      console.log(`   Keyboard: /key-down, /key-up, /insert-text`);
+      console.log(`   Clipboard: /read-clipboard, /write-clipboard`);
+      console.log(`   File Chooser: /handle-file-chooser`);
+      console.log(`   Download: /wait-for-download`);
+      console.log(`   Dialog: /set-dialog-handler, /accept-dialog, /dismiss-dialog`);
+      console.log(`   Popup: /wait-for-popup`);
+      console.log(`   WebSocket: /intercept-websocket, /get-websockets`);
+      console.log(`   Headers: /set-request-headers, /get-response-headers`);
+      console.log(`   Body: /get-request-body, /get-response-body`);
+      console.log(`   HAR: /export-har`);
+      console.log(`   Throttling: /set-network-throttle, /set-cpu-throttle, /set-offline`);
+      console.log(`   Storage: /get-indexeddb, /get-cache-storage, /get-session-storage, /set-session-storage`);
+      console.log(`   Workers: /get-service-workers, /get-web-workers`);
+      console.log(`   Geolocation: /set-geolocation, /get-geolocation`);
+      console.log(`   Permissions: /grant-permissions, /clear-permissions`);
+      console.log(`   Device: /set-device-orientation, /set-color-scheme, /set-reduced-motion, /set-forced-colors, /set-high-contrast`);
+      console.log(`   Console: /get-console-messages, /clear-console-messages`);
+      console.log(`   Accessibility: /get-accessibility-tree`);
+      console.log(`   Element State: /get-element-state`);
+      console.log(`   Bounding Box: /get-bounding-box`);
+      console.log(`   CSS: /get-computed-style`);
+      console.log(`   Scroll: /get-scroll-position, /set-scroll-position`);
+      console.log(`   Content: /get-element-content`);
+      console.log(`   Count: /get-element-count`);
+      console.log(`   Focus: /focus-element, /blur-element`);
+      console.log(`   PDF: /generate-pdf`);
+      console.log(`   Screenshot: /take-advanced-screenshot, /mask-screenshot, /ignore-regions-screenshot`);
+      console.log(`   WebAuthn: /enable-webauthn`);
+      console.log(`   Auth: /set-http-auth, /set-client-certificates, /set-proxy-auth`);
+      console.log(`   Cookies: /set-cookie-priority, /set-cookie-same-party, /set-cookie-partition-key`);
+      console.log(`   User Agent: /set-user-agent`);
+      console.log(`   Viewport: /set-viewport-size`);
+      console.log(`   Media: /set-media-type, /set-color-gamut`);
+      console.log(`   Test Tags: /run-tagged-tests`);
+      console.log(`   Test Projects: /run-project`);
+      console.log(`   Test Config: /set-test-config`);
+      console.log(`   Global: /global-setup, /global-teardown`);
+      console.log(`   Dependent Tests: /run-dependent-tests`);
+      console.log(`   Filtering: /filter-tests`);
+      console.log(`   Security: /set-csp, /set-cors`);
+      console.log(`   Enhanced: /wait-for-selector, /get-by-role, /get-by-text, etc.`);
+      console.log(`   Basic: /navigate, /click, /fill, /list-inputs, /list-buttons, /info, /screenshot, /execute-js, /hover, /dark-mode, /close`);
     });
     
     return server;
