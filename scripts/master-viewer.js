@@ -38,12 +38,12 @@ class MasterViewer {
     this.keepViewing = true;
     this.isPaused = false;
     this.speedMultiplier = 1.0;
-    this.zoomLevel = 1.0;
-    this.ambientMode = false;
     this.favoriteGalleries = this.loadJson('favorites.json', []);
-    this.smoothTransitions = true;
-    this.qualityMode = false;
     this.currentGallery = null;
+    this.viewHistory = this.loadJson('history.json', []);
+    this.shuffleMode = false;
+    this.favoritesOnlyMode = false;
+    this.currentCategory = 'skirt';
     
     // Start keyboard input
     this.startKeyboardInput();
@@ -62,12 +62,11 @@ class MasterViewer {
     console.log('   "+" - Speed up slideshow');
     console.log('   "-" - Slow down slideshow');
     console.log('   "f" - Toggle fullscreen');
-    console.log('   "z" - Zoom in');
-    console.log('   "x" - Zoom out');
-    console.log('   "a" - Toggle ambient mode (dim background)');
     console.log('   "h" - Add to favorites');
-    console.log('   "t" - Toggle smooth transitions');
-    console.log('   "o" - Toggle quality mode (high res only)\n');
+    console.log('   "p" - Play from favorites only');
+    console.log('   "r" - View history (recently viewed)');
+    console.log('   "c" - Change category');
+    console.log('   "u" - Toggle shuffle mode\n');
     
     rl.on('line', (input) => {
       const cmd = input.toLowerCase().trim();
@@ -90,15 +89,6 @@ class MasterViewer {
         console.log('🐢 Speed: ' + this.speedMultiplier + 'x');
       } else if (cmd === 'f') {
         console.log('🖥️  Fullscreen toggle (use browser F11)');
-      } else if (cmd === 'z') {
-        this.zoomLevel = Math.min(this.zoomLevel + 0.25, 3.0);
-        console.log('🔍 Zoom: ' + this.zoomLevel + 'x');
-      } else if (cmd === 'x') {
-        this.zoomLevel = Math.max(this.zoomLevel - 0.25, 0.5);
-        console.log('🔍 Zoom: ' + this.zoomLevel + 'x');
-      } else if (cmd === 'a') {
-        this.ambientMode = !this.ambientMode;
-        console.log(this.ambientMode ? '🌙 Ambient mode ON' : '☀️ Ambient mode OFF');
       } else if (cmd === 'h') {
         if (this.currentGallery && !this.favoriteGalleries.includes(this.currentGallery.href)) {
           this.favoriteGalleries.push(this.currentGallery.href);
@@ -107,12 +97,20 @@ class MasterViewer {
         } else {
           console.log('❤️  Already in favorites or no gallery loaded');
         }
-      } else if (cmd === 't') {
-        this.smoothTransitions = !this.smoothTransitions;
-        console.log(this.smoothTransitions ? '✨ Smooth transitions ON' : '⚡ Smooth transitions OFF');
-      } else if (cmd === 'o') {
-        this.qualityMode = !this.qualityMode;
-        console.log(this.qualityMode ? '🎨 Quality mode ON' : '🎨 Quality mode OFF');
+      } else if (cmd === 'p') {
+        this.favoritesOnlyMode = !this.favoritesOnlyMode;
+        console.log(this.favoritesOnlyMode ? '❤️  Favorites mode ON' : '🌐 Normal mode ON');
+      } else if (cmd === 'r') {
+        console.log('📜 Recent history:');
+        this.viewHistory.slice(-5).forEach((url, i) => {
+          console.log('   ' + (i + 1) + '. ' + url);
+        });
+      } else if (cmd === 'c') {
+        console.log('📂 Available categories: ' + this.categories.join(', '));
+        console.log('   Current: ' + this.currentCategory);
+      } else if (cmd === 'u') {
+        this.shuffleMode = !this.shuffleMode;
+        console.log(this.shuffleMode ? '🔀 Shuffle mode ON' : '📋 Sequential mode ON');
       }
     });
   }
@@ -392,30 +390,6 @@ class MasterViewer {
       console.log('✅ Fullscreen enabled');
     }
     
-    // Apply ambient mode if enabled
-    if (this.ambientMode) {
-      await page.addStyleTag({
-        content: '.pswp { background: #000 !important; } .pswp__bg { opacity: 0.95 !important; }'
-      });
-      console.log('🌙 Ambient mode applied');
-    }
-    
-    // Apply zoom
-    if (this.zoomLevel !== 1.0) {
-      await page.addStyleTag({
-        content: '.pswp__img { transform: scale(' + this.zoomLevel + ') !important; }'
-      });
-      console.log('🔍 Zoom applied: ' + this.zoomLevel + 'x');
-    }
-    
-    // Apply smooth transitions
-    if (this.smoothTransitions) {
-      await page.addStyleTag({
-        content: '.pswp__img { transition: opacity 0.5s ease-in-out !important; }'
-      });
-      console.log('✨ Smooth transitions enabled');
-    }
-    
     // Try play button
     console.log('Trying play button...');
     const playClicked = await this.clickPlayButton(page);
@@ -511,6 +485,12 @@ class MasterViewer {
     // Record like (since we didn't skip)
     this.recordLike(gallery);
     
+    // Add to history
+    if (!this.viewHistory.includes(gallery.href)) {
+      this.viewHistory.push(gallery.href);
+      this.saveJson('history.json', this.viewHistory);
+    }
+    
     // Mark as viewed
     this.viewedGalleries.push(gallery.href);
     this.saveJson(this.viewedFile, this.viewedGalleries);
@@ -540,30 +520,47 @@ class MasterViewer {
     const page = await context.newPage();
     
     try {
-      console.log('🚀 Starting Master Viewer - Using Related Galleries');
+      console.log('🚀 Starting Master Viewer');
       console.log('Viewed galleries: ' + this.viewedGalleries.length);
+      console.log('Favorites: ' + this.favoriteGalleries.length);
+      console.log('Mode: ' + (this.favoritesOnlyMode ? 'Favorites only' : 'Normal'));
       
-      // Start with a fresh gallery from skirt category
-      console.log('\n📂 Finding starting gallery...');
-      await page.goto('https://www.pornpics.com/skirt/');
+      // If favorites mode, play from favorites
+      if (this.favoritesOnlyMode && this.favoriteGalleries.length > 0) {
+        console.log('\n❤️  Playing from favorites...');
+        
+        for (const galleryUrl of this.favoriteGalleries) {
+          if (!this.keepViewing) break;
+          
+          await page.goto(galleryUrl);
+          await page.waitForTimeout(2000);
+          
+          const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+          const imageCount = await this.getImageCount(page);
+          
+          const gallery = {
+            href: galleryUrl,
+            text: title,
+            category: 'favorites',
+            isHearted: false,
+            imageCount: imageCount,
+            score: 10
+          };
+          
+          await this.viewGallery(page, gallery);
+          console.log('\n✅ Gallery complete');
+        }
+        
+        console.log('\n✅ Favorites complete');
+        return;
+      }
+      
+      // Normal mode: find gallery from category
+      console.log('\n📂 Finding starting gallery in ' + this.currentCategory + '...');
+      await page.goto('https://www.pornpics.com/' + this.currentCategory + '/');
       await page.waitForTimeout(3000);
       
-      const galleryLinks = await page.$$eval('a', links => 
-        links
-          .filter(link => link.href && link.href.includes('/galleries/'))
-          .map(link => link.href)
-          .slice(0, 10)
-      );
-      
-      console.log('Found ' + galleryLinks.length + ' galleries');
-      
-      // Scroll down and check hearts by hovering
-      console.log('\n🔍 Scrolling to find unhearted galleries...');
-      
-      let currentGalleryUrl = null;
-      let currentTitle = null;
-      
-      // Get all gallery links first
+      // Get all gallery links
       const allGalleries = await page.$$eval('a', links => 
         links
           .filter(link => link.href && link.href.includes('/galleries/'))
@@ -573,12 +570,24 @@ class MasterViewer {
       
       console.log('Total galleries: ' + allGalleries.length);
       
+      // Shuffle if enabled
+      if (this.shuffleMode) {
+        for (let i = allGalleries.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [allGalleries[i], allGalleries[j]] = [allGalleries[j], allGalleries[i]];
+        }
+        console.log('🔀 Shuffled galleries');
+      }
+      
+      // Find first unhearted gallery
+      let currentGalleryUrl = null;
+      let currentTitle = null;
+      
       for (const galleryUrl of allGalleries) {
         if (this.viewedGalleries.includes(galleryUrl)) {
           continue;
         }
         
-        // Navigate to gallery to check heart status and get title
         await page.goto(galleryUrl);
         await page.waitForTimeout(2000);
         
@@ -588,7 +597,6 @@ class MasterViewer {
           continue;
         }
         
-        // Get title from page
         const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
         
         console.log('✅ Unhearted: ' + title);
@@ -611,19 +619,16 @@ class MasterViewer {
       while (this.keepViewing && galleryCount < maxGalleries) {
         galleryCount++;
         
-        // Already on the gallery page from heart check
-        // Get image count
         const imageCount = await this.getImageCount(page);
         
         console.log('\n🖼️  Gallery ' + galleryCount + '/' + maxGalleries);
         console.log('Title: ' + currentTitle);
         console.log('Images: ' + imageCount);
         
-        // View this gallery
         const gallery = {
           href: currentGalleryUrl,
           text: currentTitle,
-          category: 'related',
+          category: this.currentCategory,
           isHearted: false,
           imageCount: imageCount,
           score: 10
@@ -648,7 +653,6 @@ class MasterViewer {
           await page.evaluate(() => window.scrollBy(0, 500));
           await page.waitForTimeout(1000);
           
-          // Find visible related galleries
           const visibleGalleries = await page.$$eval('a', (links) => 
             links
               .filter(link => {
@@ -662,15 +666,11 @@ class MasterViewer {
               .slice(0, 5)
           );
           
-          console.log('Visible related: ' + visibleGalleries.length);
-          
-          // Filter out viewed and current
           const filteredGalleries = visibleGalleries.filter(url => 
             url !== currentGalleryUrl && !this.viewedGalleries.includes(url)
           );
           
           for (const galleryUrl of filteredGalleries) {
-            // Navigate to gallery to check heart status and get title
             await page.goto(galleryUrl);
             await page.waitForTimeout(2000);
             
@@ -680,7 +680,6 @@ class MasterViewer {
               continue;
             }
             
-            // Get title from page
             const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
             
             console.log('✅ Unhearted: ' + title);
@@ -696,8 +695,7 @@ class MasterViewer {
         
         if (!nextGalleryUrl) {
           console.log('❌ No fresh related galleries found, going back to category');
-          // Go back to category to find fresh gallery
-          await page.goto('https://www.pornpics.com/skirt/');
+          await page.goto('https://www.pornpics.com/' + this.currentCategory + '/');
           await page.waitForTimeout(3000);
           
           const freshGalleries = await page.$$eval('a', links => 
@@ -706,6 +704,13 @@ class MasterViewer {
               .map(link => link.href)
               .slice(0, 10)
           );
+          
+          if (this.shuffleMode) {
+            for (let i = freshGalleries.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [freshGalleries[i], freshGalleries[j]] = [freshGalleries[j], freshGalleries[i]];
+            }
+          }
           
           for (const galleryUrl of freshGalleries) {
             if (this.viewedGalleries.includes(galleryUrl)) {
@@ -733,7 +738,6 @@ class MasterViewer {
           }
         }
         
-        // Update for next iteration
         currentGalleryUrl = nextGalleryUrl;
         currentTitle = nextTitle;
         console.log('✅ Next: ' + currentTitle);

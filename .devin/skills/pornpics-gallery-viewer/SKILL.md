@@ -1,4 +1,4 @@
-# PornPics Gallery Viewer Skill - Comprehensive System
+# PornPics Gallery Viewer Skill - Complete System
 
 ## Overview
 
@@ -15,42 +15,78 @@ Comprehensive system to view PornPics gallery images at high resolution with ful
 6. ✅ Category exploration - Systematic category scanning
 7. ✅ Adaptive timing - Adjust based on image count
 8. ✅ Preference learning - Track user likes
-9. ✅ Quality scoring - Rate galleries by metrics
+9. ✅ Smart timing - First and last images get 2x viewing time
 10. ✅ Related galleries - Find and navigate to related content
+
+### Control Features
+1. ✅ Keyboard skip - Press 's' or 'n' to skip current gallery
+2. ✅ Keyboard quit - Press 'q' to stop viewing
+3. ✅ Pause/Resume - Press space to pause/resume slideshow
+4. ✅ Speed control - Press + to speed up, - to slow down (0.5x to 3x)
+5. ✅ Fullscreen - Auto-enter fullscreen when slideshow starts
+6. ✅ Favorites - Press 'h' to add current gallery to favorites
+7. ✅ Favorites mode - Press 'p' to play from favorites only
+8. ✅ History tracking - Press 'r' to view recently viewed galleries
+9. ✅ Category selection - Press 'c' to see available categories
+10. ✅ Shuffle mode - Press 'u' to toggle random gallery selection
 
 ## Implementation Details
 
-### 1. Heart Detection (Multiple Methods)
+### Heart Detection (Multiple Methods)
 ```javascript
-// Method 1: Class check
-const isHearted = await page.$('.favorite-button.btn-frameless.active, .favorite-button.btn-frameless.added');
+// Method 1: Check for "del" class (already hearted)
+let isHearted = await page.$('.gall-info-favorite.del, .favorite-button.btn-frameless.del');
+if (isHearted) return true;
 
-// Method 2: Text check
-const heartText = await page.$('.favorite-button.btn-frameless');
-const text = await heartText.textContent();
-const isHearted = text.includes('Remove') || text.includes('Favorited');
+// Method 2: Check for "active" or "added" class
+isHearted = await page.$('.favorite-button.btn-frameless.active, .favorite-button.btn-frameless.added');
+if (isHearted) return true;
 
-// Method 3: Attribute check
-const isHearted = await page.$('.favorite-button.btn-frameless[data-favorited="true"]');
+// Method 3: Check PhotoSwipe favorite button
+isHearted = await page.$('.pswp__button--favorite-button.del');
+if (isHearted) return true;
+
+// Method 4: Text check
+const heartButton = await page.$('.gall-info-favorite, .favorite-button.btn-frameless');
+if (heartButton) {
+  const text = await heartButton.textContent();
+  if (text && (text.includes('Remove') || text.includes('Favorited'))) {
+    return true;
+  }
+}
 ```
 
-### 2. Image Clicking (Handle ppc-layer)
+### Image Clicking (Handle ppc-layer)
 ```javascript
 // Method 1: Click parent link (bypasses ppc-layer)
-const imageLink = await imageElement.$('xpath=..');
-await imageLink.click();
+const images = await page.$$('img[src*="cdni"]');
+if (images.length > 0) {
+  const parentLink = await images[0].$('xpath=..');
+  if (parentLink) {
+    await parentLink.click();
+    await page.waitForTimeout(3000);
+    return true;
+  }
+}
 
 // Method 2: Force click
-await imageElement.click({ force: true });
-
-// Method 3: Navigate to image URL directly
-const imageUrl = await imageElement.getAttribute('src');
-await page.goto(imageUrl);
+try {
+  await images[0].click({ force: true });
+  await page.waitForTimeout(3000);
+  return true;
+} catch (e) {
+  // Method 3: Navigate to URL directly
+  const imageUrl = await images[0].getAttribute('src');
+  await page.goto(imageUrl);
+  await page.waitForTimeout(3000);
+  return true;
+}
 ```
 
-### 3. Play Button (Multiple Selectors)
+### Play Button (Correct Selector)
 ```javascript
 const playSelectors = [
+  '.pswp__button--slideshow-button',  // Correct PhotoSwipe slideshow button
   '.favorite-button.btn-frameless + button',
   'button:has-text("Play")',
   'button[title*="play"]',
@@ -62,12 +98,29 @@ for (const selector of playSelectors) {
   const btn = await page.$(selector);
   if (btn) {
     await btn.click();
-    break;
+    return true;
   }
 }
 ```
 
-### 4. Gallery Selection (Quality-Based)
+### Smart Timing
+```javascript
+// First and last images get 2x viewing time
+const imageCount = Math.min(gallery.imageCount, 10);
+const timePerImage = viewingTime / imageCount;
+
+for (let i = 0; i < imageCount; i++) {
+  const isFirstOrLast = (i === 0 || i === imageCount - 1);
+  const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
+  
+  console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : ''));
+  
+  const adjustedWait = (adjustedTime * 1000) / speedMultiplier;
+  await page.waitForTimeout(adjustedWait);
+}
+```
+
+### Gallery Selection (Quality-Based)
 ```javascript
 // Score galleries by:
 // - Image count (more = better)
@@ -79,87 +132,95 @@ function scoreGallery(gallery) {
   let score = 0;
   score += gallery.imageCount * 2;
   score += !gallery.isHearted ? 10 : 0;
-  score += gallery.hasPreferredCategory ? 5 : 0;
+  score += this.preferences.categories[gallery.category] ? 5 : 0;
+  
+  // Penalize disliked keywords
+  for (const keyword of this.preferences.skipKeywords) {
+    if (gallery.text.toLowerCase().includes(keyword)) {
+      score -= 50;
+    }
+  }
+  
+  // Bonus for preferred keywords
+  for (const keyword of Object.keys(this.preferences.keywords)) {
+    if (gallery.text.toLowerCase().includes(keyword)) {
+      score += 10;
+    }
+  }
+  
   return score;
 }
 ```
 
-### 5. Category Exploration
+### Favorites System
 ```javascript
-const categories = ['skirt', 'bikini', 'pussy', 'milf', 'teen', 'blonde', 'brunette'];
+// Add to favorites
+if (this.currentGallery && !this.favoriteGalleries.includes(this.currentGallery.href)) {
+  this.favoriteGalleries.push(this.currentGallery.href);
+  this.saveJson('favorites.json', this.favoriteGalleries);
+}
 
-for (const category of categories) {
-  await exploreCategory(category);
+// Play from favorites mode
+if (this.favoritesOnlyMode && this.favoriteGalleries.length > 0) {
+  for (const galleryUrl of this.favoriteGalleries) {
+    await viewGallery(galleryUrl);
+  }
 }
 ```
 
-### 6. Adaptive Timing
+### History Tracking
 ```javascript
-const imageCount = await getImageCount();
-const timePerImage = 10000; // 10 seconds
-const totalTime = imageCount * timePerImage;
-await page.waitForTimeout(totalTime);
-```
-
-### 7. Preference Learning
-```javascript
-const preferences = {
-  categories: {},
-  keywords: {},
-  imageCountRange: [10, 30]
-};
-
-// Track what user likes
-preferences.categories[category] = (preferences.categories[category] || 0) + 1;
-```
-
-### 8. Quality Scoring
-```javascript
-function calculateQuality(gallery) {
-  return {
-    imageCount: gallery.images.length,
-    resolution: 'high',
-    lighting: 'good',
-    composition: 'excellent',
-    overall: 9.5
-  };
+// Add to history after viewing
+if (!this.viewHistory.includes(gallery.href)) {
+  this.viewHistory.push(gallery.href);
+  this.saveJson('history.json', this.viewHistory);
 }
+
+// View recent history
+this.viewHistory.slice(-5).forEach((url, i) => {
+  console.log('   ' + (i + 1) + '. ' + url);
+});
 ```
 
-### 9. Related Galleries
+### Shuffle Mode
 ```javascript
-const related = await page.$$eval('a', links => 
-  links
-    .filter(link => link.href && link.href.includes('/galleries/'))
-    .map(link => link.href)
-    .slice(0, 5)
-);
+// Fisher-Yates shuffle
+for (let i = array.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [array[i], array[j]] = [array[j], array[i]];
+}
 ```
 
 ## Master Script Flow
 
 ```
-1. Load preferences and viewed history
-2. Explore categories systematically
-3. Score and rank galleries
-4. Select best unhearted gallery
-5. Navigate and verify not hearted
-6. Click first image (handle ppc-layer)
-7. Heart the gallery
-8. Find and click play button
-9. View slideshow with adaptive timing
-10. Mark as viewed
-11. Update preferences
-12. Find related galleries
-13. Repeat from step 3
+1. Load preferences, viewed galleries, favorites, history
+2. Check if favorites mode is enabled
+3. If favorites mode: play from favorites only
+4. If normal mode: explore category
+5. Shuffle galleries if shuffle mode enabled
+6. Score and rank galleries
+7. Select best unhearted gallery
+8. Navigate and verify not hearted
+9. Click first image (handle ppc-layer)
+10. Enter fullscreen
+11. Heart the gallery
+12. Find and click play button
+13. View slideshow with smart timing
+14. Mark as viewed
+15. Add to history
+16. Update preferences
+17. Find related galleries
+18. Repeat from step 8
 ```
 
 ## Scripts Available
 
 - `master-viewer.js` - Complete automated system
-- `viewed-galleries.json` - Tracks viewed galleries
-- `preferences.json` - User preferences
-- `gallery-scores.json` - Quality scores
+- `viewed-galleries.json` - Tracks all viewed galleries
+- `preferences.json` - User preferences and settings
+- `favorites.json` - Saved favorite galleries
+- `history.json` - Recently viewed galleries
 
 ## Usage
 
@@ -167,12 +228,29 @@ const related = await page.$$eval('a', links =>
 node master-viewer.js
 ```
 
+## Keyboard Controls
+
+- `s` or `n` - Skip current gallery
+- `q` - Quit
+- `space` - Pause/Resume slideshow
+- `+` - Speed up slideshow
+- `-` - Slow down slideshow
+- `f` - Toggle fullscreen
+- `h` - Add to favorites
+- `p` - Play from favorites only
+- `r` - View history (recently viewed)
+- `c` - Change category
+- `u` - Toggle shuffle mode
+
 ## Remember
 
 - NEVER open hearted galleries
 - NEVER repeat galleries
-- Use multiple methods for reliability
-- Adapt timing based on content
-- Learn from user behavior
-- Score and rank for quality
-- Explore systematically
+- Click first image to get controls to appear
+- Heart button: `.gall-info-favorite`
+- Play button: `.pswp__button--slideshow-button`
+- Controls only appear after clicking an image
+- Play button starts automatic slideshow
+- First and last images get extended viewing time
+- Favorites are saved to favorites.json
+- History is saved to history.json
