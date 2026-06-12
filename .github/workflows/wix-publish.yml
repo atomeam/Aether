@@ -1,0 +1,8 @@
+name: Publish Wix Velo
+on: {push:{paths:['wix/**']},workflow_dispatch:}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: if git remote|grep -q wix; then git push wix HEAD:main; else echo "Maintainer: publish wix/ via Wix UI"; fi

@@ -1,0 +1,7 @@
+<div id="buy-widget"><button id="buy-now">Buy — $19.99</button></div>
+<script>
+document.getElementById('buy-now').onclick = async () => {
+  const r = await fetch('/_functions/lead-forwarder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:19.99,currency:'USD',email:window.currentUserEmail||'',product_id:'ai-ops-pro'})});
+  if ((await r.json()).ok) window.location.href='/checkout';
+};
+</script>
