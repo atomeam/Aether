@@ -14,6 +14,9 @@ import { krakenTradingBot } from './kraken-trading';
 import { handleEmailValidation } from './rapidapi-apis/email-validator';
 import { handleIPGeolocation } from './rapidapi-apis/ip-geolocation';
 import { handleTextAnalysis } from './rapidapi-apis/text-analyzer';
+import { handleURLShortener } from './rapidapi-apis/url-shortener';
+import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
+import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
 
 // Shared constants
 const VERSION = '0.16.2';
@@ -854,6 +857,21 @@ export default {
       // RapidAPI - Text Analysis API
       if (path === '/api/rapidapi/text-analyzer' && method === 'POST') {
         return handleTextAnalysis(request);
+      }
+
+      // RapidAPI - URL Shortener API
+      if (path === '/api/rapidapi/url-shortener' && method === 'POST') {
+        return handleURLShortener(request);
+      }
+
+      // RapidAPI - QR Code Generator API
+      if (path === '/api/rapidapi/qr-code-generator' && method === 'POST') {
+        return handleQRCodeGenerator(request);
+      }
+
+      // RapidAPI - Currency Converter API
+      if (path === '/api/rapidapi/currency-converter' && method === 'POST') {
+        return handleCurrencyConverter(request);
       }
 
       // GET /crew/status - summary with all bindings
