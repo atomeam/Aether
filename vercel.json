@@ -1,20 +1,24 @@
 {
   "version": 2,
-  "buildCommand": "npm run build -w @aether/backend",
+  "buildCommand": "npm run build -w @aether/frontend",
+  "outputDirectory": "apps/frontend/dist",
   "builds": [
     {
-      "src": "apps/backend/dist/server.cjs",
-      "use": "@vercel/node"
+      "src": "apps/frontend/package.json",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/apps/backend/dist/server.cjs"
+      "dest": "https://bridge.a-to-mind.com/api/$1"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/apps/backend/dist/server.cjs"
+      "dest": "/$1"
     }
   ]
 }
