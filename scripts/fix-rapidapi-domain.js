@@ -35,10 +35,10 @@ async function fixRapidAPIDomain() {
       }
     }
     
-    // Look for API-related buttons
+    // Look for API-specific settings button (not API Marketplace)
     const apiButton = menuButtons.buttons.find(b => 
-      b.text.toLowerCase().includes('api') || 
-      (b.ariaLabel && b.ariaLabel.toLowerCase().includes('api'))
+      (b.text.toLowerCase().includes('api') && !b.text.toLowerCase().includes('marketplace')) || 
+      (b.ariaLabel && b.ariaLabel.toLowerCase().includes('api') && !b.ariaLabel.toLowerCase().includes('marketplace'))
     );
     
     if (apiButton) {
