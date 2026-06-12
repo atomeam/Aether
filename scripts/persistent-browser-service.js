@@ -249,6 +249,17 @@ class PersistentBrowserService {
     }
   }
   
+  async executeJavaScriptAsync(code) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const result = await this.page.evaluate(code);
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
   async hoverElement(selector) {
     if (!this.page) await this.startBrowser();
     
