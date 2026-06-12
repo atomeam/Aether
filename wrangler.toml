@@ -53,6 +53,8 @@ id = "49202b2460a74d2dbd6d747d35dda5b7"
 binding = "MYBROWSER"
 
 # Cloudflare Queues (created manually: npx wrangler queues create curator-jobs)
+# NOTE: the consumer for curator-jobs lives in apps/bridge/wrangler.toml
+# (aether-bridge is the executor). The dispatcher only produces.
 [[queues.producers]]
 binding = "CURATOR_QUEUE"
 queue = "curator-jobs"
@@ -64,11 +66,6 @@ service = "aether-bridge"
 
 [vars]
 WORKER_ROLE = "dispatcher"
-[[queues.consumers]]
-queue = "curator-jobs"
-max_batch_size = 1
-max_batch_timeout = 30
-max_retries = 3
 
 # ACTIONS queue - needs to be created via Cloudflare API
 # [[queues.producers]]
