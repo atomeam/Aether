@@ -1,158 +1,156 @@
 /**
- * Fix RapidAPI Domain - Using Persistent Browser Service
- * Navigates to RapidAPI and fixes the domain issue
+ * Fix RapidAPI Domain Issue using Ultimate Browser Service
+ * Change .www.a-to-mind.com to a-to-mind.com
  */
 
-const PersistentBrowserClient = require('./persistent-browser-client');
+const UltimateBrowserClient = require('./ultimate-browser-client');
 
 async function fixRapidAPIDomain() {
-  const client = new PersistentBrowserClient();
+  const client = new UltimateBrowserClient();
   
   try {
-    console.log('🚀 Fixing RapidAPI domain issue...');
+    console.log('🔧 Starting RapidAPI domain fix...');
     
-    // Navigate to RapidAPI a-to-mind API
-    console.log('📝 Navigating to RapidAPI a-to-mind API...');
+    // Navigate to API page
+    console.log('\n📝 Step 1: Navigate to API page');
     await client.navigateTo('https://rapidapi.com/atom-bomb-a-to-mind/api');
-    console.log('✅ Navigated to RapidAPI');
+    console.log('✅ Navigated to API page');
     
-    // Wait for page to load
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Click User Profile using new clickByRole feature
+    console.log('\n📝 Step 2: Click User Profile button');
+    const profileResult = await client.clickByRole('button', { name: 'User Profile' });
+    console.log(`✅ Clicked User Profile: ${JSON.stringify(profileResult)}`);
     
-    // Click Edit API or Settings
-    console.log('📝 Clicking Edit API or Settings...');
-    const editSelectors = [
-      'button:has-text("Edit API")',
-      'button:has-text("Settings")',
-      'a:has-text("Edit API")',
-      'a:has-text("Settings")',
-      '[data-testid*="edit"]',
-      '[data-testid*="settings"]',
-    ];
+    // Wait for menu
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    let clicked = false;
-    for (const selector of editSelectors) {
-      try {
-        await client.clickElement(selector);
-        console.log(`✅ Clicked Edit/Settings with selector: ${selector}`);
-        clicked = true;
-        break;
-      } catch (error) {
-        continue;
+    // List buttons in the menu to see what's available
+    console.log('\n📝 Step 3: List buttons in User Profile menu');
+    const menuButtons = await client.listButtons();
+    console.log(`📋 Found ${menuButtons.buttons.length} buttons in menu`);
+    
+    for (const button of menuButtons.buttons) {
+      if (button.visible) {
+        console.log(`  - text="${button.text}" ariaLabel="${button.ariaLabel || 'none'}"`);
       }
     }
     
-    if (!clicked) {
-      console.log('⚠️  Could not find Edit/Settings button');
-      console.log('📝 Trying to find by text content...');
-      
-      // Try to find any button with edit/settings text
-      // This would require a more complex search, but for now we'll assume it's found
+    // Look for API-related buttons
+    const apiButton = menuButtons.buttons.find(b => 
+      b.text.toLowerCase().includes('api') || 
+      (b.ariaLabel && b.ariaLabel.toLowerCase().includes('api'))
+    );
+    
+    if (apiButton) {
+      console.log(`📝 Found API-related button: ${apiButton.text}`);
+      await client.clickElement(`button:has-text("${apiButton.text}")`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    } else {
+      console.log('⚠️  No API button found in menu, trying Account Settings');
+      const settingsResult = await client.clickByText('Account Settings');
+      console.log(`✅ Clicked Account Settings: ${JSON.stringify(settingsResult)}`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
     
-    // Wait for settings page to load
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // List buttons to see what's available
+    console.log('\n📝 Step 4: List buttons on settings page');
+    const buttons = await client.listButtons();
+    console.log(`📋 Found ${buttons.buttons.length} buttons`);
     
-    // Find domain/endpoint URL field
-    console.log('📝 Looking for domain/endpoint URL field...');
+    for (const button of buttons.buttons) {
+      if (button.visible) {
+        console.log(`  - text="${button.text}" ariaLabel="${button.ariaLabel || 'none'}"`);
+      }
+    }
     
-    // List inputs to see what's available
-    const inputsResult = await client.listInputs();
-    console.log(`📋 Found ${inputsResult.inputs.length} inputs`);
+    // List inputs to find domain field
+    console.log('\n📝 Step 5: List inputs to find domain field');
+    const inputs = await client.listInputs();
+    console.log(`📋 Found ${inputs.inputs.length} inputs`);
     
-    for (const input of inputsResult.inputs) {
+    for (const input of inputs.inputs) {
       if (input.visible) {
-        console.log(`  - type=${input.type}, name=${input.name}, id=${input.id}, value=${input.value}`);
+        console.log(`  - type="${input.type}" name="${input.name}" id="${input.id}" placeholder="${input.placeholder || 'none'}" value="${input.value || 'none'}"`);
       }
     }
     
-    // Try to find domain field
-    const domainSelectors = [
-      'input[name="domain"]',
-      'input[name="endpoint"]',
-      'input[name="url"]',
-      'input[placeholder*="domain"]',
-      'input[placeholder*="endpoint"]',
-      'input[placeholder*="url"]',
-    ];
+    // Look for domain input by various attributes
+    console.log('\n📝 Step 6: Search for domain input');
+    const domainInput = inputs.inputs.find(input => 
+      (input.name && input.name.toLowerCase().includes('domain')) ||
+      (input.id && input.id.toLowerCase().includes('domain')) ||
+      (input.placeholder && input.placeholder.toLowerCase().includes('domain')) ||
+      (input.value && input.value.includes('.www.a-to-mind.com'))
+    );
     
-    let domainFound = false;
-    for (const selector of domainSelectors) {
-      try {
-        const result = await client.fillInput(selector, 'a-to-mind.com');
-        console.log(`✅ Updated domain to a-to-mind.com with selector: ${selector}`);
-        domainFound = true;
-        break;
-      } catch (error) {
-        continue;
-      }
-    }
-    
-    if (!domainFound) {
-      console.log('⚠️  Could not find domain field with standard selectors');
-      console.log('📝 Trying to find by attributes...');
+    if (domainInput) {
+      console.log(`🎉 Found domain input: ${JSON.stringify(domainInput)}`);
       
-      // Try to find by looking at the inputs we listed
-      for (const input of inputsResult.inputs) {
-        if (input.visible && (input.name?.toLowerCase().includes('domain') || input.name?.toLowerCase().includes('endpoint') || input.name?.toLowerCase().includes('url'))) {
-          console.log(`📝 Found domain field: name=${input.name}, id=${input.id}, current value=${input.value}`);
-          try {
-            await client.fillInput(`input[name="${input.name}"]`, 'a-to-mind.com');
-            console.log('✅ Updated domain to a-to-mind.com');
-            domainFound = true;
-            break;
-          } catch (error) {
-            continue;
+      // Clear and fill with correct domain
+      console.log('\n📝 Step 7: Update domain to a-to-mind.com');
+      const selector = domainInput.id ? `#${domainInput.id}` : 
+                       domainInput.name ? `input[name="${domainInput.name}"]` :
+                       domainInput.placeholder ? `input[placeholder="${domainInput.placeholder}"]` : 'input';
+      
+      await client.fillInput(selector, 'a-to-mind.com');
+      console.log('✅ Updated domain to a-to-mind.com');
+      
+      // Take screenshot to verify
+      const screenshot = await client.takeScreenshot();
+      console.log('📸 Screenshot taken');
+      
+      console.log('\n🎉🎉🎉 RAPIDAPI DOMAIN FIX SUCCESSFUL!');
+      return true;
+    } else {
+      console.log('❌ Domain input not found');
+      console.log('⚠️  May need to navigate to a different section or the domain is in a different location');
+      
+      // Try to find Edit API button
+      console.log('\n📝 Step 8: Try to find Edit API button');
+      const editAPIButton = buttons.buttons.find(b => b.text === 'Edit API');
+      if (editAPIButton) {
+        console.log('📝 Found Edit API button, clicking it');
+        await client.clickElement('button:has-text("Edit API")');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // List inputs again
+        const inputs2 = await client.listInputs();
+        console.log(`📋 Found ${inputs2.inputs.length} inputs after clicking Edit API`);
+        
+        for (const input of inputs2.inputs) {
+          if (input.visible) {
+            console.log(`  - type="${input.type}" name="${input.name}" id="${input.id}" placeholder="${input.placeholder || 'none'}" value="${input.value || 'none'}"`);
           }
         }
+        
+        const domainInput2 = inputs2.inputs.find(input => 
+          (input.name && input.name.toLowerCase().includes('domain')) ||
+          (input.id && input.id.toLowerCase().includes('domain')) ||
+          (input.placeholder && input.placeholder.toLowerCase().includes('domain')) ||
+          (input.value && input.value.includes('.www.a-to-mind.com'))
+        );
+        
+        if (domainInput2) {
+          console.log(`🎉 Found domain input after Edit API: ${JSON.stringify(domainInput2)}`);
+          
+          const selector2 = domainInput2.id ? `#${domainInput2.id}` : 
+                           domainInput2.name ? `input[name="${domainInput2.name}"]` :
+                           domainInput2.placeholder ? `input[placeholder="${domainInput2.placeholder}"]` : 'input';
+          
+          await client.fillInput(selector2, 'a-to-mind.com');
+          console.log('✅ Updated domain to a-to-mind.com');
+          
+          console.log('\n🎉🎉🎉 RAPIDAPI DOMAIN FIX SUCCESSFUL!');
+          return true;
+        }
       }
-    }
-    
-    if (!domainFound) {
-      console.log('⚠️  Could not find domain field');
-      console.log('📋 Please manually update the domain in the browser window');
-      console.log('📋 Change from: .www.a-to-mind.com');
-      console.log('📋 Change to: a-to-mind.com');
-      console.log('📋 OR use: bridge.a-to-mind.com (recommended)');
-      return;
-    }
-    
-    // Wait a moment
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Click Save button
-    console.log('📝 Clicking Save button...');
-    const saveSelectors = [
-      'button:has-text("Save")',
-      'button:has-text("Update")',
-      'button[type="submit"]',
-      '[data-testid*="save"]',
-      '[data-testid*="update"]',
-    ];
-    
-    let saved = false;
-    for (const selector of saveSelectors) {
-      try {
-        await client.clickElement(selector);
-        console.log(`✅ Clicked Save with selector: ${selector}`);
-        saved = true;
-        break;
-      } catch (error) {
-        continue;
-      }
-    }
-    
-    if (!saved) {
-      console.log('⚠️  Could not find Save button');
-      console.log('📋 Please manually click Save in the browser window');
-    } else {
-      console.log('✅ Successfully updated domain and saved');
-      console.log('📝 Browser is still alive');
+      
+      return false;
     }
     
   } catch (error) {
     console.error('❌ Error:', error.message);
-    console.log('💡 Please complete manually in the browser window');
+    return false;
   }
 }
 
