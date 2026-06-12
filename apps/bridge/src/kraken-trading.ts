@@ -4,8 +4,47 @@ import { BridgeEnv } from '../types';
 // CONSERVATIVE STRATEGY - Small positions, tight stops, managed risk
 
 export async function getKrakenBalance(apiKey: string, apiSecret: string): Promise<{ asset: string; balance: string }[]> {
+  // First, test with a public endpoint to verify connection
+  try {
+    const publicTest = await fetch('https://api.kraken.com/0/public/Time');
+    const publicData = await publicTest.json();
+    console.log('Public API Test:', JSON.stringify(publicData));
+  } catch (error) {
+    console.error('Public API failed:', error);
+  }
+  
   const nonce = Date.now().toString();
-  const body = `nonce=${nonce}`;
+  
+  // Try TradeBalance first (often more reliable)
+  const tradeBalanceBody = `nonce=${nonce}&asset=`;
+  const tradeBalancePath = '/0/private/TradeBalance';
+  const tradeBalanceSignature = await createKrakenSignature(apiSecret, tradeBalancePath, tradeBalanceBody);
+  
+  const tradeResponse = await fetch('https://api.kraken.com/0/private/TradeBalance', {
+    method: 'POST',
+    headers: {
+      'API-Key': apiKey,
+      'API-Sign': tradeBalanceSignature,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: tradeBalanceBody
+  });
+  const tradeData = await tradeResponse.json();
+  console.log('Kraken TradeBalance API Response:', JSON.stringify(tradeData));
+  console.log('TradeBalance Request Body:', tradeBalanceBody);
+  console.log('TradeBalance Path:', tradeBalancePath);
+  
+  if (tradeData.result) {
+    return Object.entries(tradeData.result).map(([asset, balance]) => ({ 
+      asset, 
+      balance: (balance as any).toString() 
+    }));
+  }
+  
+  // Fallback to Balance endpoint
+  console.log('TradeBalance failed, trying Balance...');
+  const balanceNonce = (Date.now() + 1).toString();
+  const body = `nonce=${balanceNonce}`;
   const path = '/0/private/Balance';
   const signature = await createKrakenSignature(apiSecret, path, body);
   
@@ -19,6 +58,14 @@ export async function getKrakenBalance(apiKey: string, apiSecret: string): Promi
     body
   });
   const data = await response.json();
+  console.log('Kraken Balance API Response:', JSON.stringify(data));
+  console.log('Balance Request Body:', body);
+  console.log('Balance Path:', path);
+  
+  if (data.error && data.error.length > 0) {
+    console.error('Kraken API Error:', data.error);
+  }
+  
   return data.result ? Object.entries(data.result).map(([asset, balance]) => ({ asset, balance: (balance as any).toString() })) : [];
 }
 
@@ -73,7 +120,8 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
         total_usd: balance.reduce((sum, b) => {
           if (b.asset === 'ZUSD') return sum + parseFloat(b.balance);
           return sum;
-        }, 0)
+        }, 0),
+        debug: 'Balance check complete'
       });
     }
     
@@ -208,9 +256,9 @@ async function getTicker(pair: string): Promise<any> {
 
 async function getOpenPositions(apiKey: string, apiSecret: string): Promise<any[]> {
   const nonce = Date.now().toString();
-  const body = `nonce=${nonce}`;
+  const bodyString = `nonce=${nonce}`;
   const path = '/0/private/OpenPositions';
-  const signature = await createKrakenSignature(apiSecret, path, body);
+  const signature = await createKrakenSignature(apiSecret, path, bodyString);
   
   const response = await fetch('https://api.kraken.com/0/private/OpenPositions', {
     method: 'POST',
@@ -219,7 +267,7 @@ async function getOpenPositions(apiKey: string, apiSecret: string): Promise<any[
       'API-Sign': signature,
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    body
+    body: bodyString
   });
   const data = await response.json();
   return data.result ? Object.values(data.result) : [];
@@ -227,15 +275,12 @@ async function getOpenPositions(apiKey: string, apiSecret: string): Promise<any[
 
 async function placeOrder(apiKey: string, apiSecret: string, pair: string, type: string, volume: number, price?: number): Promise<any> {
   const nonce = Date.now().toString();
-  const body = new URLSearchParams({
-    nonce,
-    pair,
-    type,
-    volume: volume.toString(),
-    ordertype: price ? 'limit' : 'market',
-    ...(price && { price: price.toString() })
-  });
-  const bodyString = body.toString();
+  // Build body as string for signature
+  let bodyString = `nonce=${nonce}&pair=${pair}&type=${type}&volume=${volume.toString()}&ordertype=${price ? 'limit' : 'market'}`;
+  if (price) {
+    bodyString += `&price=${price.toString()}`;
+  }
+  
   const path = '/0/private/AddOrder';
   const signature = await createKrakenSignature(apiSecret, path, bodyString);
 
@@ -259,8 +304,8 @@ async function createKrakenSignature(apiSecret: string, path: string, body: stri
   // Decode secret from base64
   const secretBuffer = Uint8Array.from(atob(apiSecret), c => c.charCodeAt(0));
   
-  // SHA256 of (nonce + body)
-  const message = body;
+  // SHA256 of (nonce + body) - NOT just body
+  const message = body; // body already includes nonce
   const messageBuffer = encoder.encode(message);
   const sha256Hash = await crypto.subtle.digest('SHA-256', messageBuffer);
   const sha256HashArray = new Uint8Array(sha256Hash);
@@ -294,14 +339,7 @@ async function convertToUSD(apiKey: string, apiSecret: string, asset: string, am
   try {
     const nonce = Date.now().toString();
     const pair = `${asset}ZUSD`; // Convert asset to USD
-    const body = new URLSearchParams({
-      nonce,
-      pair,
-      type: 'sell',
-      ordertype: 'market',
-      volume: amount
-    });
-    const bodyString = body.toString();
+    const bodyString = `nonce=${nonce}&pair=${pair}&type=sell&ordertype=market&volume=${amount}`;
     const path = '/0/private/AddOrder';
     const signature = await createKrakenSignature(apiSecret, path, bodyString);
 
