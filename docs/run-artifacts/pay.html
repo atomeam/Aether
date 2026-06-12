@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aether Pro Access - $49</title>
+  <title>Aether Pro Access - Multiple Payment Options</title>
   <meta name="description" content="Get Aether Pro API key - autonomous agent teams, priority rate limits, council session logs">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,7 +18,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 500px;
+      max-width: 600px;
       width: 100%;
       text-align: center;
     }
@@ -30,14 +30,78 @@
     }
     .subtitle {
       color: rgba(255, 255, 255, 0.6);
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
       font-size: 1rem;
     }
+    .urgency {
+      color: #ff6b6b;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .pricing {
+      display: flex;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .price-card {
+      flex: 1;
+      min-width: 200px;
+      padding: 1.5rem;
+      background: rgba(196, 166, 97, 0.05);
+      border: 2px solid rgba(196, 166, 97, 0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .price-card:hover {
+      border-color: #c4a661;
+      transform: translateY(-4px);
+    }
+    .price-card.selected {
+      border-color: #c4a661;
+      background: rgba(196, 166, 97, 0.15);
+    }
+    .price-card.featured {
+      border-color: #c4a661;
+      background: rgba(196, 166, 97, 0.1);
+      position: relative;
+    }
+    .price-card.featured::before {
+      content: 'MOST POPULAR';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #c4a661;
+      color: #020202;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
     .price {
-      font-size: 3.5rem;
+      font-size: 2.5rem;
       font-weight: 800;
       color: #c4a661;
-      margin: 1.5rem 0;
+      margin: 0.5rem 0;
+    }
+    .price-label {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 0.5rem;
+    }
+    .original-price {
+      text-decoration: line-through;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 1rem;
     }
     .features {
       text-align: left;
@@ -73,6 +137,46 @@
     .email-input::placeholder {
       color: rgba(255, 255, 255, 0.3);
     }
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .payment-method {
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .payment-method:hover {
+      border-color: #c4a661;
+      background: rgba(196, 166, 97, 0.1);
+    }
+    .payment-method.selected {
+      border-color: #c4a661;
+      background: rgba(196, 166, 97, 0.15);
+    }
+    .payment-icon {
+      font-size: 1.5rem;
+    }
+    .payment-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .payment-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+    }
     .pay-button {
       width: 100%;
       padding: 1.25rem;
@@ -95,25 +199,22 @@
     .pay-button:active {
       transform: translateY(0);
     }
-    .info {
-      margin-top: 2rem;
+    .pay-button:disabled {
+      background: rgba(196, 166, 97, 0.3);
+      cursor: not-allowed;
+      transform: none;
+    }
+    .guarantee {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      border-radius: 8px;
       font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.4);
+      color: rgba(255, 255, 255, 0.7);
     }
-    .networks {
-      margin-top: 1rem;
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .network {
-      padding: 0.4rem 0.8rem;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 20px;
-      font-size: 0.75rem;
-      color: rgba(255, 255, 255, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    .guarantee strong {
+      color: #4caf50;
     }
     .loading {
       display: none;
@@ -124,21 +225,76 @@
     .loading.active {
       display: block;
     }
+    .crypto-address {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .crypto-address.active {
+      display: block;
+    }
+    .crypto-address code {
+      display: block;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin: 0.5rem 0;
+      word-break: break-all;
+      font-family: monospace;
+      color: #c4a661;
+    }
+    .copy-button {
+      padding: 0.5rem 1rem;
+      background: rgba(196, 166, 97, 0.2);
+      border: 1px solid rgba(196, 166, 97, 0.3);
+      border-radius: 4px;
+      color: #c4a661;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+    .copy-button:hover {
+      background: rgba(196, 166, 97, 0.3);
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Aether Pro Access</h1>
     <p class="subtitle">Autonomous agent teams. Measurable output. No babysitting.</p>
+    
+    <div class="urgency">⚡ Limited time: 30% off ends soon</div>
 
-    <div class="price">$49</div>
+    <div class="pricing">
+      <div class="price-card" onclick="selectPrice(29, this)">
+        <div class="price-label">Starter</div>
+        <div class="price">$29</div>
+        <div class="original-price">$49</div>
+      </div>
+      <div class="price-card featured selected" onclick="selectPrice(49, this)">
+        <div class="price-label">Pro</div>
+        <div class="price">$49</div>
+        <div class="original-price">$99</div>
+      </div>
+      <div class="price-card" onclick="selectPrice(99, this)">
+        <div class="price-label">Enterprise</div>
+        <div class="price">$99</div>
+        <div class="original-price">$199</div>
+      </div>
+    </div>
 
     <div class="features">
       <ul>
         <li>✓ API key with priority rate limits</li>
         <li>✓ Council session logs & replay</li>
-        <li>✓ Email support</li>
+        <li>✓ Email support (24h response)</li>
         <li>✓ Multi-chain crypto payments</li>
+        <li>✓ Discord community access</li>
+        <li>✓ Early access to new features</li>
       </ul>
     </div>
 
@@ -150,28 +306,101 @@
       required
     />
 
-    <button
-      class="pay-button"
-      onclick="pay()"
-    >
-      Pay with Crypto
-    </button>
-
-    <div class="loading" id="loading">
-      Redirecting to payment page...
+    <div class="payment-methods">
+      <div class="payment-method" onclick="selectPayment('stripe', this)">
+        <div class="payment-icon">💳</div>
+        <div class="payment-name">Credit Card</div>
+        <div class="payment-badge">Instant</div>
+      </div>
+      <div class="payment-method" onclick="selectPayment('paypal', this)">
+        <div class="payment-icon">🅿️</div>
+        <div class="payment-name">PayPal</div>
+        <div class="payment-badge">Instant</div>
+      </div>
+      <div class="payment-method" onclick="selectPayment('crypto', this)">
+        <div class="payment-icon">₿</div>
+        <div class="payment-name">Crypto</div>
+        <div class="payment-badge">0.5% fee</div>
+      </div>
+      <div class="payment-method" onclick="selectPayment('direct', this)">
+        <div class="payment-icon">🔗</div>
+        <div class="payment-name">Direct</div>
+        <div class="payment-badge">No fee</div>
+      </div>
     </div>
 
-    <div class="info">
-      <p>Payments powered by XPTP • 0.5% fee • Instant settlement</p>
-      <div class="networks">
-        <span class="network">Base USDC</span>
-        <span class="network">Ethereum ETH</span>
-        <span class="network">Polygon USDC</span>
-      </div>
+    <button
+      class="pay-button"
+      id="payButton"
+      onclick="pay()"
+      disabled
+    >
+      Select Payment Method
+    </button>
+
+    <div class="crypto-address" id="cryptoAddress">
+      <strong>Send exactly $<span id="cryptoAmount">49</span> to:</strong>
+      <code id="addressText">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</code>
+      <button class="copy-button" onclick="copyAddress()">Copy Address</button>
+      <p style="margin-top: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.5);">
+        BTC • ETH • USDC accepted. Email us after sending.
+      </p>
+    </div>
+
+    <div class="loading" id="loading">
+      Processing payment...
+    </div>
+
+    <div class="guarantee">
+      <strong>💰 30-Day Money-Back Guarantee</strong><br>
+      Not satisfied? Get a full refund, no questions asked.
     </div>
   </div>
 
   <script>
+    let selectedPrice = 49;
+    let selectedPayment = null;
+
+    function selectPrice(price, element) {
+      selectedPrice = price;
+      document.querySelectorAll('.price-card').forEach(card => card.classList.remove('selected'));
+      element.classList.add('selected');
+      updateButton();
+    }
+
+    function selectPayment(method, element) {
+      selectedPayment = method;
+      document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+      element.classList.add('selected');
+      
+      const cryptoAddress = document.getElementById('cryptoAddress');
+      if (method === 'crypto' || method === 'direct') {
+        cryptoAddress.classList.add('active');
+        document.getElementById('cryptoAmount').textContent = selectedPrice;
+      } else {
+        cryptoAddress.classList.remove('active');
+      }
+      
+      updateButton();
+    }
+
+    function updateButton() {
+      const button = document.getElementById('payButton');
+      if (selectedPayment) {
+        button.disabled = false;
+        const names = {
+          'stripe': 'Pay with Credit Card',
+          'paypal': 'Pay with PayPal',
+          'crypto': 'Pay with Crypto',
+          'direct': 'Pay Direct'
+        };
+        button.textContent = names[selectedPayment];
+      } else {
+        button.disabled = true;
+        button.textContent = 'Select Payment Method';
+      }
+    }
+
     function pay() {
       const email = document.getElementById('email').value;
       if (!email) {
@@ -179,16 +408,37 @@
         return;
       }
       
+      if (!selectedPayment) {
+        alert('Please select a payment method');
+        return;
+      }
+      
       const loading = document.getElementById('loading');
       loading.classList.add('active');
       
-      const url = `https://bridge.a-to-mind.com/pay?amount=49&email=${encodeURIComponent(email)}`;
-      window.location.href = url;
+      if (selectedPayment === 'stripe') {
+        // Redirect to Stripe (you'll need to set this up)
+        window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}&method=stripe`;
+      } else if (selectedPayment === 'paypal') {
+        // Redirect to PayPal (you'll need to set this up)
+        window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}&method=paypal`;
+      } else if (selectedPayment === 'crypto') {
+        window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}`;
+      } else if (selectedPayment === 'direct') {
+        // Show direct payment instructions
+        alert(`Send $${selectedPrice} to:\n\nBTC: bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh\nETH: 0x74e4...476708\nUSDC: 0x74e4...476708\n\nEmail us at support@a-to-mind.com after sending with your transaction ID.`);
+      }
+    }
+    
+    function copyAddress() {
+      const address = document.getElementById('addressText').textContent;
+      navigator.clipboard.writeText(address);
+      alert('Address copied!');
     }
     
     // Allow Enter key to submit
     document.getElementById('email').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && selectedPayment) {
         pay();
       }
     });
