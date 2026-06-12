@@ -344,6 +344,7 @@ export default function App() {
   const [displayInstanceId, setDisplayInstanceId] = useState(instanceId);
   const [screenShake, setScreenShake] = useState(false);
   const [isGlitching, setIsGlitching] = useState(false);
+  const [quickPayEmail, setQuickPayEmail] = useState('');
 
   useEffect(() => {
     if (isGlitching) {
@@ -1407,7 +1408,30 @@ export default function App() {
 
       {/* Main Canvas */}
       <main className="flex-1 overflow-y-auto relative p-12 custom-scrollbar">
-        <motion.div 
+        {/* Payment Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-5xl mx-auto mb-8 p-6 bg-gold/5 border border-gold/20 rounded-sm relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gold/5 transform -skew-x-12 translate-x-full group-hover:translate-x-[-100%] transition-transform duration-1000" />
+          <div className="relative flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="text-[8px] uppercase tracking-widest text-gold/60 mb-1">Pro Access Available</div>
+              <div className="text-[10px] text-white/80 leading-tight">Get your API key and unlock priority rate limits, council session logs, and email support.</div>
+            </div>
+            <a
+              href={`https://bridge.a-to-mind.com/pay?amount=49&email=${encodeURIComponent(quickPayEmail)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-gold text-black text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all cursor-pointer border border-gold/50 shrink-0"
+            >
+              Get Pro - $49
+            </a>
+          </div>
+        </motion.div>
+
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="max-w-5xl mx-auto mb-12 border-l border-white/5 pl-8"

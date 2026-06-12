@@ -2,7 +2,20 @@
 
 Welcome to Aether! This is the ALPHA Stack monorepo with npm workspaces.
 
-## Quick Start
+## 🚀 Quick Start - Get Pro Access
+
+**Get your API key now:**
+```
+https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+```
+
+**Pro Tier ($49 USD):**
+- API key with priority rate limits
+- Council session logs & replay
+- Email support
+- Multi-chain crypto payments (Base, Ethereum, Polygon)
+
+## Development Quick Start
 
 ```bash
 # Clone and install
