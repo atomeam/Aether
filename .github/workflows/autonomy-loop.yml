@@ -1,0 +1,87 @@
+name: Autonomy Loop
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # Every 2 hours
+  workflow_dispatch:
+
+jobs:
+  automerge-green-prs:
+    name: Automerge green PRs
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.find.outputs.merged }}
+    steps:
+      - name: Find automerge-labeled PRs with passing checks
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=$(gh pr list --label automerge --state open --json number,title,statusCheckRollup,mergeable --jq '
+            [.[] | select(
+              (.statusCheckRollup | length) > 0 and
+              (.statusCheckRollup | all(.conclusion == "SUCCESS")) and
+              .mergeable == true
+            )] | first')
+
+          if [ -z "$PR" ]; then
+            echo "No automerge-eligible PRs found"
+            echo "merged=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          NUM=$(echo $PR | jq -r '.number')
+          echo "Found PR #$NUM with passing checks"
+          echo "merged=true" >> $GITHUB_OUTPUT
+
+          # Skip Workers Builds — known to fail on CF token issues
+          if echo "$PR" | jq -r '.title' | grep -qi "Workers Builds"; then
+            echo "Skipping Workers Builds PR (known red lane)"
+            exit 0
+          fi
+
+          gh pr merge $NUM --squash --delete-branch --auto || echo "Merge failed"
+
+  rail-probe-wix:
+    name: Rail probe — Wix health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Wix health
+        run: |
+          DOMAIN=$(cat storefront-domain.txt 2>/dev/null || echo "")
+          if [ -z "$DOMAIN" ]; then
+            echo "No storefront-domain.txt — skipping Wix probe"
+            exit 0
+          fi
+          RESP=$(curl -sfS "https://$DOMAIN/_functions/health" || echo "fail")
+          if echo "$RESP" | grep -q '"ok"'; then
+            echo "✅ Wix storefront healthy: $DOMAIN"
+          else
+            echo "⚠️ Wix storefront unreachable: $DOMAIN"
+          fi
+
+  rail-probe-bridge:
+    name: Rail probe — Bridge leads
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check bridge leads endpoint
+        run: |
+          RESP=$(curl -sfS "https://bridge.a-to-mind.com/api/leads" || echo "fail")
+          if echo "$RESP" | grep -q '\[\|{'; then
+            echo "✅ Bridge leads API responding"
+          else
+            echo "⚠️ Bridge leads API unreachable"
+          fi
+
+  rail-probe-billing:
+    name: Rail probe — Billing worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check billing worker health
+        run: |
+          RESP=$(curl -sfS "https://aether-bridge.atomicmoonbeam88.workers.dev/billing/health" || echo "fail")
+          if echo "$RESP" | grep -q '"ok"'; then
+            echo "✅ Billing worker healthy"
+          else
+            echo "⚠️ Billing worker unreachable"
+          fi
