@@ -52,11 +52,6 @@ id = "49202b2460a74d2dbd6d747d35dda5b7"
 [browser]
 binding = "MYBROWSER"
 
-# R2 Bucket
-[[r2_buckets]]
-binding = "_LOGS"
-bucket_name = "aether-logs"
-
 # Cloudflare Queues (created manually: npx wrangler queues create curator-jobs)
 [[queues.producers]]
 binding = "CURATOR_QUEUE"
