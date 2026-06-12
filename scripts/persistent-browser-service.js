@@ -156,13 +156,25 @@ class PersistentBrowserService {
   async clickElement(selector) {
     if (!this.page) await this.startBrowser();
     
-    const element = await this.page.$(selector);
-    if (element) {
-      await element.click();
+    try {
+      // Handle text selectors (Playwright syntax)
+      if (selector.startsWith('text=')) {
+        await this.page.click(selector);
+      } else if (selector.includes(':has-text(')) {
+        await this.page.click(selector);
+      } else {
+        const element = await this.page.$(selector);
+        if (element) {
+          await element.click();
+        } else {
+          return { success: false, error: 'Element not found' };
+        }
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
       return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    return { success: false, error: 'Element not found' };
   }
   
   async fillInput(selector, value) {

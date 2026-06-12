@@ -52,7 +52,7 @@ async function rapidAPIFixWithSession() {
   try {
     console.log('🌐 STEP 1: Navigating to RapidAPI with saved session...');
     await page.goto('https://rapidapi.com/atom-bomb-a-to-mind/api', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000); // Wait longer for session to apply
     await screenshot('01-initial-page');
     
     // Verify logged in

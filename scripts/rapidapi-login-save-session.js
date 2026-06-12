@@ -73,16 +73,29 @@ async function loginAndSaveSession() {
       await page.waitForTimeout(3000);
     }
     
-    console.log('\n⏸️  WAITING FOR 2FA/PASSKEY');
-    console.log('👀 Please:');
-    console.log('   1. Complete 2FA/passkey verification in the browser');
-    console.log('   2. Wait until you see the API page');
-    console.log('   3. Press Enter in this terminal when done');
+    // Accept cookies if present
+    console.log('🍪 Checking for cookie consent...');
+    await page.waitForTimeout(2000);
     
-    // Wait for user to complete 2FA
-    await new Promise(resolve => {
-      process.stdin.once('data', resolve);
-    });
+    // Try to find and click "Accept All" or similar cookie button
+    const cookieButtons = await page.$$eval('button', els =>
+      els.map(el => ({ text: el.textContent?.substring(0, 50), id: el.id }))
+    );
+    
+    const acceptAllButton = cookieButtons.find(btn => 
+      btn.text.toLowerCase().includes('accept') || 
+      btn.text.toLowerCase().includes('allow')
+    );
+    
+    if (acceptAllButton) {
+      console.log('🍪 Clicking cookie consent button...');
+      await page.click('button:has-text("Accept"), button:has-text("Allow")');
+      await page.waitForTimeout(2000);
+    }
+    
+    // Wait for page to load
+    console.log('⏳ Waiting for page to load...');
+    await page.waitForTimeout(5000);
     
     console.log('\n✅ Login complete!');
     
