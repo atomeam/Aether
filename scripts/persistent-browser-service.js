@@ -345,6 +345,26 @@ class PersistentBrowserService {
     }
   }
   
+  async scrollPage(direction = 'down', amount = 500) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      if (direction === 'down') {
+        await this.page.evaluate(amount => window.scrollBy(0, amount), amount);
+      } else if (direction === 'up') {
+        await this.page.evaluate(amount => window.scrollBy(0, -amount), amount);
+      } else if (direction === 'top') {
+        await this.page.evaluate(() => window.scrollTo(0, 0));
+      } else if (direction === 'bottom') {
+        await this.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
   async close() {
     if (this.page) {
       await this.page.close();
@@ -436,6 +456,12 @@ class PersistentBrowserService {
           const result = await this.hoverElement(selector);
           res.writeHead(result.success ? 200 : 400);
           res.end(JSON.stringify(result));
+        } else if (pathname === '/scroll') {
+          const direction = url.searchParams.get('direction') || 'down';
+          const amount = parseInt(url.searchParams.get('amount') || '500');
+          const result = await this.scrollPage(direction, amount);
+          res.writeHead(result.success ? 200 : 400);
+          res.end(JSON.stringify(result));
         } else if (pathname === '/dark-mode') {
           const result = await this.switchToDarkMode();
           res.writeHead(200);
@@ -461,6 +487,7 @@ class PersistentBrowserService {
       console.log(`   GET  /navigate?url=URL - Navigate to URL`);
       console.log(`   GET  /click?selector=SELECTOR - Click element`);
       console.log(`   GET  /fill?selector=SELECTOR&value=VALUE - Fill input`);
+      console.log(`   GET  /scroll?direction=down|up|top|bottom&amount=500 - Scroll page`);
       console.log(`   GET  /info - Get page info`);
       console.log(`   GET  /close - Close browser and exit`);
     });
