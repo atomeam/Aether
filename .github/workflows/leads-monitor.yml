@@ -1,0 +1,20 @@
+name: Leads Endpoint Monitor
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-leads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check leads endpoint health
+        run: |
+          BRIDGE_URL="https://bridge.a-to-mind.com"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BRIDGE_URL/api/leads" --max-time 10)
+          echo "Leads endpoint HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "405" ] && [ "$HTTP_CODE" != "404" ]; then
+            echo "::warning::Leads endpoint returned $HTTP_CODE - investigate bridge deployment"
+            exit 1
+          fi
