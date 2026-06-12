@@ -7,6 +7,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const http = require('http');
+const readline = require('readline');
 
 class MasterViewer {
   constructor() {
@@ -29,27 +30,31 @@ class MasterViewer {
     
     this.categories = ['skirt', 'bikini', 'pussy', 'milf', 'teen', 'blonde', 'brunette'];
     this.shouldSkip = false;
+    this.keepViewing = true;
     
-    // Start skip server
-    this.startSkipServer();
+    // Start keyboard input
+    this.startKeyboardInput();
   }
   
-  startSkipServer() {
-    const server = http.createServer((req, res) => {
-      if (req.url === '/skip') {
-        this.shouldSkip = true;
-        console.log('⏭️  Skip requested');
-        res.writeHead(200);
-        res.end(JSON.stringify({ success: true }));
-      } else {
-        res.writeHead(404);
-        res.end(JSON.stringify({ error: 'Not found' }));
-      }
+  startKeyboardInput() {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
     });
     
-    server.listen(3457, () => {
-      console.log('🎮 Skip server listening on port 3457');
-      console.log('   GET http://localhost:3457/skip to skip current gallery');
+    console.log('\n🎮 Keyboard Controls:');
+    console.log('   Press "s" or "n" to skip current gallery');
+    console.log('   Press "q" to quit\n');
+    
+    rl.on('line', (input) => {
+      if (input.toLowerCase() === 's' || input.toLowerCase() === 'n') {
+        this.shouldSkip = true;
+        console.log('⏭️  Skipping...');
+      } else if (input.toLowerCase() === 'q') {
+        this.keepViewing = false;
+        console.log('🛑 Quitting...');
+        process.exit(0);
+      }
     });
   }
   
@@ -62,16 +67,6 @@ class MasterViewer {
       }
     }
     return defaultVal;
-  }
-  
-  async httpGet(url) {
-    return new Promise((resolve, reject) => {
-      http.get(url, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => resolve(data));
-      }).on('error', reject);
-    });
   }
   
   saveJson(file, data) {
@@ -341,14 +336,6 @@ class MasterViewer {
         const remaining = viewingTime - elapsed;
         console.log('   Time remaining: ' + remaining + 's');
         
-        // Check for skip (via HTTP request)
-        try {
-          await httpGet('http://localhost:3457/skip');
-          this.shouldSkip = true;
-        } catch (e) {
-          // Server not responding, continue
-        }
-        
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
           this.preferences.skipped++;
@@ -376,14 +363,6 @@ class MasterViewer {
       for (let i = 0; i < Math.min(gallery.imageCount, 10); i++) {
         console.log('📷 Image ' + (i + 1) + '/' + Math.min(gallery.imageCount, 10));
         console.log('   Time remaining: ' + (viewingTime - (i * imageTime)).toFixed(0) + 's');
-        
-        // Check for skip
-        try {
-          await this.httpGet('http://localhost:3457/skip');
-          this.shouldSkip = true;
-        } catch (e) {
-          // Server not responding, continue
-        }
         
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
@@ -460,116 +439,199 @@ class MasterViewer {
       
       console.log('Found ' + galleryLinks.length + ' galleries');
       
-      // Find first unhearted gallery to start
+      // Scroll down and check hearts by hovering
+      console.log('\n🔍 Scrolling to find unhearted galleries...');
+      
       let currentGalleryUrl = null;
-      for (const galleryUrl of galleryLinks) {
-        if (this.viewedGalleries.includes(galleryUrl)) {
-          continue;
+      let currentTitle = null;
+      
+      for (let i = 0; i < 5; i++) {
+        await page.evaluate(() => window.scrollBy(0, 500));
+        await page.waitForTimeout(1000);
+        
+        // Find visible gallery links
+        const visibleGalleries = await page.$$eval('a', links => 
+          links
+            .filter(link => {
+              const rect = link.getBoundingClientRect();
+              return rect.top > 0 && rect.top < window.innerHeight && 
+                     link.href && link.href.includes('/galleries/');
+            })
+            .map(link => link.href)
+            .slice(0, 5)
+        );
+        
+        console.log('Visible galleries: ' + visibleGalleries.length);
+        
+        for (const galleryUrl of visibleGalleries) {
+          if (this.viewedGalleries.includes(galleryUrl)) {
+            continue;
+          }
+          
+          // Navigate to gallery to check heart status and get title
+          await page.goto(galleryUrl);
+          await page.waitForTimeout(2000);
+          
+          const isHearted = await this.isHearted(page);
+          if (isHearted) {
+            console.log('❌ Hearted: ' + galleryUrl);
+            continue;
+          }
+          
+          // Get title from page
+          const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+          
+          console.log('✅ Unhearted: ' + title);
+          currentGalleryUrl = galleryUrl;
+          currentTitle = title;
+          break;
         }
         
-        await page.goto(galleryUrl);
-        await page.waitForTimeout(2000);
-        
-        const isHearted = await this.isHearted(page);
-        if (isHearted) {
-          continue;
+        if (currentGalleryUrl) {
+          break;
         }
-        
-        // Get gallery title
-        const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent);
-        
-        currentGalleryUrl = galleryUrl;
-        console.log('✅ Starting with: ' + currentGalleryUrl);
-        console.log('   Title: ' + title);
-        break;
       }
       
       if (!currentGalleryUrl) {
-        console.log('❌ No fresh galleries found in category');
+        console.log('❌ No fresh galleries found');
         return;
       }
       
-      // View this gallery once
-      await page.goto(currentGalleryUrl);
-      await page.waitForTimeout(2000);
+      console.log('✅ Selected: ' + currentTitle);
       
-      // Check if already hearted
-      const isHearted = await this.isHearted(page);
-      if (isHearted) {
-        console.log('❌ Already hearted');
-        return;
-      }
+      // Continuous viewing loop
+      let galleryCount = 0;
+      const maxGalleries = 100;
       
-      // Get image count and title
-      const imageCount = await this.getImageCount(page);
-      const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
-      
-      console.log('\n🖼️  Viewing gallery');
-      console.log('Title: ' + title);
-      console.log('Images: ' + imageCount);
-      
-      // View this gallery
-      const gallery = {
-        href: currentGalleryUrl,
-        text: title,
-        category: 'related',
-        isHearted: false,
-        imageCount: imageCount,
-        score: 10
-      };
-      
-      const success = await this.viewGallery(page, gallery);
-      if (!success) {
-        return;
-      }
-      
-      console.log('\n✅ Gallery complete');
-      
-      // Find next gallery from related
-      console.log('\n🔍 Finding next gallery from related...');
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(2000);
-      
-      const relatedGalleries = await page.$$eval('a', (links, currentUrl, viewed) => 
-        links
-          .filter(link => {
-            const href = link.href;
-            return href && 
-                   href.includes('/galleries/') && 
-                   href !== currentUrl &&
-                   !viewed.includes(href);
-          })
-          .map(link => link.href)
-          .slice(0, 5)
-      , currentGalleryUrl, this.viewedGalleries);
-      
-      console.log('Found ' + relatedGalleries.length + ' related galleries');
-      
-      if (relatedGalleries.length === 0) {
-        console.log('❌ No related galleries found');
-        return;
-      }
-      
-      // Find first unhearted related gallery
-      for (const relatedUrl of relatedGalleries) {
-        await page.goto(relatedUrl);
-        await page.waitForTimeout(2000);
+      while (this.keepViewing && galleryCount < maxGalleries) {
+        galleryCount++;
         
-        const relatedIsHearted = await this.isHearted(page);
-        if (relatedIsHearted) {
-          console.log('Skipping (hearted): ' + relatedUrl);
-          continue;
+        // Already on the gallery page from heart check
+        // Get image count
+        const imageCount = await this.getImageCount(page);
+        
+        console.log('\n🖼️  Gallery ' + galleryCount + '/' + maxGalleries);
+        console.log('Title: ' + currentTitle);
+        console.log('Images: ' + imageCount);
+        
+        // View this gallery
+        const gallery = {
+          href: currentGalleryUrl,
+          text: currentTitle,
+          category: 'related',
+          isHearted: false,
+          imageCount: imageCount,
+          score: 10
+        };
+        
+        const success = await this.viewGallery(page, gallery);
+        if (!success) {
+          console.log('⏭️  Skipped, finding next...');
         }
         
-        console.log('✅ Found next gallery: ' + relatedUrl);
-        console.log('Browser stays open for viewing');
+        console.log('\n✅ Gallery complete');
         
-        // Keep browser open for manual viewing
-        await new Promise(() => {});
-        return;
+        // Find next gallery from related
+        console.log('\n🔍 Finding next gallery from related...');
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.waitForTimeout(2000);
+        
+        let nextGalleryUrl = null;
+        let nextTitle = null;
+        
+        for (let i = 0; i < 5; i++) {
+          await page.evaluate(() => window.scrollBy(0, 500));
+          await page.waitForTimeout(1000);
+          
+          // Find visible related galleries
+          const visibleGalleries = await page.$$eval('a', (links, currentUrl, viewed) => 
+            links
+              .filter(link => {
+                const rect = link.getBoundingClientRect();
+                const href = link.href;
+                return rect.top > 0 && rect.top < window.innerHeight && 
+                       href && 
+                       href.includes('/galleries/') && 
+                       href !== currentUrl &&
+                       !viewed.includes(href);
+              })
+              .map(link => link.href)
+              .slice(0, 5)
+          , currentGalleryUrl, this.viewedGalleries);
+          
+          console.log('Visible related: ' + visibleGalleries.length);
+          
+          for (const galleryUrl of visibleGalleries) {
+            // Navigate to gallery to check heart status and get title
+            await page.goto(galleryUrl);
+            await page.waitForTimeout(2000);
+            
+            const isHearted = await this.isHearted(page);
+            if (isHearted) {
+              console.log('❌ Hearted: ' + galleryUrl);
+              continue;
+            }
+            
+            // Get title from page
+            const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+            
+            console.log('✅ Unhearted: ' + title);
+            nextGalleryUrl = galleryUrl;
+            nextTitle = title;
+            break;
+          }
+          
+          if (nextGalleryUrl) {
+            break;
+          }
+        }
+        
+        if (!nextGalleryUrl) {
+          console.log('❌ No fresh related galleries found, going back to category');
+          // Go back to category to find fresh gallery
+          await page.goto('https://www.pornpics.com/skirt/');
+          await page.waitForTimeout(3000);
+          
+          const freshGalleries = await page.$$eval('a', links => 
+            links
+              .filter(link => link.href && link.href.includes('/galleries/'))
+              .map(link => link.href)
+              .slice(0, 10)
+          );
+          
+          for (const galleryUrl of freshGalleries) {
+            if (this.viewedGalleries.includes(galleryUrl)) {
+              continue;
+            }
+            
+            await page.goto(galleryUrl);
+            await page.waitForTimeout(2000);
+            
+            const isHearted = await this.isHearted(page);
+            if (isHearted) {
+              continue;
+            }
+            
+            const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+            
+            nextGalleryUrl = galleryUrl;
+            nextTitle = title;
+            break;
+          }
+          
+          if (!nextGalleryUrl) {
+            console.log('❌ No fresh galleries found anywhere, stopping');
+            break;
+          }
+        }
+        
+        // Update for next iteration
+        currentGalleryUrl = nextGalleryUrl;
+        currentTitle = nextTitle;
+        console.log('✅ Next: ' + currentTitle);
       }
       
-      console.log('❌ No fresh related galleries found');
+      console.log('\n✅ Completed viewing ' + galleryCount + ' galleries');
       
     } catch (error) {
       console.error('Error:', error.message);
