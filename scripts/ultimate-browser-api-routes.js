@@ -720,6 +720,263 @@ class UltimateBrowserAPIRoutes {
         this.sendResult(res, result);
       }
       
+      // ==================== NEW 100% FEATURES ====================
+      
+      // Direct element clicking from semantic selectors
+      else if (pathname === '/click-by-role') {
+        const role = url.searchParams.get('role');
+        const options = JSON.parse(url.searchParams.get('options') || '{}');
+        const result = await this.service.clickByRole(role, options);
+        this.sendResult(res, result);
+      } else if (pathname === '/click-by-text') {
+        const text = url.searchParams.get('text');
+        const options = JSON.parse(url.searchParams.get('options') || '{}');
+        const result = await this.service.clickByText(text, options);
+        this.sendResult(res, result);
+      }
+      
+      // Element inspection from locators
+      else if (pathname === '/get-locator-text') {
+        const role = url.searchParams.get('role');
+        const options = JSON.parse(url.searchParams.get('options') || '{}');
+        const result = await this.service.getLocatorText(role, options);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-locator-attribute') {
+        const role = url.searchParams.get('role');
+        const attribute = url.searchParams.get('attribute');
+        const options = JSON.parse(url.searchParams.get('options') || '{}');
+        const result = await this.service.getLocatorAttribute(role, attribute, options);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-locator-state') {
+        const role = url.searchParams.get('role');
+        const options = JSON.parse(url.searchParams.get('options') || '{}');
+        const result = await this.service.getLocatorState(role, options);
+        this.sendResult(res, result);
+      }
+      
+      // Visual element detection
+      else if (pathname === '/find-by-color') {
+        const selector = url.searchParams.get('selector');
+        const color = url.searchParams.get('color');
+        const result = await this.service.findElementByColor(selector, color);
+        this.sendResult(res, result);
+      } else if (pathname === '/find-by-position') {
+        const x = parseInt(url.searchParams.get('x'));
+        const y = parseInt(url.searchParams.get('y'));
+        const result = await this.service.findElementByPosition(x, y);
+        this.sendResult(res, result);
+      } else if (pathname === '/find-by-size') {
+        const minWidth = parseInt(url.searchParams.get('minWidth'));
+        const minHeight = parseInt(url.searchParams.get('minHeight'));
+        const result = await this.service.findElementsBySize(minWidth, minHeight);
+        this.sendResult(res, result);
+      }
+      
+      // AI-powered element finding
+      else if (pathname === '/find-by-description') {
+        const description = url.searchParams.get('description');
+        const result = await this.service.findElementByDescription(description);
+        this.sendResult(res, result);
+      }
+      
+      // Cross-origin frame communication
+      else if (pathname === '/post-message-to-frame') {
+        const frameSelector = url.searchParams.get('frameSelector');
+        const message = JSON.parse(url.searchParams.get('message'));
+        const result = await this.service.postMessageToFrame(frameSelector, message);
+        this.sendResult(res, result);
+      } else if (pathname === '/listen-for-frame-messages') {
+        const result = await this.service.listenForFrameMessages();
+        this.sendResult(res, result);
+      } else if (pathname === '/get-frame-messages') {
+        const result = await this.service.getFrameMessages();
+        this.sendResult(res, result);
+      }
+      
+      // Browser extension API
+      else if (pathname === '/inject-extension-script') {
+        const script = url.searchParams.get('script');
+        const result = await this.service.injectExtensionScript(script);
+        this.sendResult(res, result);
+      } else if (pathname === '/execute-in-extension-context') {
+        const code = url.searchParams.get('code');
+        const result = await this.service.executeInExtensionContext(code);
+        this.sendResult(res, result);
+      }
+      
+      // Service worker testing
+      else if (pathname === '/register-service-worker') {
+        const scriptURL = url.searchParams.get('scriptURL');
+        const result = await this.service.registerServiceWorker(scriptURL);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-service-worker-registration') {
+        const result = await this.service.getServiceWorkerRegistration();
+        this.sendResult(res, result);
+      } else if (pathname === '/trigger-push-notification') {
+        const data = JSON.parse(url.searchParams.get('data'));
+        const result = await this.service.triggerPushNotification(data);
+        this.sendResult(res, result);
+      }
+      
+      // WebRTC testing
+      else if (pathname === '/get-user-media') {
+        const constraints = JSON.parse(url.searchParams.get('constraints'));
+        const result = await this.service.getUserMedia(constraints);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-media-stream-stats') {
+        const result = await this.service.getMediaStreamStats();
+        this.sendResult(res, result);
+      }
+      
+      // Canvas/WebGL testing
+      else if (pathname === '/get-canvas-data') {
+        const selector = url.searchParams.get('selector');
+        const result = await this.service.getCanvasData(selector);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-webgl-info') {
+        const selector = url.searchParams.get('selector');
+        const result = await this.service.getWebGLInfo(selector);
+        this.sendResult(res, result);
+      }
+      
+      // WebSocket frame inspection
+      else if (pathname === '/capture-websocket-frames') {
+        const urlPattern = url.searchParams.get('urlPattern');
+        const result = await this.service.captureWebSocketFrames(urlPattern);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-websocket-frames') {
+        const result = await this.service.getWebSocketFrames();
+        this.sendResult(res, result);
+      }
+      
+      // Storage quota testing
+      else if (pathname === '/get-storage-quota') {
+        const result = await this.service.getStorageQuota();
+        this.sendResult(res, result);
+      } else if (pathname === '/request-persistent-storage') {
+        const result = await this.service.requestPersistentStorage();
+        this.sendResult(res, result);
+      }
+      
+      // Browser cache testing
+      else if (pathname === '/clear-browser-cache') {
+        const result = await this.service.clearBrowserCache();
+        this.sendResult(res, result);
+      } else if (pathname === '/get-cache-entries') {
+        const result = await this.service.getCacheEntries();
+        this.sendResult(res, result);
+      }
+      
+      // Browser history testing
+      else if (pathname === '/get-history-length') {
+        const result = await this.service.getHistoryLength();
+        this.sendResult(res, result);
+      } else if (pathname === '/go-back') {
+        const result = await this.service.goBack();
+        this.sendResult(res, result);
+      } else if (pathname === '/go-forward') {
+        const result = await this.service.goForward();
+        this.sendResult(res, result);
+      } else if (pathname === '/push-state') {
+        const state = JSON.parse(url.searchParams.get('state'));
+        const url = url.searchParams.get('url');
+        const result = await this.service.pushState(state, url);
+        this.sendResult(res, result);
+      }
+      
+      // Browser print testing
+      else if (pathname === '/trigger-print') {
+        const result = await this.service.triggerPrint();
+        this.sendResult(res, result);
+      } else if (pathname === '/cancel-print-dialog') {
+        const result = await this.service.cancelPrintDialog();
+        this.sendResult(res, result);
+      }
+      
+      // Download content verification
+      else if (pathname === '/verify-download-content') {
+        const filePath = url.searchParams.get('filePath');
+        const expectedContent = url.searchParams.get('expectedContent');
+        const result = await this.service.verifyDownloadContent(filePath, expectedContent);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-download-progress') {
+        const result = await this.service.getDownloadProgress();
+        this.sendResult(res, result);
+      }
+      
+      // Complex drag-and-drop
+      else if (pathname === '/drag-over-multiple') {
+        const source = url.searchParams.get('source');
+        const targets = JSON.parse(url.searchParams.get('targets'));
+        const result = await this.service.dragOverMultiple(source, targets);
+        this.sendResult(res, result);
+      } else if (pathname === '/validate-drop') {
+        const target = url.searchParams.get('target');
+        const expectedContent = url.searchParams.get('expectedContent');
+        const result = await this.service.validateDrop(target, expectedContent);
+        this.sendResult(res, result);
+      }
+      
+      // Resize testing
+      else if (pathname === '/test-responsive-breakpoints') {
+        const breakpoints = JSON.parse(url.searchParams.get('breakpoints'));
+        const result = await this.service.testResponsiveBreakpoints(breakpoints);
+        this.sendResult(res, result);
+      } else if (pathname === '/listen-for-resize-events') {
+        const result = await this.service.listenForResizeEvents();
+        this.sendResult(res, result);
+      } else if (pathname === '/get-resize-events') {
+        const result = await this.service.getResizeEvents();
+        this.sendResult(res, result);
+      }
+      
+      // Focus testing
+      else if (pathname === '/test-focus-trap') {
+        const containerSelector = url.searchParams.get('containerSelector');
+        const result = await this.service.testFocusTrap(containerSelector);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-focus-order') {
+        const result = await this.service.getFocusOrder();
+        this.sendResult(res, result);
+      } else if (pathname === '/test-focus-visible') {
+        const result = await this.service.testFocusVisible();
+        this.sendResult(res, result);
+      }
+      
+      // Scroll testing
+      else if (pathname === '/get-scroll-position-detailed') {
+        const result = await this.service.getScrollPosition();
+        this.sendResult(res, result);
+      } else if (pathname === '/listen-for-scroll-events') {
+        const result = await this.service.listenForScrollEvents();
+        this.sendResult(res, result);
+      } else if (pathname === '/get-scroll-events') {
+        const result = await this.service.getScrollEvents();
+        this.sendResult(res, result);
+      } else if (pathname === '/test-infinite-scroll') {
+        const result = await this.service.testInfiniteScroll();
+        this.sendResult(res, result);
+      }
+      
+      // Animation testing
+      else if (pathname === '/get-animation-state') {
+        const selector = url.searchParams.get('selector');
+        const result = await this.service.getAnimationState(selector);
+        this.sendResult(res, result);
+      } else if (pathname === '/wait-for-animation') {
+        const selector = url.searchParams.get('selector');
+        const timeout = parseInt(url.searchParams.get('timeout') || '5000');
+        const result = await this.service.waitForAnimation(selector, timeout);
+        this.sendResult(res, result);
+      } else if (pathname === '/listen-for-animation-events') {
+        const selector = url.searchParams.get('selector');
+        const result = await this.service.listenForAnimationEvents(selector);
+        this.sendResult(res, result);
+      } else if (pathname === '/get-animation-events') {
+        const result = await this.service.getAnimationEvents();
+        this.sendResult(res, result);
+      }
+      
       // ==================== EXISTING ENHANCED FEATURES ====================
       else if (pathname === '/wait-for-selector') {
         const selector = url.searchParams.get('selector');

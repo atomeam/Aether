@@ -933,6 +933,232 @@ class UltimateBrowserClient {
     return this.request('/close');
   }
   
+  // ==================== NEW 100% FEATURES ====================
+  
+  // Direct element clicking from semantic selectors
+  async clickByRole(role, options) {
+    return this.request('/click-by-role', { role, options: JSON.stringify(options) });
+  }
+  
+  async clickByText(text, options) {
+    return this.request('/click-by-text', { text, options: JSON.stringify(options) });
+  }
+  
+  // Element inspection from locators
+  async getLocatorText(role, options) {
+    return this.request('/get-locator-text', { role, options: JSON.stringify(options) });
+  }
+  
+  async getLocatorAttribute(role, attribute, options) {
+    return this.request('/get-locator-attribute', { role, attribute, options: JSON.stringify(options) });
+  }
+  
+  async getLocatorState(role, options) {
+    return this.request('/get-locator-state', { role, options: JSON.stringify(options) });
+  }
+  
+  // Visual element detection
+  async findElementByColor(selector, color) {
+    return this.request('/find-by-color', { selector, color });
+  }
+  
+  async findElementByPosition(x, y) {
+    return this.request('/find-by-position', { x, y });
+  }
+  
+  async findElementsBySize(minWidth, minHeight) {
+    return this.request('/find-by-size', { minWidth, minHeight });
+  }
+  
+  // AI-powered element finding
+  async findElementByDescription(description) {
+    return this.request('/find-by-description', { description });
+  }
+  
+  // Cross-origin frame communication
+  async postMessageToFrame(frameSelector, message) {
+    return this.request('/post-message-to-frame', { frameSelector, message: JSON.stringify(message) });
+  }
+  
+  async listenForFrameMessages() {
+    return this.request('/listen-for-frame-messages');
+  }
+  
+  async getFrameMessages() {
+    return this.request('/get-frame-messages');
+  }
+  
+  // Browser extension API
+  async injectExtensionScript(script) {
+    return this.request('/inject-extension-script', { script });
+  }
+  
+  async executeInExtensionContext(code) {
+    return this.request('/execute-in-extension-context', { code });
+  }
+  
+  // Service worker testing
+  async registerServiceWorker(scriptURL) {
+    return this.request('/register-service-worker', { scriptURL });
+  }
+  
+  async getServiceWorkerRegistration() {
+    return this.request('/get-service-worker-registration');
+  }
+  
+  async triggerPushNotification(data) {
+    return this.request('/trigger-push-notification', { data: JSON.stringify(data) });
+  }
+  
+  // WebRTC testing
+  async getUserMedia(constraints) {
+    return this.request('/get-user-media', { constraints: JSON.stringify(constraints) });
+  }
+  
+  async getMediaStreamStats() {
+    return this.request('/get-media-stream-stats');
+  }
+  
+  // Canvas/WebGL testing
+  async getCanvasData(selector) {
+    return this.request('/get-canvas-data', { selector });
+  }
+  
+  async getWebGLInfo(selector) {
+    return this.request('/get-webgl-info', { selector });
+  }
+  
+  // WebSocket frame inspection
+  async captureWebSocketFrames(urlPattern) {
+    return this.request('/capture-websocket-frames', { urlPattern });
+  }
+  
+  async getWebSocketFrames() {
+    return this.request('/get-websocket-frames');
+  }
+  
+  // Storage quota testing
+  async getStorageQuota() {
+    return this.request('/get-storage-quota');
+  }
+  
+  async requestPersistentStorage() {
+    return this.request('/request-persistent-storage');
+  }
+  
+  // Browser cache testing
+  async clearBrowserCache() {
+    return this.request('/clear-browser-cache');
+  }
+  
+  async getCacheEntries() {
+    return this.request('/get-cache-entries');
+  }
+  
+  // Browser history testing
+  async getHistoryLength() {
+    return this.request('/get-history-length');
+  }
+  
+  async goBack() {
+    return this.request('/go-back');
+  }
+  
+  async goForward() {
+    return this.request('/go-forward');
+  }
+  
+  async pushState(state, url) {
+    return this.request('/push-state', { state: JSON.stringify(state), url });
+  }
+  
+  // Browser print testing
+  async triggerPrint() {
+    return this.request('/trigger-print');
+  }
+  
+  async cancelPrintDialog() {
+    return this.request('/cancel-print-dialog');
+  }
+  
+  // Download content verification
+  async verifyDownloadContent(filePath, expectedContent) {
+    return this.request('/verify-download-content', { filePath, expectedContent });
+  }
+  
+  async getDownloadProgress() {
+    return this.request('/get-download-progress');
+  }
+  
+  // Complex drag-and-drop
+  async dragOverMultiple(source, targets) {
+    return this.request('/drag-over-multiple', { source, targets: JSON.stringify(targets) });
+  }
+  
+  async validateDrop(target, expectedContent) {
+    return this.request('/validate-drop', { target, expectedContent });
+  }
+  
+  // Resize testing
+  async testResponsiveBreakpoints(breakpoints) {
+    return this.request('/test-responsive-breakpoints', { breakpoints: JSON.stringify(breakpoints) });
+  }
+  
+  async listenForResizeEvents() {
+    return this.request('/listen-for-resize-events');
+  }
+  
+  async getResizeEvents() {
+    return this.request('/get-resize-events');
+  }
+  
+  // Focus testing
+  async testFocusTrap(containerSelector) {
+    return this.request('/test-focus-trap', { containerSelector });
+  }
+  
+  async getFocusOrder() {
+    return this.request('/get-focus-order');
+  }
+  
+  async testFocusVisible() {
+    return this.request('/test-focus-visible');
+  }
+  
+  // Scroll testing
+  async getScrollPositionDetailed() {
+    return this.request('/get-scroll-position-detailed');
+  }
+  
+  async listenForScrollEvents() {
+    return this.request('/listen-for-scroll-events');
+  }
+  
+  async getScrollEvents() {
+    return this.request('/get-scroll-events');
+  }
+  
+  async testInfiniteScroll() {
+    return this.request('/test-infinite-scroll');
+  }
+  
+  // Animation testing
+  async getAnimationState(selector) {
+    return this.request('/get-animation-state', { selector });
+  }
+  
+  async waitForAnimation(selector, timeout) {
+    return this.request('/wait-for-animation', { selector, timeout });
+  }
+  
+  async listenForAnimationEvents(selector) {
+    return this.request('/listen-for-animation-events', { selector });
+  }
+  
+  async getAnimationEvents() {
+    return this.request('/get-animation-events');
+  }
+  
   request(path, params = {}) {
     return new Promise((resolve, reject) => {
       const url = new URL(path, this.baseUrl);
