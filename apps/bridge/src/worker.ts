@@ -17,6 +17,7 @@ import { handleTextAnalysis } from './rapidapi-apis/text-analyzer';
 import { handleURLShortener } from './rapidapi-apis/url-shortener';
 import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
 import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
+import { handleAToMindRequest } from './a-to-mind-api';
 
 // Shared constants
 const VERSION = '0.16.2';
@@ -872,6 +873,11 @@ export default {
       // RapidAPI - Currency Converter API
       if (path === '/api/rapidapi/currency-converter' && method === 'POST') {
         return handleCurrencyConverter(request);
+      }
+
+      // a-to-mind API - Comprehensive automation API
+      if (path.startsWith('/api/a-to-mind/')) {
+        return handleAToMindRequest(request, path);
       }
 
       // GET /crew/status - summary with all bindings
