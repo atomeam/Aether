@@ -3,12 +3,41 @@ import { BridgeEnv } from '../types';
 // Kraken Trading Bot for Cloudflare Workers
 // CONSERVATIVE STRATEGY - Small positions, tight stops, managed risk
 
-export async function krakenTradingBot(env: BridgeEnv): Promise<Response> {
+export async function getKrakenBalance(apiKey: string, apiSecret: string): Promise<{ asset: string; balance: string }[]> {
+  const nonce = Date.now().toString();
+  const body = `nonce=${nonce}`;
+  const path = '/0/private/Balance';
+  const signature = await createKrakenSignature(apiSecret, path, body);
+  
+  const response = await fetch('https://api.kraken.com/0/private/Balance', {
+    method: 'POST',
+    headers: {
+      'API-Key': apiKey,
+      'API-Sign': signature,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body
+  });
+  const data = await response.json();
+  return data.result ? Object.entries(data.result).map(([asset, balance]) => ({ asset, balance: (balance as any).toString() })) : [];
+}
+
+export async function krakenTradingBot(env: BridgeEnv, checkOnly: boolean = false): Promise<Response> {
   const apiKey = env.KRAKEN_API_KEY;
   const apiSecret = env.KRAKEN_API_SECRET;
 
+  const json = (data: unknown, status = 200): Response => {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  };
+
   if (!apiKey || !apiSecret) {
-    return Response.json({ 
+    return json({ 
       error: 'KRAKEN_API_KEY and KRAKEN_API_SECRET required',
       setup: 'Set these in Cloudflare Workers environment variables',
       instructions: `
@@ -29,35 +58,48 @@ IMPORTANT: This bot uses CONSERVATIVE risk management:
 
 RISK WARNING: Trading with leverage involves significant risk. Only trade with money you can afford to lose. Past performance does not guarantee future results.
       `
-    }, { status: 400 });
+    }, 400);
   }
-
-  // Trading parameters - CONSERVATIVE
-  const TRADING_PAIR = 'XBTUSD'; // BTC/USD
-  const LEVERAGE = 2; // 2x leverage (conservative)
-  const POSITION_SIZE_USD = 10; // Start with $10
-  const STOP_LOSS_PERCENT = 0.02; // 2% stop loss
-  const TAKE_PROFIT_PERCENT = 0.05; // 5% take profit
-  const MAX_POSITIONS = 1; // Only 1 position at a time
 
   try {
     // Get current balance
-    const balance = await getBalance(apiKey, apiSecret);
+    const balance = await getKrakenBalance(apiKey, apiSecret);
+    
+    // If checkOnly mode, just return balance
+    if (checkOnly) {
+      return json({ 
+        status: 'success',
+        balance: balance,
+        total_usd: balance.reduce((sum, b) => {
+          if (b.asset === 'ZUSD') return sum + parseFloat(b.balance);
+          return sum;
+        }, 0)
+      });
+    }
+    
+    // Trading parameters - CONSERVATIVE
+    const TRADING_PAIR = 'XBTUSD'; // BTC/USD
+    const LEVERAGE = 2; // 2x leverage (conservative)
+    const POSITION_SIZE_USD = 10; // Start with $10
+    const STOP_LOSS_PERCENT = 0.02; // 2% stop loss
+    const TAKE_PROFIT_PERCENT = 0.05; // 5% take profit
+    const MAX_POSITIONS = 1; // Only 1 position at a time
+    
+    // Return balance if no USD available (for checking)
     const usdBalance = balance.find(b => b.asset === 'ZUSD')?.balance || '0';
     const usdBalanceNum = parseFloat(usdBalance);
+    const availableAssets = balance.filter(b => parseFloat(b.balance) > 0);
+
+    if (availableAssets.length === 0) {
+      return Response.json({ 
+        status: 'no_funds',
+        balance: balance,
+        message: 'No funds available in account. Please deposit funds to start trading.'
+      });
+    }
 
     // If no USD, try to convert available assets to USD
     if (usdBalanceNum < POSITION_SIZE_USD) {
-      const availableAssets = balance.filter(b => parseFloat(b.balance) > 0);
-      
-      if (availableAssets.length === 0) {
-        return Response.json({ 
-          status: 'no_funds',
-          balance: balance,
-          message: 'No funds available in account. Please deposit funds to start trading.'
-        });
-      }
-
       // Try to convert available assets to USD
       for (const asset of availableAssets) {
         if (asset.asset === 'ZUSD') continue;
@@ -70,7 +112,7 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
             await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Check balance again
-            const newBalance = await getBalance(apiKey, apiSecret);
+            const newBalance = await getKrakenBalance(apiKey, apiSecret);
             const newUsdBalance = newBalance.find(b => b.asset === 'ZUSD')?.balance || '0';
             const newUsdBalanceNum = parseFloat(newUsdBalance);
             
@@ -86,7 +128,7 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
       }
 
       // Check balance again after conversion attempts
-      const finalBalance = await getBalance(apiKey, apiSecret);
+      const finalBalance = await getKrakenBalance(apiKey, apiSecret);
       const finalUsdBalance = finalBalance.find(b => b.asset === 'ZUSD')?.balance || '0';
       const finalUsdBalanceNum = parseFloat(finalUsdBalance);
 
@@ -156,25 +198,6 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
       details: error instanceof Error ? error.message : 'unknown'
     }, { status: 500 });
   }
-}
-
-async function getBalance(apiKey: string, apiSecret: string): Promise<{ asset: string; balance: string }[]> {
-  const nonce = Date.now().toString();
-  const body = `nonce=${nonce}`;
-  const path = '/0/private/Balance';
-  const signature = await createKrakenSignature(apiSecret, path, body);
-  
-  const response = await fetch('https://api.kraken.com/0/private/Balance', {
-    method: 'POST',
-    headers: {
-      'API-Key': apiKey,
-      'API-Sign': signature,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body
-  });
-  const data = await response.json();
-  return data.result ? Object.entries(data.result).map(([asset, balance]) => ({ asset, balance: (balance as any).toString() })) : [];
 }
 
 async function getTicker(pair: string): Promise<any> {

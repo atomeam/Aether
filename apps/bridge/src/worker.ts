@@ -905,6 +905,11 @@ interface XPTPPaymentResponse {
         });
       }
 
+      // GET /api/trading/balance — check Kraken account balance
+      if (path === '/api/trading/balance' && method === 'GET') {
+        return krakenTradingBot(env, true);
+      }
+
       // GET /api/council/history - get conversation history
       if (path === '/api/council/history') {
         const session_id = url.searchParams.get('session_id');
