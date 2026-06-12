@@ -2,23 +2,10 @@
   "version": 2,
   "buildCommand": "npm run build -w @aether/frontend",
   "outputDirectory": "apps/frontend/dist",
-  "builds": [
+  "rewrites": [
     {
-      "src": "apps/frontend/package.json",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://bridge.a-to-mind.com/api/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/api/:path*",
+      "destination": "https://bridge.a-to-mind.com/api/:path*"
     }
   ]
 }
