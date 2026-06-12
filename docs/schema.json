@@ -1,0 +1,14 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Aether Pro Access",
+  "description": "Autonomous agent teams with crypto payments. No KYC, no signup, instant settlement.",
+  "url": "https://aether-pay.pages.dev",
+  "offers": {
+    "@type": "Offer",
+    "price": "49",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock",
+    "priceValidUntil": "2025-12-31"
+  }
+}

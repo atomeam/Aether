@@ -1,0 +1,174 @@
+openapi: 3.0.0
+info:
+  title: Aether Bridge API
+  description: Autonomous agent team management API with crypto payments
+  version: 1.0.0
+  contact:
+    email: bridge@a-to-mind.com
+  license:
+    name: MIT
+    url: https://github.com/atomeam/Aether/blob/main/LICENSE
+
+servers:
+  - url: https://bridge.a-to-mind.com
+    description: Production server
+
+paths:
+  /api/billing/checkout:
+    post:
+      summary: Create payment checkout
+      description: Create a crypto payment checkout for Pro access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - email
+              properties:
+                amount:
+                  type: number
+                  description: Payment amount in USD
+                  example: 49
+                email:
+                  type: string
+                  format: email
+                  description: User email for API key delivery
+                  example: user@example.com
+      responses:
+        '200':
+          description: Payment checkout created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: Payment URL
+                  paymentId:
+                    type: string
+                    description: Payment ID
+        '400':
+          description: Invalid request
+  /api/billing/webhook:
+    post:
+      summary: Payment webhook
+      description: Handle payment completion webhook from XPTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - event
+                - data
+              properties:
+                event:
+                  type: string
+                  description: Event type
+                  example: payment.completed
+                data:
+                  type: object
+                  properties:
+                    paymentId:
+                      type: string
+                    amount:
+                      type: number
+                    currency:
+                      type: string
+                    status:
+                      type: string
+      responses:
+        '200':
+          description: Webhook processed
+        '400':
+          description: Invalid webhook
+  /api/keys/{paymentId}:
+    get:
+      summary: Get API key
+      description: Retrieve API key for completed payment
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: API key retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                  createdAt:
+                    type: string
+                  expiresAt:
+                    type: string
+        '404':
+          description: Payment not found or incomplete
+  /api/agents:
+    get:
+      summary: Get agent status
+      description: Get status of autonomous agent system
+      responses:
+        '200':
+          description: Agent status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  agents:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        status:
+                          type: string
+                        lastActivity:
+                          type: string
+  /api/agents/evaluate:
+    get:
+      summary: Evaluate agent task
+      description: Get suggestions for agent task execution
+      parameters:
+        - in: query
+          name: task
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Evaluation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                  confidence:
+                    type: number
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth

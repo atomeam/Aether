@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether Bridge API Documentation</title>
+  <meta name="description" content="Aether Bridge API - Autonomous agent team management with crypto payments. No KYC, no signup, 0.5% fee, instant settlement.">
+  <meta name="keywords" content="API, autonomous agents, crypto payments, no KYC, instant settlement">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.css" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #swagger-ui { height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: '/openapi.yaml',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: ['swagger-ui'],
+        layout: 'BaseLayout',
+        defaultModelsExpandDepth: 2,
+        defaultModelExpandDepth: 2,
+        docExpansion: 'list',
+        filter: true,
+        showRequestDuration: true,
+        tryItOutEnabled: true
+      });
+    };
+  </script>
+</body>
+</html>

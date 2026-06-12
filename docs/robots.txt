@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aether-pay.pages.dev/sitemap.xml
+Sitemap: https://aether-qr.pages.dev/sitemap.xml
+Sitemap: https://aether-buy.pages.dev/sitemap.xml
+Sitemap: https://aether-pay49.pages.dev/sitemap.xml
+Sitemap: https://aether-pay-now.pages.dev/sitemap.xml
+Sitemap: https://aether-b2b.pages.dev/sitemap.xml
+Sitemap: https://crypto-payment-link-generator.pages.dev/sitemap.xml
