@@ -115,32 +115,22 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
 
   // Return key info for verification
   if (checkOnly) {
+    // Actually fetch balance with the new key
+    const balance = await getKrakenBalance(apiKey, apiSecret);
     return json({ 
-      status: 'key_info',
-      api_key_prefix: apiKey.substring(0, 10),
-      api_key_length: apiKey.length,
-      secret_length: apiSecret.length,
-      note: 'Please verify this API key was created at pro.kraken.com (SPOT, not Derivatives) and has Query + Trade permissions. Also check if IP whitelisting is enabled.',
-      instructions: 'If IP whitelisting is enabled, you need to add Cloudflare Workers IPs. Otherwise, create a new key without IP restrictions. Also ensure secrets were set with printf (not echo) to avoid trailing newlines.'
+      status: 'success',
+      balance: balance,
+      total_usd: balance.reduce((sum, b) => {
+        if (b.asset === 'ZUSD') return sum + parseFloat(b.balance);
+        return sum;
+      }, 0),
+      debug: 'Balance check with new key set via printf'
     });
   }
 
   try {
     // Get current balance
     const balance = await getKrakenBalance(apiKey, apiSecret);
-    
-    // If checkOnly mode, just return balance
-    if (checkOnly) {
-      return json({ 
-        status: 'success',
-        balance: balance,
-        total_usd: balance.reduce((sum, b) => {
-          if (b.asset === 'ZUSD') return sum + parseFloat(b.balance);
-          return sum;
-        }, 0),
-        debug: 'Balance check complete'
-      });
-    }
     
     // Trading parameters - CONSERVATIVE with fee awareness
     const TRADING_PAIR = 'XBTUSD'; // BTC/USD
