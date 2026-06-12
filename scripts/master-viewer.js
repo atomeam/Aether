@@ -1,7 +1,7 @@
 /**
- * Master PornPics Viewer - Complete Automated System
- * Implements all improvements: no-repeats, heart detection, image clicking, play button,
- * gallery selection, category exploration, adaptive timing, preference learning, quality scoring
+ * Masturbuddy - Your Personal Gallery Companion
+ * Complete automated system with collaborative learning, quality analysis,
+ * adaptive timing, and preference synchronization
  */
 
 const { chromium } = require('playwright');
@@ -55,6 +55,21 @@ class MasterViewer {
     this.brightness = 100;
     this.contrast = 100;
     this.skipImage = false;
+    this.collectingFeedback = null;
+    
+    // Collaborative learning
+    this.userPreferences = this.loadJson('user-preferences.json', {
+      likedKeywords: {},
+      dislikedKeywords: {},
+      likedCategories: {},
+      preferredImageCount: [10, 30],
+      preferredFeatures: {
+        hasFace: true,
+        cleanBackground: true,
+        goodLighting: true,
+        naturalLook: true
+      }
+    });
     
     // Start keyboard input
     this.startKeyboardInput();
@@ -73,7 +88,7 @@ class MasterViewer {
     console.log('   " " (space) - Pause/Resume slideshow');
     console.log('   "+" - Speed up slideshow');
     console.log('   "-" - Slow down slideshow');
-    console.log('   "f" - Toggle fullscreen');
+    console.log('   "f" - Toggle fullscreen (use browser F11)');
     console.log('   "h" - Add to favorites');
     console.log('   "p" - Play from favorites only');
     console.log('   "r" - View history (recently viewed)');
@@ -90,7 +105,9 @@ class MasterViewer {
     console.log('   "t" - Decrease contrast');
     console.log('   "T" - Increase contrast');
     console.log('   "→" - Next image (manual)');
-    console.log('   "←" - Previous image (manual)\n');
+    console.log('   "←" - Previous image (manual)');
+    console.log('   "y" - Tell me what you liked about this gallery');
+    console.log('   "n" - Tell me what you didn\'t like\n');
     
     rl.on('line', (input) => {
       const cmd = input.toLowerCase().trim();
@@ -177,6 +194,18 @@ class MasterViewer {
         console.log('➡️  Next image (manual)');
       } else if (input === '←') {
         console.log('⬅️  Previous image (manual)');
+      } else if (cmd === 'y') {
+        console.log('📝 What did you like about this gallery? (type your feedback)');
+        console.log('Examples: "her boobs", "the lighting", "her smile", "the outfit", "her body", "the pose"');
+        this.collectingFeedback = 'like';
+      } else if (cmd === 'n') {
+        console.log('📝 What didn\'t you like about this gallery? (type your feedback)');
+        console.log('Examples: "too much makeup", "bad lighting", "not my type", "boring pose", "fake boobs"');
+        this.collectingFeedback = 'dislike';
+      } else if (this.collectingFeedback) {
+        // Collect user feedback
+        this.recordFeedback(input, this.collectingFeedback);
+        this.collectingFeedback = null;
       }
     });
   }
@@ -286,24 +315,122 @@ class MasterViewer {
     return imageUrls.size;
   }
   
+  async analyzeImageQuality(page, imageUrl) {
+    // Lightweight browser-based quality analysis
+    try {
+      const img = await page.$('img[src="' + imageUrl + '"]');
+      if (!img) return { score: 50, metrics: {} };
+      
+      // Get image dimensions
+      const rect = await img.boundingBox();
+      const resolution = rect.width * rect.height;
+      
+      // Get natural size
+      const naturalWidth = await img.evaluate(img => img.naturalWidth);
+      const naturalHeight = await img.evaluate(img => img.naturalHeight);
+      const naturalResolution = naturalWidth * naturalHeight;
+      
+      // Aspect ratio (prefer standard ratios)
+      const aspectRatio = naturalWidth / naturalHeight;
+      const standardRatios = [0.75, 1.0, 1.33, 1.5, 1.77, 2.0];
+      const closestRatio = standardRatios.reduce((prev, curr) => 
+        Math.abs(curr - aspectRatio) < Math.abs(prev - aspectRatio) ? curr : prev
+      );
+      const ratioScore = 1 - Math.abs(aspectRatio - closestRatio) * 2;
+      
+      // Resolution score (higher is better, up to 2MP)
+      const resolutionScore = Math.min(naturalResolution / 2000000, 1) * 100;
+      
+      // Blur detection (can't do Laplacian in browser, use file size as proxy)
+      // Larger files usually = higher quality
+      const fileSize = await img.evaluate(img => {
+        // Get file size from network (approximate)
+        return img.src.length * 0.5; // Rough estimate
+      });
+      const sizeScore = Math.min(fileSize / 50000, 1) * 100;
+      
+      // Calculate overall score
+      const score = (resolutionScore * 0.4) + (sizeScore * 0.3) + (ratioScore * 100 * 0.3);
+      
+      return {
+        score: Math.max(0, Math.min(100, score)),
+        metrics: {
+          resolution: naturalResolution,
+          aspectRatio: aspectRatio.toFixed(2),
+          fileSize: fileSize
+        }
+      };
+    } catch (e) {
+      return { score: 50, metrics: {} };
+    }
+  }
+  
+  async getAllImageUrls(page) {
+    await page.evaluate(() => window.scrollBy(0, 500));
+    await page.waitForTimeout(500);
+    
+    const imageUrls = new Set();
+    for (let i = 0; i < 10; i++) {
+      await page.evaluate(() => window.scrollBy(0, 500));
+      await page.waitForTimeout(500);
+      
+      const currentImages = await page.$$eval('img[src*="cdni"]', imgs => imgs.map(img => img.src));
+      currentImages.forEach(url => imageUrls.add(url));
+    }
+    
+    return Array.from(imageUrls);
+  }
+  
+  calculateTiming(qualityScore) {
+    // Higher quality = longer viewing time
+    // Base time: 8 seconds
+    // Quality multiplier: 0.5x to 2.0x
+    
+    const baseTime = 8000;
+    const multiplier = 0.5 + (qualityScore / 100) * 1.5;
+    
+    return baseTime * multiplier / this.speedMultiplier;
+  }
+  
+  shuffleArray(array) {
+    // Fisher-Yates shuffle
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+  
   scoreGallery(gallery) {
     let score = 0;
     score += gallery.imageCount * 2;
     score += !gallery.isHearted ? 10 : 0;
     score += this.preferences.categories[gallery.category] ? 5 : 0;
     
-    // Penalize disliked keywords
+    // Penalize system skip keywords
     for (const keyword of this.preferences.skipKeywords) {
       if (gallery.text.toLowerCase().includes(keyword)) {
         score -= 50;
       }
     }
     
-    // Bonus for preferred keywords
-    for (const keyword of Object.keys(this.preferences.keywords)) {
+    // Bonus for user-liked keywords
+    for (const keyword of Object.keys(this.userPreferences.likedKeywords)) {
       if (gallery.text.toLowerCase().includes(keyword)) {
-        score += 10;
+        score += this.userPreferences.likedKeywords[keyword] * 5;
       }
+    }
+    
+    // Penalize user-disliked keywords
+    for (const keyword of Object.keys(this.userPreferences.dislikedKeywords)) {
+      if (gallery.text.toLowerCase().includes(keyword)) {
+        score -= this.userPreferences.dislikedKeywords[keyword] * 10;
+      }
+    }
+    
+    // Bonus for liked category
+    if (this.userPreferences.likedCategories[gallery.category]) {
+      score += this.userPreferences.likedCategories[gallery.category] * 3;
     }
     
     return score;
@@ -365,6 +492,58 @@ class MasterViewer {
     });
     
     this.saveJson(this.preferencesFile, this.preferences);
+  }
+  
+  recordFeedback(feedback, type) {
+    if (!this.currentGallery) return;
+    
+    const words = feedback.toLowerCase().split(/\s+/);
+    const galleryTitle = this.currentGallery.text.toLowerCase();
+    const category = this.currentGallery.category;
+    
+    if (type === 'like') {
+      // Track liked keywords
+      words.forEach(word => {
+        if (word.length > 2) {
+          this.userPreferences.likedKeywords[word] = (this.userPreferences.likedKeywords[word] || 0) + 1;
+        }
+      });
+      
+      // Track liked category
+      this.userPreferences.likedCategories[category] = (this.userPreferences.likedCategories[category] || 0) + 1;
+      
+      // Extract keywords from gallery title and boost them
+      const titleWords = galleryTitle.split(/\s+/);
+      titleWords.forEach(word => {
+        if (word.length > 2) {
+          this.userPreferences.likedKeywords[word] = (this.userPreferences.likedKeywords[word] || 0) + 0.5;
+        }
+      });
+      
+      console.log('✅ Feedback recorded: ' + feedback);
+      console.log('Updated preferences for: ' + words.join(', '));
+      
+    } else if (type === 'dislike') {
+      // Track disliked keywords
+      words.forEach(word => {
+        if (word.length > 2) {
+          this.userPreferences.dislikedKeywords[word] = (this.userPreferences.dislikedKeywords[word] || 0) + 1;
+        }
+      });
+      
+      // Extract keywords from gallery title and penalize them
+      const titleWords = galleryTitle.split(/\s+/);
+      titleWords.forEach(word => {
+        if (word.length > 2) {
+          this.userPreferences.dislikedKeywords[word] = (this.userPreferences.dislikedKeywords[word] || 0) + 0.5;
+        }
+      });
+      
+      console.log('✅ Feedback recorded: ' + feedback);
+      console.log('Will avoid: ' + words.join(', '));
+    }
+    
+    this.saveJson('user-preferences.json', this.userPreferences);
   }
   
   async exploreCategory(page, category) {
@@ -451,6 +630,63 @@ class MasterViewer {
       console.log('✅ Hearted');
     }
     
+    // PRE-SCAN: Get all image URLs and analyze quality
+    console.log('🔍 Pre-scanning images for quality analysis...');
+    const imageUrls = await this.getAllImageUrls(page);
+    console.log('Found ' + imageUrls.length + ' images');
+    
+    // Analyze quality for each image
+    const imageScores = [];
+    for (let i = 0; i < imageUrls.length; i++) {
+      const url = imageUrls[i];
+      console.log('Analyzing image ' + (i + 1) + '/' + imageUrls.length + '...');
+      const quality = await this.analyzeImageQuality(page, url);
+      imageScores.push({ url, score: quality.score, metrics: quality.metrics });
+    }
+    
+    // Sort by quality score (highest first)
+    imageScores.sort((a, b) => b.score - a.score);
+    
+    console.log('✅ Quality analysis complete');
+    console.log('Best image score: ' + imageScores[0].score.toFixed(1));
+    console.log('Average score: ' + (imageScores.reduce((sum, img) => sum + img.score, 0) / imageScores.length).toFixed(1));
+    
+    // Tell user what the system liked
+    console.log('\n🤖 What I liked about this gallery:');
+    console.log('   Title: ' + gallery.text);
+    console.log('   Category: ' + gallery.category);
+    console.log('   Image count: ' + imageUrls.length + ' (your preference: ' + this.userPreferences.preferredImageCount.join('-') + ')');
+    console.log('   Quality: ' + imageScores[0].score.toFixed(1) + '/100 (best image)');
+    
+    // Extract keywords from title
+    const titleKeywords = gallery.text.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const likedKeywords = titleKeywords.filter(k => this.userPreferences.likedKeywords[k]);
+    if (likedKeywords.length > 0) {
+      console.log('   Matches your likes: ' + likedKeywords.join(', '));
+    }
+    
+    const dislikedKeywords = titleKeywords.filter(k => this.userPreferences.dislikedKeywords[k]);
+    if (dislikedKeywords.length > 0) {
+      console.log('   ⚠️  Contains your dislikes: ' + dislikedKeywords.join(', '));
+    }
+    
+    // Filter out low-quality images (score < 30)
+    const qualityThreshold = 30;
+    const highQualityImages = imageScores.filter(img => img.score >= qualityThreshold);
+    console.log('High-quality images: ' + highQualityImages.length + '/' + imageScores.length);
+    
+    if (highQualityImages.length === 0) {
+      console.log('❌ No high-quality images found, skipping gallery');
+      return false;
+    }
+    
+    // Use high-quality images for viewing
+    const imagesToView = this.randomImageOrder ? 
+      this.shuffleArray(highQualityImages) : 
+      highQualityImages;
+    
+    console.log('🎬 Starting manual slideshow with ' + imagesToView.length + ' images');
+    
     // Now click first image to open PhotoSwipe
     console.log('Clicking first image...');
     const clicked = await this.clickImage(page);
@@ -478,99 +714,19 @@ class MasterViewer {
       console.log('🎨 Applied brightness: ' + this.brightness + '%, contrast: ' + this.contrast + '%');
     }
     
-    // Try play button
-    console.log('Trying play button...');
-    const playClicked = await this.clickPlayButton(page);
+    // MANUAL SLIDESHOW: Don't use PhotoSwipe play button
+    console.log('🎬 Manual slideshow with quality-based timing');
     
-    const viewingTime = this.preferences.viewingTime;
-    
-    if (playClicked) {
-      console.log('✅ Play clicked - slideshow started');
-      console.log('⏱️  Viewing for ' + viewingTime + ' seconds...');
-      console.log('⚡ Speed: ' + this.speedMultiplier + 'x');
+    for (let idx = 0; idx < imagesToView.length; idx++) {
+      const image = imagesToView[idx];
+      this.currentImageIndex = idx + 1;
       
-      // Smart timing: longer on first and last images
-      const imageCount = Math.min(gallery.imageCount, 10);
-      const timePerImage = viewingTime / imageCount;
+      const timing = this.calculateTiming(image.score);
+      console.log('📷 Image ' + (idx + 1) + '/' + imagesToView.length + ' | Quality: ' + image.score.toFixed(0) + '/100 | Time: ' + (timing / 1000).toFixed(1) + 's');
       
-      // Create image order (random if enabled)
-      let imageOrder = Array.from({ length: imageCount }, (_, i) => i);
-      if (this.randomImageOrder) {
-        for (let i = imageOrder.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [imageOrder[i], imageOrder[j]] = [imageOrder[j], imageOrder[i]];
-        }
-        console.log('🔀 Random image order');
-      }
-      
-      for (let idx = 0; idx < imageCount; idx++) {
-        const i = imageOrder[idx];
-        this.currentImageIndex = i + 1;
-        
-        // Smart timing: first and last get 2x time
-        const isFirstOrLast = (i === 0 || i === imageCount - 1);
-        const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
-        
-        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : '') + ' | Brightness: ' + this.brightness + '% | Contrast: ' + this.contrast + '%');
-        
-        // Wait with speed and pause
-        const totalWait = adjustedTime * 1000 / this.speedMultiplier;
-        for (let elapsed = 0; elapsed < totalWait; elapsed += 1000) {
-          if (this.shouldSkip) {
-            console.log('⏭️  Skipped by user');
-            this.preferences.skipped++;
-            this.saveJson(this.preferencesFile, this.preferences);
-            this.shouldSkip = false;
-            
-            const closeButton = await page.$('.pswp__button--close');
-            if (closeButton) {
-              await closeButton.click();
-              await page.waitForTimeout(1000);
-            }
-            
-            return false;
-          }
-          
-          if (this.skipImage) {
-            console.log('⏭️  Skipped image');
-            this.skipImage = false;
-            break;
-          }
-          
-          while (this.isPaused) {
-            console.log('⏸️  Paused...');
-            await page.waitForTimeout(1000);
-          }
-          
-          await page.waitForTimeout(1000);
-        }
-      }
-    } else {
-      console.log('⚠️  Play button not found, manual viewing');
-      
-      // Manual slideshow with smart timing
-      const imageCount = Math.min(gallery.imageCount, 10);
-      const timePerImage = viewingTime / imageCount;
-      
-      // Create image order (random if enabled)
-      let imageOrder = Array.from({ length: imageCount }, (_, i) => i);
-      if (this.randomImageOrder) {
-        for (let i = imageOrder.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [imageOrder[i], imageOrder[j]] = [imageOrder[j], imageOrder[i]];
-        }
-        console.log('🔀 Random image order');
-      }
-      
-      for (let idx = 0; idx < imageCount; idx++) {
-        const i = imageOrder[idx];
-        this.currentImageIndex = i + 1;
-        
-        const isFirstOrLast = (i === 0 || i === imageCount - 1);
-        const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
-        
-        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : '') + ' | Brightness: ' + this.brightness + '% | Contrast: ' + this.contrast + '%');
-        
+      // Wait with quality-based timing
+      const totalWait = timing;
+      for (let elapsed = 0; elapsed < totalWait; elapsed += 1000) {
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
           this.preferences.skipped++;
@@ -589,20 +745,26 @@ class MasterViewer {
         if (this.skipImage) {
           console.log('⏭️  Skipped image');
           this.skipImage = false;
-        } else {
-          while (this.isPaused) {
-            console.log('⏸️  Paused...');
-            await page.waitForTimeout(1000);
-          }
-          
-          const adjustedWait = (adjustedTime * 1000) / this.speedMultiplier;
-          await page.waitForTimeout(adjustedWait);
+          break;
         }
         
+        while (this.isPaused) {
+          console.log('⏸️  Paused...');
+          await page.waitForTimeout(1000);
+        }
+        
+        await page.waitForTimeout(1000);
+      }
+      
+      // Click next manually
+      if (idx < imagesToView.length - 1) {
         const nextButton = await page.$('.pswp__button--arrow--next');
         if (nextButton) {
           await nextButton.click();
           await page.waitForTimeout(2000);
+        } else {
+          console.log('⚠️  No next button found');
+          break;
         }
       }
     }
@@ -624,6 +786,14 @@ class MasterViewer {
     this.saveJson(this.preferencesFile, this.preferences);
     
     console.log('✅ Gallery complete');
+    
+    // Ask for feedback
+    console.log('\n🤔 What did you think of this gallery?');
+    console.log('Gallery: ' + gallery.text);
+    console.log('Press "y" to tell me what you liked');
+    console.log('Press "n" to tell me what you didn\'t like');
+    console.log('Or press "s" to skip to next gallery');
+    
     return true;
   }
   
@@ -645,7 +815,7 @@ class MasterViewer {
     const page = await context.newPage();
     
     try {
-      console.log('🚀 Starting Master Viewer');
+      console.log('🚀 Masturbuddy - Your Personal Gallery Companion');
       console.log('Viewed galleries: ' + this.viewedGalleries.length);
       console.log('Favorites: ' + this.favoriteGalleries.length);
       console.log('Mode: ' + (this.favoritesOnlyMode ? 'Favorites only' : 'Normal'));
