@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Network as Code API - Device Status & Reachability</title>
+  <meta name="description" content="Monitor device status, reachability, and network conditions via API. Real-time device insights for telecom applications.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+    .features {
+      text-align: left;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+    }
+    .features h2 {
+      color: #00d2ff;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+    .features ul {
+      list-style: none;
+    }
+    .features li {
+      padding: 0.75rem 0;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .features li:before {
+      content: "📡 ";
+    }
+    .endpoints {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .endpoint {
+      padding: 1.5rem;
+      background: rgba(0, 210, 255, 0.1);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .endpoint:hover {
+      border-color: #00d2ff;
+      background: rgba(0, 210, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .endpoint h3 {
+      color: #00d2ff;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .endpoint p {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .try-button {
+      width: 100%;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2rem;
+    }
+    .try-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 210, 255, 0.4);
+    }
+    .code-example {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      text-align: left;
+    }
+    .code-example h3 {
+      color: #00d2ff;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+    .code-example pre {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      color: #00ff00;
+    }
+    .info {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .rapidapi-link {
+      color: #00d2ff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Network as Code API</h1>
+    <p class="subtitle">Monitor device status, reachability, and network conditions. Real-time telecom insights.</p>
+    
+    <div class="badge">📡 Telecom Network Intelligence</div>
+
+    <div class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>📡 Device reachability status monitoring</li>
+        <li>🌍 Device roaming status tracking</li>
+        <li>📱 Device status verification</li>
+        <li>🎯 Geofencing subscription management</li>
+        <li>🔐 SIM swap detection</li>
+        <li>📊 Quality-of-Service on demand</li>
+        <li>🔀 Network slicing configuration</li>
+        <li>📍 Location verification and retrieval</li>
+      </ul>
+    </div>
+
+    <div class="endpoints">
+      <div class="endpoint">
+        <h3>Device Status</h3>
+        <p>v0.5.1</p>
+      </div>
+      <div class="endpoint">
+        <h3>Reachability</h3>
+        <p>v0.7</p>
+      </div>
+      <div class="endpoint">
+        <h3>Roaming Status</h3>
+        <p>v0.7</p>
+      </div>
+      <div class="endpoint">
+        <h3>Geofencing</h3>
+        <p>v0.3.0</p>
+      </div>
+      <div class="endpoint">
+        <h3>SIM Swap</h3>
+        <p>v1.0.0</p>
+      </div>
+      <div class="endpoint">
+        <h3>QoS</h3>
+        <p>v1.0.0</p>
+      </div>
+    </div>
+
+    <div class="code-example">
+      <h3>Quick Start Example</h3>
+      <pre>curl --request POST \\
+  --url https://network-as-code.p.rapidapi.com/device-status/device-reachability-status-subscriptions/v0.7/subscriptions \\
+  --header 'Content-Type: application/json' \\
+  --header 'x-rapidapi-host: network-as-code.p.rapidapi.com' \\
+  --header 'x-rapidapi-key: YOUR_API_KEY' \\
+  --data '{"sink":"https://endpoint.example.com/sink","protocol":"HTTP","types":["org.camaraproject.device-reachability-status-subscriptions.v0.reachability-data"],"config":{"subscriptionDetail":{"device":{"phoneNumber":"+99999991000"}},"subscriptionMaxEvents":5,"initialEvent":true}}'</pre>
+    </div>
+
+    <button class="try-button" onclick="openRapidAPI()">
+      Get API Key on RapidAPI
+    </button>
+
+    <div class="info">
+      <p>Available on <a href="https://rapidapi.com/atom-bomb-network-as-code/api" target="_blank" class="rapidapi-link">RapidAPI</a> • Multiple endpoints • Real-time data</p>
+    </div>
+  </div>
+
+  <script>
+    function openRapidAPI() {
+      window.open('https://rapidapi.com/atom-bomb-network-as-code/api', '_blank');
+    }
+  </script>
+</body>
+</html>

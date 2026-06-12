@@ -86,3 +86,11 @@ custom_domain = true
 [[routes]]
 pattern = "crypto-payment-link-generator.a-to-mind.com"
 custom_domain = true
+
+[[routes]]
+pattern = "ai-image-generator.a-to-mind.com"
+custom_domain = true
+
+[[routes]]
+pattern = "network-as-code.a-to-mind.com"
+custom_domain = true
