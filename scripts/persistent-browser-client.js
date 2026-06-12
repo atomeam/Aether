@@ -39,6 +39,14 @@ class PersistentBrowserClient {
     return this.request('/screenshot');
   }
   
+  async executeJavaScript(code) {
+    return this.request('/execute-js', { code: encodeURIComponent(code) });
+  }
+  
+  async hoverElement(selector) {
+    return this.request('/hover', { selector });
+  }
+  
   async close() {
     return this.request('/close');
   }

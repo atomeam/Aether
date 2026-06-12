@@ -238,6 +238,33 @@ class PersistentBrowserService {
     return { success: true, screenshot };
   }
   
+  async executeJavaScript(code) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const result = await this.page.evaluate(code);
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  async hoverElement(selector) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const element = await this.page.$(selector);
+      if (element) {
+        await element.hover();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return { success: true };
+      }
+      return { success: false, error: 'Element not found' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
   async close() {
     if (this.page) {
       await this.page.close();
@@ -308,6 +335,26 @@ class PersistentBrowserService {
         } else if (pathname === '/screenshot') {
           const result = await this.takeScreenshot();
           res.writeHead(200);
+          res.end(JSON.stringify(result));
+        } else if (pathname === '/execute-js') {
+          const code = url.searchParams.get('code');
+          if (!code) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: 'Code parameter required' }));
+            return;
+          }
+          const result = await this.executeJavaScript(decodeURIComponent(code));
+          res.writeHead(result.success ? 200 : 400);
+          res.end(JSON.stringify(result));
+        } else if (pathname === '/hover') {
+          const selector = url.searchParams.get('selector');
+          if (!selector) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: 'Selector parameter required' }));
+            return;
+          }
+          const result = await this.hoverElement(selector);
+          res.writeHead(result.success ? 200 : 400);
           res.end(JSON.stringify(result));
         } else if (pathname === '/close') {
           await this.close();
