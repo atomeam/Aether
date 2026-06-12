@@ -47,6 +47,10 @@ class PersistentBrowserClient {
     return this.request('/hover', { selector });
   }
   
+  async switchToDarkMode() {
+    return this.request('/dark-mode');
+  }
+  
   async close() {
     return this.request('/close');
   }

@@ -73,8 +73,65 @@ class PersistentBrowserService {
     // Accept cookies
     await this.acceptCookies();
     
+    // Switch to dark mode
+    await this.switchToDarkMode();
+    
     await this.saveSession();
     console.log('✅ Navigation complete');
+  }
+  
+  async switchToDarkMode() {
+    if (!this.page) return;
+    
+    try {
+      console.log('🌙 Switching to dark mode...');
+      
+      // Try common dark mode patterns
+      const darkModeCode = `
+        (function() {
+          // Try to find dark mode toggle
+          const darkModeSelectors = [
+            'button[aria-label*="dark"]',
+            'button[aria-label*="theme"]',
+            'button[title*="dark"]',
+            'button[title*="theme"]',
+            '.dark-mode-toggle',
+            '.theme-toggle',
+            '[data-theme-toggle]',
+          ];
+          
+          for (const selector of darkModeSelectors) {
+            const element = document.querySelector(selector);
+            if (element && element.offsetParent !== null) {
+              element.click();
+              return 'Clicked dark mode toggle';
+            }
+          }
+          
+          // Try to set dark mode via CSS variables
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.setAttribute('data-color-mode', 'dark');
+          
+          // Try to set dark mode via class
+          document.documentElement.classList.add('dark');
+          document.body.classList.add('dark');
+          
+          // Try to set dark mode via localStorage
+          localStorage.setItem('theme', 'dark');
+          localStorage.setItem('color-mode', 'dark');
+          localStorage.setItem('darkMode', 'true');
+          
+          return 'Attempted to set dark mode';
+        })()
+      `;
+      
+      const result = await this.page.evaluate(darkModeCode);
+      console.log(`✅ Dark mode result: ${result}`);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.log('⚠️  Could not switch to dark mode:', error.message);
+    }
   }
   
   async acceptCookies() {
@@ -367,6 +424,10 @@ class PersistentBrowserService {
           const result = await this.hoverElement(selector);
           res.writeHead(result.success ? 200 : 400);
           res.end(JSON.stringify(result));
+        } else if (pathname === '/dark-mode') {
+          const result = await this.switchToDarkMode();
+          res.writeHead(200);
+          res.end(JSON.stringify({ success: true }));
         } else if (pathname === '/close') {
           await this.close();
           res.writeHead(200);
