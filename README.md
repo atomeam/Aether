@@ -1,47 +1,37 @@
-# Aether - ALPHA Stack Monorepo
+# Aether - Autonomous Agent Teams
 
-Welcome to Aether! This is the ALPHA Stack monorepo with npm workspaces.
+## 🚀 Get Pro Access - $49
 
-## 🚀 Quick Start - Get Pro Access
+**Payment Link**: https://aether-pay.pages.dev
 
-**Get your API key now:**
-```
-https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
-```
+Autonomous agent teams. Measurable output. No babysitting.
 
-**Pro Tier ($49 USD):**
+### What You Get
 - API key with priority rate limits
 - Council session logs & replay
 - Email support
-- Multi-chain crypto payments (Base, Ethereum, Polygon)
+- Multi-chain crypto payments (Base USDC, Ethereum ETH, Polygon USDC)
 
-## Development Quick Start
+### Payment Flow
+1. Go to https://aether-pay.pages.dev
+2. Enter your email
+3. Pay with crypto
+4. Receive API key automatically
+
+### Technical Details
+- **Fee**: 0.5% (XPTP)
+- **Settlement**: Instant
+- **Networks**: Base, Ethereum, Polygon
+- **No KYC required**
+- **No account signup**
+
+## Development
 
 ```bash
-# Clone and install
 cd Aether
 npm install
-npm run dev
-```
-
-## Two Terminals Required
-
-### Terminal 1 (Backend)
-
-```bash
-npm run dev:backend
-```
-
-### Terminal 2 (Frontend)
-
-```bash
-npm run dev:frontend
-```
-
-### Then open in browser
-
-```text
-http://localhost:5173
+npm run dev:backend  # Terminal 1 - port 3000
+npm run dev:frontend  # Terminal 2 - port 5173
 ```
 
 ## Project Structure
@@ -49,43 +39,20 @@ http://localhost:5173
 ```text
 aether/
 ├── apps/
-│   ├── backend/        # @aether/backend — express API, deployed to Vercel (port 3000 local)
-│   ├── frontend/       # @aether/frontend (port 5173)
-│   ├── bridge/         # @aether/bridge — Cloudflare Worker (bridge.a-to-mind.com)
-│   ├── aether-verifier/  crew-room/  homebase/  notion-worker/  weekly-digest/
-├── packages/           # 40+ shared packages (council, curator, alerts, …)
-├── src/                # Apex SPA (Vite + React) served at a-to-mind.com
-├── docs/               # See docs/README.md for the index
-├── STATUS.md           # Current state + money roadmap — read this first
-├── vercel.json         # Apex deploy (backend bundle + /api/* routes)
-└── wrangler.toml       # Bridge worker deploy (via CI only)
+│   ├── backend/        # @aether/backend (port 3000)
+│   ├── frontend/     # @aether/frontend (port 5173)
+│   └── bridge/      # @aether/bridge (bridge.a-to-mind.com)
+├── packages/         # 40+ shared packages
+├── docs/            # Documentation
+└── src/             # Apex SPA
 ```
 
-## Deploy & env
+## Payment System
 
-- Vercel (apex): set `GEMINI_API_KEY`, `ALLOW_DEGRADED=1`, `NODE_ENV=production`.
-- Bridge (Cloudflare): deploys via CI — never `wrangler deploy` from local. Billing needs `STRIPE_WEBHOOK_SECRET` secret.
+**Aether Wallet**: `0xDe497AF77d0edf1cC8B902Ae854987F67c375Fa0`
 
-## Scripts
+Payments powered by XPTP - zero-config crypto payments with no account signup required.
 
-| Script | Description |
-|--------|-----------|
-| `npm run dev` | Run all dev servers |
-| `npm run dev:backend` | Start backend on port 3000 |
-| `npm run dev:frontend` | Start frontend on port 5173 |
-| `npm run build` | Build all packages |
-| `npm run test` | Run tests |
+## Support
 
-## Testing
-
-Run tests with Turborepo:
-
-```bash
-npx turbo run test
-```
-
-Or test individual packages:
-
-```bash
-npm run test -w @aether/contracts
-```
+For Pro access support: bridge@a-to-mind.com
