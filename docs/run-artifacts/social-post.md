@@ -14,7 +14,7 @@ Get your API key and unlock:
 Pay with crypto (Base USDC, ETH, Polygon USDC)
 $49 one-time • 0.5% fee • Instant settlement
 
-🔗 https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+🔗 https://aether-pay.pages.dev
 
 #AI #CryptoPayments #API
 ```
@@ -27,7 +27,7 @@ No Stripe. No KYC. No account signup.
 Just crypto → API key → access.
 
 $49 for Pro access:
-https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+https://aether-pay.pages.dev
 
 Payments powered by @xptp_payments
 
@@ -54,7 +54,7 @@ I integrated XPTP crypto payments, and the entire flow is now automated:
 
 $49 for Pro access with priority rate limits, council session logs, and email support.
 
-🔗 https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+🔗 https://aether-pay.pages.dev
 
 #AI #Automation #CryptoPayments #Web3
 ```
@@ -80,7 +80,7 @@ Technical details:
 - Multi-chain support
 
 $49 for Pro access:
-https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+https://aether-pay.pages.dev
 
 Thoughts on this approach vs traditional payment processors?
 ```
@@ -99,7 +99,7 @@ Get your API key for autonomous agent teams:
 Pay with crypto (Base USDC, ETH, Polygon USDC)
 $49 one-time • 0.5% fee • Instant settlement
 
-🔗 https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+🔗 https://aether-pay.pages.dev
 
 No account signup. No KYC. Just crypto → API key.
 ```
@@ -119,7 +119,7 @@ Get your API key and unlock:
 - Email support
 
 Payment is simple:
-1. Go to https://bridge.a-to-mind.com/pay?amount=49&email=YOUR_EMAIL
+1. Go to https://aether-pay.pages.dev
 2. Enter your email
 3. Pay with crypto (Base USDC, ETH, Polygon USDC)
 4. Receive your API key automatically
