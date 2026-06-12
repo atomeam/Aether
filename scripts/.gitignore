@@ -1,0 +1,7 @@
+# Session files - sensitive authentication data
+rapidapi-session.json
+rapidapi-cookies.json
+*.session.json
+*.cookies.json
+session.json
+cookies.json

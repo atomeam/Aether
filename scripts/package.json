@@ -8,7 +8,9 @@
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
-    "fix:rapidapi": "node rapidapi-fix-with-inspector.js"
+    "fix:rapidapi": "node rapidapi-fix-with-inspector.js",
+    "login:rapidapi": "node rapidapi-login-save-session.js",
+    "fix:rapidapi:session": "node rapidapi-fix-with-session.js"
   },
   "keywords": [],
   "author": "",
