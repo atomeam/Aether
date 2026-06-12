@@ -1,6 +1,6 @@
 /**
- * Click First Image, Heart, and Play
- * Navigate to gallery, click first image, heart it, then play slideshow
+ * Click First Image, Heart, and Play - No Repeats
+ * Navigate to gallery, check if hearted/viewed, click first image, heart it, then play slideshow
  */
 
 const { chromium } = require('playwright');
@@ -26,9 +26,30 @@ async function clickFirstHeartPlay() {
   try {
     const galleryUrl = 'https://www.pornpics.com/galleries/skinny-teen-maria-anjel-doffs-her-skirt-and-poses-naked-in-her-black-heels-13110096/';
     
+    // Check if already viewed
+    const viewedFile = 'viewed-galleries.json';
+    let viewedGalleries = [];
+    if (fs.existsSync(viewedFile)) {
+      viewedGalleries = JSON.parse(fs.readFileSync(viewedFile, 'utf-8'));
+    }
+    
+    if (viewedGalleries.includes(galleryUrl)) {
+      console.log('❌ Already viewed, skipping');
+      await browser.close();
+      return;
+    }
+    
     console.log('Step 1: Navigating to gallery...');
     await page.goto(galleryUrl);
     await page.waitForTimeout(3000);
+    
+    // Check if already hearted
+    const isHearted = await page.$('.favorite-button.btn-frameless.active, .favorite-button.btn-frameless.added');
+    if (isHearted) {
+      console.log('❌ Already hearted, skipping');
+      await browser.close();
+      return;
+    }
     
     console.log('Step 2: Clicking first image to open fullscreen...');
     const firstImage = await page.$('img[src*="cdni"]');
@@ -38,6 +59,7 @@ async function clickFirstHeartPlay() {
       console.log('✅ First image clicked');
     } else {
       console.log('❌ No image found');
+      await browser.close();
       return;
     }
     
@@ -52,10 +74,8 @@ async function clickFirstHeartPlay() {
     }
     
     console.log('Step 4: Clicking play button...');
-    // Play button is to the right of heart
     const playButton = await page.$('.favorite-button.btn-frameless + button');
     if (!playButton) {
-      // Try alternative selector
       const playButtonAlt = await page.$('button:has-text("Play")');
       if (playButtonAlt) {
         await playButtonAlt.click();
@@ -76,6 +96,11 @@ async function clickFirstHeartPlay() {
     await page.waitForTimeout(300000);
     
     console.log('✅ Slideshow complete');
+    
+    // Mark as viewed
+    viewedGalleries.push(galleryUrl);
+    fs.writeFileSync(viewedFile, JSON.stringify(viewedGalleries, null, 2));
+    console.log('✅ Marked as viewed');
     
   } catch (error) {
     console.error('Error:', error.message);
