@@ -941,7 +941,7 @@ class UltimateBrowserClient {
   }
   
   async clickByText(text, options) {
-    return this.request('/click-by-text', { text, options: JSON.stringify(options) });
+    return this.request('/click-by-text', { text, options: JSON.stringify(options || {}) });
   }
   
   // Element inspection from locators

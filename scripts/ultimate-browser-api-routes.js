@@ -730,7 +730,8 @@ class UltimateBrowserAPIRoutes {
         this.sendResult(res, result);
       } else if (pathname === '/click-by-text') {
         const text = url.searchParams.get('text');
-        const options = JSON.parse(url.searchParams.get('options') || '{}');
+        const optionsStr = url.searchParams.get('options');
+        const options = optionsStr && optionsStr !== 'undefined' ? JSON.parse(optionsStr) : {};
         const result = await this.service.clickByText(text, options);
         this.sendResult(res, result);
       }
