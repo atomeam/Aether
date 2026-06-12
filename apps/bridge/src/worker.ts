@@ -11,6 +11,9 @@
 
 import { default as app } from './server';
 import { krakenTradingBot } from './kraken-trading';
+import { handleEmailValidation } from './rapidapi-apis/email-validator';
+import { handleIPGeolocation } from './rapidapi-apis/ip-geolocation';
+import { handleTextAnalysis } from './rapidapi-apis/text-analyzer';
 
 // Shared constants
 const VERSION = '0.16.2';
@@ -334,6 +337,21 @@ export default {
         return new Response(html, {
           headers: { 'Content-Type': 'text/html' },
         });
+      }
+
+      // RapidAPI - Email Validation API
+      if (path === '/api/rapidapi/email-validator' && method === 'POST') {
+        return handleEmailValidation(request);
+      }
+
+      // RapidAPI - IP Geolocation API
+      if (path === '/api/rapidapi/ip-geolocation' && method === 'POST') {
+        return handleIPGeolocation(request, request.cf);
+      }
+
+      // RapidAPI - Text Analysis API
+      if (path === '/api/rapidapi/text-analyzer' && method === 'POST') {
+        return handleTextAnalysis(request);
       }
 
       // GET /crew/status - summary with all bindings
