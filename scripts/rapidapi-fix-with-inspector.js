@@ -1,32 +1,43 @@
 /**
- * RapidAPI Domain Fix - Standalone Playwright Script with Inspector
+ * RapidAPI Domain Fix - Automatic with Full Visibility
  * 
- * This script uses Playwright Inspector to debug and fix the domain issue.
+ * This script uses Playwright with full visibility (screenshots, logging, inspection)
+ * to automatically fix the domain issue without interactive pauses.
  * 
  * Run with:
  *   node rapidapi-fix-with-inspector.js
- * 
- * The Inspector will open automatically at each page.pause() call
  */
 
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
 
-async function rapidAPIFixWithInspector() {
-  const browser = await chromium.launch({ headless: false });
+async function rapidAPIFixAutomatic() {
+  const browser = await chromium.launch({ 
+    headless: false, // Show browser so we can see what's happening
+    slowMo: 100 // Slow down actions for visibility
+  });
   const page = await browser.newPage();
   
+  // Create screenshots directory
+  const screenshotDir = './rapidapi-fix-screenshots';
+  fs.mkdirSync(screenshotDir, { recursive: true });
+  
+  let step = 0;
+  
+  const screenshot = async (name) => {
+    step++;
+    const path = `${screenshotDir}/${step}-${name}.png`;
+    await page.screenshot({ path, fullPage: true });
+    console.log(`📸 Screenshot: ${path}`);
+    return path;
+  };
+  
   try {
-    console.log('🌐 Navigating to RapidAPI...');
-    await page.goto('https://rapidapi.com/atom-bomb-a-to-mind/api');
-    
-    // PAUSE 1 - Opens Inspector to see the initial page
-    console.log('\n⏸️  PAUSE 1: Inspecting initial page');
-    console.log('👀 Use Inspector to:');
-    console.log('   - Press Ctrl+Shift+C to pick locators');
-    console.log('   - Click elements to see their selectors');
-    console.log('   - Inspect the DOM structure');
-    console.log('   - Press F8 to resume when ready');
-    await page.pause();
+    console.log('🌐 STEP 1: Navigating to RapidAPI...');
+    await page.goto('https://rapidapi.com/atom-bomb-a-to-mind/api', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(3000); // Wait for page to stabilize
+    await screenshot('01-initial-page');
     
     // Get page info
     const title = await page.title();
@@ -43,18 +54,30 @@ async function rapidAPIFixWithInspector() {
       console.log(`   ${i + 1}. text="${btn.text}" id="${btn.id}" ariaLabel="${btn.ariaLabel}"`);
     });
     
+    // Check if logged in
+    const signInButton = buttons.find(btn => btn.text === 'Sign In');
+    if (signInButton) {
+      console.log('\n❌ NOT LOGGED IN');
+      console.log('⚠️  You need to be logged in to RapidAPI to fix the domain');
+      console.log('\n📋 Options:');
+      console.log('   1. Manually log in to RapidAPI in the browser');
+      console.log('   2. Use the alternative: bridge.a-to-mind.com (already working)');
+      console.log('   3. Fix the domain manually in the RapidAPI dashboard');
+      console.log('\n🔍 Manual fix takes 2 minutes:');
+      console.log('   - Go to https://rapidapi.com/atom-bomb-a-to-mind/api');
+      console.log('   - Log in (requires 2FA/passkey)');
+      console.log('   - Click Edit API or Settings');
+      console.log('   - Change domain from .www.a-to-mind.com to a-to-mind.com');
+      console.log('   - Save');
+      await screenshot('02-not-logged-in');
+      return;
+    }
+    
     // Click User Profile
-    console.log('\n👤 Clicking User Profile button...');
+    console.log('\n👤 STEP 2: Clicking User Profile button...');
     await page.click('button[aria-label="User Profile"]');
     await page.waitForTimeout(2000);
-    
-    // PAUSE 2 - Opens Inspector to see the menu
-    console.log('\n⏸️  PAUSE 2: Inspecting User Profile menu');
-    console.log('👀 Use Inspector to:');
-    console.log('   - See what menu options are available');
-    console.log('   - Pick selectors for menu items');
-    console.log('   - Press F8 to resume when ready');
-    await page.pause();
+    await screenshot('02-user-profile-clicked');
     
     // List menu buttons
     const menuButtons = await page.$$eval('button, [role="button"]', els =>
@@ -74,24 +97,22 @@ async function rapidAPIFixWithInspector() {
     );
     
     if (apiButton) {
-      console.log('\n📝 Found API button:', apiButton.text);
+      console.log('\n📝 STEP 3: Found API button:', apiButton.text);
       await page.click(`button:has-text("${apiButton.text}")`);
-      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(3000);
+      await screenshot('03-api-button-clicked');
     } else if (settingsButton) {
-      console.log('\n📝 Found Settings button:', settingsButton.text);
+      console.log('\n📝 STEP 3: Found Settings button:', settingsButton.text);
       await page.click(`button:has-text("${settingsButton.text}")`);
-      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(3000);
+      await screenshot('03-settings-button-clicked');
     } else {
       console.log('\n⚠️  No API or Settings button found in menu');
+      console.log('🔍 Trying Account Settings specifically...');
+      await page.click('button:has-text("Account Settings")');
+      await page.waitForTimeout(3000);
+      await screenshot('03-account-settings-clicked');
     }
-    
-    // PAUSE 3 - Opens Inspector to see the settings/API page
-    console.log('\n⏸️  PAUSE 3: Inspecting settings/API page');
-    console.log('👀 Use Inspector to:');
-    console.log('   - Look for domain input field');
-    console.log('   - Pick the domain field selector');
-    console.log('   - Press F8 to resume when ready');
-    await page.pause();
     
     // List all inputs
     const inputs = await page.$$eval('input, textarea, select', els =>
@@ -117,53 +138,91 @@ async function rapidAPIFixWithInspector() {
     );
     
     if (domainInput) {
-      console.log('\n🎉 Found domain input:', domainInput);
-      
-      // PAUSE 4 - Before changing domain
-      console.log('\n⏸️  PAUSE 4: About to change domain');
-      console.log('👀 Use Inspector to:');
-      console.log('   - Verify this is the correct field');
-      console.log('   - Press F8 to proceed with change');
-      await page.pause();
+      console.log('\n🎉 STEP 4: Found domain input:', domainInput);
+      await screenshot('04-domain-input-found');
       
       // Change domain
       const selector = domainInput.id ? `#${domainInput.id}` : 
                        domainInput.name ? `input[name="${domainInput.name}"]` :
-                       domainInput.placeholder ? `input[placeholder="${domainInput.placeholder}"]` : 'input';
+                       domainInput.placeholder ? `input[placeholder="${domain.placeholder}"]` : 'input';
       
-      console.log(`\n✏️  Changing domain to a-to-mind.com...`);
+      console.log(`\n✏️  STEP 5: Changing domain to a-to-mind.com...`);
       await page.fill(selector, 'a-to-mind.com');
-      
-      // PAUSE 5 - After changing domain
-      console.log('\n⏸️  PAUSE 5: Domain changed');
-      console.log('👀 Use Inspector to:');
-      console.log('   - Verify the change');
-      console.log('   - Look for Save button');
-      console.log('   - Press F8 to proceed');
-      await page.pause();
+      await screenshot('05-domain-changed');
       
       // Look for save button
       const saveButton = await page.$('button:has-text("Save"), button[type="submit"]');
       if (saveButton) {
-        console.log('\n💾 Clicking Save button...');
+        console.log('\n💾 STEP 6: Clicking Save button...');
         await saveButton.click();
+        await page.waitForTimeout(2000);
+        await screenshot('06-save-clicked');
         console.log('✅ Save clicked');
       } else {
-        console.log('\n⚠️  Save button not found');
+        console.log('\n⚠️  Save button not found, looking for other save options...');
+        const allButtons = await page.$$eval('button', els =>
+          els.map(el => ({ text: el.textContent?.substring(0, 50), type: el.type }))
+        );
+        console.log('All buttons:', JSON.stringify(allButtons, null, 2));
+        await screenshot('06-no-save-button');
       }
       
       // Take final screenshot
-      await page.screenshot({ path: 'rapidapi-final.png', fullPage: true });
-      console.log('\n📸 Final screenshot saved: rapidapi-final.png');
+      await screenshot('07-final-state');
+      console.log('\n🎉 Domain fix complete!');
       
     } else {
       console.log('\n❌ Domain input not found');
       console.log('⚠️  May need to navigate to a different section');
+      await screenshot('04-no-domain-input');
+      
+      // Try to find Edit API button
+      console.log('\n🔍 Looking for Edit API button...');
+      const editAPIButton = await page.$('button:has-text("Edit API")');
+      if (editAPIButton) {
+        console.log('📝 Found Edit API button');
+        await editAPIButton.click();
+        await page.waitForTimeout(3000);
+        await screenshot('05-edit-api-clicked');
+        
+        // List inputs again
+        const inputs2 = await page.$$eval('input, textarea, select', els =>
+          els.map(el => ({ 
+            type: el.type, 
+            name: el.name, 
+            id: el.id, 
+            placeholder: el.placeholder,
+            value: el.value 
+          }))
+        );
+        console.log('\n📝 Inputs after Edit API:', inputs2.length);
+        inputs2.forEach((input, i) => {
+          console.log(`   ${i + 1}. type="${input.type}" name="${input.name}" id="${input.id}" placeholder="${input.placeholder}" value="${input.value}"`);
+        });
+        
+        const domainInput2 = inputs2.find(input => 
+          (input.name && input.name.toLowerCase().includes('domain')) ||
+          (input.id && input.id.toLowerCase().includes('domain')) ||
+          (input.placeholder && input.placeholder.toLowerCase().includes('domain')) ||
+          (input.value && input.value.includes('.www.a-to-mind.com'))
+        );
+        
+        if (domainInput2) {
+          console.log('\n🎉 Found domain input after Edit API:', domainInput2);
+          const selector2 = domainInput2.id ? `#${domainInput2.id}` : 
+                           domainInput2.name ? `input[name="${domainInput2.name}"]` :
+                           domainInput2.placeholder ? `input[placeholder="${domainInput2.placeholder}"]` : 'input';
+          
+          await page.fill(selector2, 'a-to-mind.com');
+          await screenshot('06-domain-changed-edit-api');
+          console.log('✅ Domain changed');
+        }
+      }
     }
     
   } catch (error) {
     console.error('❌ Error:', error.message);
-    await page.screenshot({ path: 'rapidapi-error.png', fullPage: true });
+    await page.screenshot({ path: `${screenshotDir}/error.png`, fullPage: true });
   } finally {
     console.log('\n🎯 Test complete. Closing browser...');
     await browser.close();
@@ -171,4 +230,4 @@ async function rapidAPIFixWithInspector() {
 }
 
 // Run the function
-rapidAPIFixWithInspector().catch(console.error);
+rapidAPIFixAutomatic().catch(console.error);
