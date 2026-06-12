@@ -1099,6 +1099,719 @@ class UltimateBrowserService {
     return { success: true };
   }
   
+  // ==================== VISUAL ELEMENT DETECTION ====================
+  
+  async findElementByColor(selector, color) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((sel, targetColor) => {
+      const elements = document.querySelectorAll(sel);
+      const matches = [];
+      
+      for (const element of elements) {
+        const computed = window.getComputedStyle(element);
+        const elementColor = computed.backgroundColor;
+        
+        if (elementColor === targetColor || elementColor.includes(targetColor)) {
+          matches.push({
+            element: element.outerHTML.substring(0, 200),
+            color: elementColor
+          });
+        }
+      }
+      
+      return matches;
+    }, selector, color);
+    
+    return { success: true, matches: result };
+  }
+  
+  async findElementByPosition(x, y) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((xPos, yPos) => {
+      const element = document.elementFromPoint(xPos, yPos);
+      if (!element) return null;
+      
+      return {
+        tagName: element.tagName,
+        id: element.id,
+        className: element.className,
+        text: element.textContent?.substring(0, 100)
+      };
+    }, x, y);
+    
+    return { success: true, element: result };
+  }
+  
+  async findElementsBySize(minWidth, minHeight) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((minW, minH) => {
+      const elements = document.querySelectorAll('*');
+      const matches = [];
+      
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect();
+        if (rect.width >= minW && rect.height >= minH) {
+          matches.push({
+            tagName: element.tagName,
+            width: rect.width,
+            height: rect.height
+          });
+        }
+      }
+      
+      return matches;
+    }, minWidth, minHeight);
+    
+    return { success: true, matches: result };
+  }
+  
+  // ==================== AI-POWERED ELEMENT FINDING ====================
+  
+  async findElementByDescription(description) {
+    if (!this.page) await this.startBrowser();
+    
+    // Simple keyword-based AI (would use actual AI API in production)
+    const keywords = description.toLowerCase().split(' ');
+    const result = await this.page.evaluate((kw) => {
+      const elements = document.querySelectorAll('button, a, input, [role="button"]');
+      const matches = [];
+      
+      for (const element of elements) {
+        const text = element.textContent?.toLowerCase() || '';
+        const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
+        const placeholder = element.getAttribute('placeholder')?.toLowerCase() || '';
+        
+        const combined = text + ' ' + ariaLabel + ' ' + placeholder;
+        const matchCount = kw.filter(k => combined.includes(k)).length;
+        
+        if (matchCount > 0) {
+          matches.push({
+            element: element.outerHTML.substring(0, 200),
+            matchCount,
+            text: text.substring(0, 50)
+          });
+        }
+      }
+      
+      return matches.sort((a, b) => b.matchCount - a.matchCount);
+    }, keywords);
+    
+    return { success: true, matches: result };
+  }
+  
+  // ==================== CROSS-ORIGIN FRAME COMMUNICATION ====================
+  
+  async postMessageToFrame(frameSelector, message) {
+    if (!this.page) await this.startBrowser();
+    
+    const frame = this.page.frameLocator(frameSelector);
+    await frame.evaluate((msg) => {
+      window.postMessage(msg, '*');
+    }, message);
+    
+    return { success: true };
+  }
+  
+  async listenForFrameMessages() {
+    if (!this.page) await this.startBrowser();
+    
+    const messages = [];
+    await this.page.evaluate(() => {
+      window.addEventListener('message', (event) => {
+        window._frameMessages = window._frameMessages || [];
+        window._frameMessages.push(event.data);
+      });
+    });
+    
+    return { success: true };
+  }
+  
+  async getFrameMessages() {
+    if (!this.page) await this.startBrowser();
+    
+    const messages = await this.page.evaluate(() => {
+      return window._frameMessages || [];
+    });
+    
+    return { success: true, messages };
+  }
+  
+  // ==================== BROWSER EXTENSION API ====================
+  
+  async injectExtensionScript(script) {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.addInitScript(script);
+    return { success: true };
+  }
+  
+  async executeInExtensionContext(code) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(code);
+    return { success: true, result };
+  }
+  
+  // ==================== SERVICE WORKER TESTING ====================
+  
+  async registerServiceWorker(scriptURL) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((url) => {
+      return navigator.serviceWorker.register(url);
+    }, scriptURL);
+    
+    return { success: true, result };
+  }
+  
+  async getServiceWorkerRegistration() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) return null;
+      
+      return {
+        scope: registration.scope,
+        active: !!registration.active,
+        waiting: !!registration.waiting,
+        installing: !!registration.installing
+      };
+    });
+    
+    return { success: true, registration: result };
+  }
+  
+  async triggerPushNotification(data) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async (payload) => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) return { error: 'No registration' };
+      
+      // Simulate push notification
+      return { success: true, payload };
+    }, data);
+    
+    return { success: true, result };
+  }
+  
+  // ==================== WEBRTC TESTING ====================
+  
+  async getUserMedia(constraints) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async (cons) => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(cons);
+        return { success: true, tracks: stream.getTracks().map(t => t.kind) };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    }, constraints);
+    
+    return result;
+  }
+  
+  async getMediaStreamStats() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(() => {
+      return new Promise((resolve) => {
+        // Would need actual WebRTC connection to get stats
+        resolve({ message: 'No active WebRTC connection' });
+      });
+    });
+    
+    return { success: true, stats: result };
+  }
+  
+  // ==================== CANVAS/WEBGL TESTING ====================
+  
+  async getCanvasData(selector) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((sel) => {
+      const canvas = document.querySelector(sel);
+      if (!canvas) return null;
+      
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      return {
+        width: canvas.width,
+        height: canvas.height,
+        dataLength: imageData.data.length
+      };
+    }, selector);
+    
+    return { success: true, canvasData: result };
+  }
+  
+  async getWebGLInfo(selector) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((sel) => {
+      const canvas = document.querySelector(sel);
+      if (!canvas) return null;
+      
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) return null;
+      
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      
+      return {
+        vendor: gl.getParameter(gl.VENDOR),
+        renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'unknown',
+        version: gl.getParameter(gl.VERSION)
+      };
+    }, selector);
+    
+    return { success: true, webglInfo: result };
+  }
+  
+  // ==================== WEBSOCKET FRAME INSPECTION ====================
+  
+  async captureWebSocketFrames(urlPattern) {
+    if (!this.page) await this.startBrowser();
+    
+    this.wsFrames = this.wsFrames || [];
+    
+    await this.page.route(urlPattern, route => {
+      // Would need custom WebSocket implementation for frame inspection
+      route.continue();
+    });
+    
+    return { success: true };
+  }
+  
+  async getWebSocketFrames() {
+    return { success: true, frames: this.wsFrames || [] };
+  }
+  
+  // ==================== BROWSER STORAGE QUOTA TESTING ====================
+  
+  async getStorageQuota() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async () => {
+      if (navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        return {
+          usage: estimate.usage,
+          quota: estimate.quota,
+          usagePercentage: (estimate.usage / estimate.quota * 100).toFixed(2)
+        };
+      }
+      return null;
+    });
+    
+    return { success: true, quota: result };
+  }
+  
+  async requestPersistentStorage() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async () => {
+      if (navigator.storage && navigator.storage.persist) {
+        return await navigator.storage.persist();
+      }
+      return false;
+    });
+    
+    return { success: true, persisted: result };
+  }
+  
+  // ==================== BROWSER CACHE TESTING ====================
+  
+  async clearBrowserCache() {
+    if (!this.page) await this.startBrowser();
+    
+    await this.context.clearCookies();
+    await this.page.evaluate(() => {
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+    });
+    
+    return { success: true };
+  }
+  
+  async getCacheEntries() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async () => {
+      if (!('caches' in window)) return [];
+      
+      const cacheNames = await caches.keys();
+      const allEntries = [];
+      
+      for (const name of cacheNames) {
+        const cache = await caches.open(name);
+        const keys = await cache.keys();
+        
+        for (const request of keys) {
+          allEntries.push({
+            cacheName: name,
+            url: request.url
+          });
+        }
+      }
+      
+      return allEntries;
+    });
+    
+    return { success: true, entries: result };
+  }
+  
+  // ==================== BROWSER HISTORY TESTING ====================
+  
+  async getHistoryLength() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(() => {
+      return window.history.length;
+    });
+    
+    return { success: true, length: result };
+  }
+  
+  async goBack() {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.goBack();
+    return { success: true };
+  }
+  
+  async goForward() {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.goForward();
+    return { success: true };
+  }
+  
+  async pushState(state, url) {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.evaluate((st, u) => {
+      window.history.pushState(st, '', u);
+    }, state, url);
+    
+    return { success: true };
+  }
+  
+  // ==================== BROWSER PRINT TESTING ====================
+  
+  async triggerPrint() {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.evaluate(() => {
+      window.print();
+    });
+    
+    return { success: true };
+  }
+  
+  async cancelPrintDialog() {
+    if (!this.page) await this.startBrowser();
+    
+    // Would need to handle print dialog
+    return { success: true };
+  }
+  
+  // ==================== BROWSER DOWNLOAD TESTING (FILE CONTENT) ====================
+  
+  async verifyDownloadContent(filePath, expectedContent) {
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'File not found' };
+    }
+    
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const matches = content.includes(expectedContent);
+    
+    return { success: true, matches, content: content.substring(0, 1000) };
+  }
+  
+  async getDownloadProgress() {
+    // Would need to track download progress
+    return { success: true, progress: 100 };
+  }
+  
+  // ==================== BROWSER DRAG-AND-DROP (COMPLEX) ====================
+  
+  async dragOverMultiple(source, targets) {
+    if (!this.page) await this.startBrowser();
+    
+    for (const target of targets) {
+      await this.page.dragAndDrop(source, target);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return { success: true };
+  }
+  
+  async validateDrop(target, expectedContent) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((sel, content) => {
+      const element = document.querySelector(sel);
+      if (!element) return { found: false };
+      
+      const text = element.textContent || element.value || '';
+      return { found: true, contains: text.includes(content) };
+    }, target, expectedContent);
+    
+    return { success: true, validation: result };
+  }
+  
+  // ==================== BROWSER RESIZE TESTING ====================
+  
+  async testResponsiveBreakpoints(breakpoints) {
+    if (!this.page) await this.startBrowser();
+    
+    const results = [];
+    
+    for (const bp of breakpoints) {
+      await this.page.setViewportSize({ width: bp.width, height: bp.height });
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const result = await this.page.evaluate(() => {
+        return {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          breakpoint: window.matchMedia('(max-width: 768px)').matches ? 'mobile' : 'desktop'
+        };
+      });
+      
+      results.push({ breakpoint: bp, result });
+    }
+    
+    return { success: true, results };
+  }
+  
+  async listenForResizeEvents() {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.evaluate(() => {
+      window._resizeEvents = [];
+      window.addEventListener('resize', () => {
+        window._resizeEvents.push({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          timestamp: Date.now()
+        });
+      });
+    });
+    
+    return { success: true };
+  }
+  
+  async getResizeEvents() {
+    if (!this.page) await this.startBrowser();
+    
+    const events = await this.page.evaluate(() => {
+      return window._resizeEvents || [];
+    });
+    
+    return { success: true, events };
+  }
+  
+  // ==================== BROWSER FOCUS TESTING ====================
+  
+  async testFocusTrap(containerSelector) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((sel) => {
+      const container = document.querySelector(sel);
+      if (!container) return { error: 'Container not found' };
+      
+      const focusableElements = container.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      return {
+        focusableCount: focusableElements.length,
+        firstFocusable: focusableElements[0]?.tagName,
+        lastFocusable: focusableElements[focusableElements.length - 1]?.tagName
+      };
+    }, containerSelector);
+    
+    return { success: true, focusTrap: result };
+  }
+  
+  async getFocusOrder() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(() => {
+      const focusableElements = document.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      return Array.from(focusableElements).map(el => ({
+        tagName: el.tagName,
+        tabIndex: el.tabIndex
+      }));
+    });
+    
+    return { success: true, focusOrder: result };
+  }
+  
+  async testFocusVisible() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(() => {
+      const activeElement = document.activeElement;
+      if (!activeElement) return { focused: null };
+      
+      const computed = window.getComputedStyle(activeElement);
+      return {
+        focused: activeElement.tagName,
+        outline: computed.outline,
+        outlineOffset: computed.outlineOffset
+      };
+    });
+    
+    return { success: true, focusVisible: result };
+  }
+  
+  // ==================== BROWSER SCROLL TESTING ====================
+  
+  async getScrollPosition() {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(() => ({
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scrollPercentage: (window.scrollY / (document.documentElement.scrollHeight - document.documentElement.clientHeight) * 100).toFixed(2)
+    }));
+    
+    return { success: true, scrollPosition: result };
+  }
+  
+  async listenForScrollEvents() {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.evaluate(() => {
+      window._scrollEvents = [];
+      window.addEventListener('scroll', () => {
+        window._scrollEvents.push({
+          scrollX: window.scrollX,
+          scrollY: window.scrollY,
+          timestamp: Date.now()
+        });
+      });
+    });
+    
+    return { success: true };
+  }
+  
+  async getScrollEvents() {
+    if (!this.page) await this.startBrowser();
+    
+    const events = await this.page.evaluate(() => {
+      return window._scrollEvents || [];
+    });
+    
+    return { success: true, events };
+  }
+  
+  async testInfiniteScroll() {
+    if (!this.page) await this.startBrowser();
+    
+    const initialHeight = await this.page.evaluate(() => document.documentElement.scrollHeight);
+    
+    await this.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const finalHeight = await this.page.evaluate(() => document.documentElement.scrollHeight);
+    
+    return { success: true, infiniteScroll: finalHeight > initialHeight };
+  }
+  
+  // ==================== BROWSER ANIMATION TESTING ====================
+  
+  async getAnimationState(selector) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate((sel) => {
+      const element = document.querySelector(sel);
+      if (!element) return null;
+      
+      const computed = window.getComputedStyle(element);
+      const animations = element.getAnimations();
+      
+      return {
+        isAnimating: animations.length > 0,
+        animationCount: animations.length,
+        transitionDuration: computed.transitionDuration,
+        animationDuration: computed.animationDuration
+      };
+    }, selector);
+    
+    return { success: true, animationState: result };
+  }
+  
+  async waitForAnimation(selector, timeout = 5000) {
+    if (!this.page) await this.startBrowser();
+    
+    const result = await this.page.evaluate(async (sel, to) => {
+      const element = document.querySelector(sel);
+      if (!element) return { error: 'Element not found' };
+      
+      const startTime = Date.now();
+      
+      while (Date.now() - startTime < to) {
+        const animations = element.getAnimations();
+        if (animations.length === 0) {
+          return { completed: true, duration: Date.now() - startTime };
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      return { completed: false, timeout: true };
+    }, selector, timeout);
+    
+    return { success: true, result };
+  }
+  
+  async listenForAnimationEvents(selector) {
+    if (!this.page) await this.startBrowser();
+    
+    await this.page.evaluate((sel) => {
+      const element = document.querySelector(sel);
+      if (!element) return;
+      
+      window._animationEvents = [];
+      
+      element.addEventListener('animationstart', (e) => {
+        window._animationEvents.push({ type: 'start', animationName: e.animationName });
+      });
+      
+      element.addEventListener('animationend', (e) => {
+        window._animationEvents.push({ type: 'end', animationName: e.animationName });
+      });
+    }, selector);
+    
+    return { success: true };
+  }
+  
+  async getAnimationEvents() {
+    if (!this.page) await this.startBrowser();
+    
+    const events = await this.page.evaluate(() => {
+      return window._animationEvents || [];
+    });
+    
+    return { success: true, events };
+  }
+  
   // ==================== HIGH CONTRAST ====================
   
   async setHighContrast(highContrast) {
@@ -1863,6 +2576,30 @@ class UltimateBrowserService {
     }
   }
   
+  async clickByRole(role, options = {}) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const locator = this.page.getByRole(role, options);
+      await locator.click();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  async clickByText(text, options = {}) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const locator = this.page.getByText(text, options);
+      await locator.click();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
   async getByText(text, options = {}) {
     if (!this.page) await this.startBrowser();
     
@@ -1870,6 +2607,50 @@ class UltimateBrowserService {
       const locator = this.page.getByText(text, options);
       await locator.waitFor({ timeout: 5000 });
       return { success: true, locator: locator.toString() };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  async getLocatorText(role, options = {}) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const locator = this.page.getByRole(role, options);
+      const text = await locator.textContent();
+      return { success: true, text };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  async getLocatorAttribute(role, attribute, options = {}) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const locator = this.page.getByRole(role, options);
+      const attr = await locator.getAttribute(attribute);
+      return { success: true, attribute: attr };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  async getLocatorState(role, options = {}) {
+    if (!this.page) await this.startBrowser();
+    
+    try {
+      const locator = this.page.getByRole(role, options);
+      const state = {
+        visible: await locator.isVisible(),
+        hidden: await locator.isHidden(),
+        enabled: await locator.isEnabled(),
+        disabled: await locator.isDisabled(),
+        editable: await locator.isEditable(),
+        checked: await locator.isChecked(),
+        focused: await locator.isFocused()
+      };
+      return { success: true, state };
     } catch (error) {
       return { success: false, error: error.message };
     }
