@@ -115,11 +115,111 @@ class PersistentBrowserService {
     if (input) {
       await input.click();
       await new Promise(resolve => setTimeout(resolve, 200));
-      await input.fill(value);
+      await input.fill('');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      await input.type(value, { delay: 50 });
       await new Promise(resolve => setTimeout(resolve, 1000));
       return { success: true };
     }
     return { success: false, error: 'Input not found' };
+  }
+  
+  async findElementByAttributes(attributes) {
+    if (!this.page) await this.startBrowser();
+    
+    const inputs = await this.page.$$('input');
+    for (const input of inputs) {
+      try {
+        const type = await input.getAttribute('type');
+        const name = await input.getAttribute('name');
+        const id = await input.getAttribute('id');
+        const placeholder = await input.getAttribute('placeholder');
+        const ariaLabel = await input.getAttribute('aria-label');
+        const isVisible = await input.isVisible();
+        
+        if (!isVisible) continue;
+        
+        let match = true;
+        for (const [key, expectedValue] of Object.entries(attributes)) {
+          const actualValue = { type, name, id, placeholder, ariaLabel }[key];
+          if (actualValue && actualValue.toLowerCase().includes(expectedValue.toLowerCase())) {
+            continue;
+          } else if (actualValue === expectedValue) {
+            continue;
+          } else {
+            match = false;
+            break;
+          }
+        }
+        
+        if (match) {
+          return { success: true, selector: `input[${key}="${value}"]` };
+        }
+      } catch {
+        continue;
+      }
+    }
+    return { success: false, error: 'Element not found' };
+  }
+  
+  async listInputs() {
+    if (!this.page) await this.startBrowser();
+    
+    const inputs = await this.page.$$('input');
+    const inputList = [];
+    
+    for (const input of inputs) {
+      try {
+        const type = await input.getAttribute('type');
+        const name = await input.getAttribute('name');
+        const id = await input.getAttribute('id');
+        const placeholder = await input.getAttribute('placeholder');
+        const value = await input.inputValue();
+        const isVisible = await input.isVisible();
+        
+        inputList.push({
+          type,
+          name,
+          id,
+          placeholder,
+          value,
+          visible: isVisible,
+        });
+      } catch {
+        continue;
+      }
+    }
+    
+    return { success: true, inputs: inputList };
+  }
+  
+  async listButtons() {
+    if (!this.page) await this.startBrowser();
+    
+    const buttons = await this.page.$$('button, a');
+    const buttonList = [];
+    
+    for (const button of buttons) {
+      try {
+        const text = await button.textContent();
+        const id = await button.getAttribute('id');
+        const className = await button.getAttribute('class');
+        const isVisible = await button.isVisible();
+        
+        if (text && text.trim()) {
+          buttonList.push({
+            text: text.trim(),
+            id,
+            className,
+            visible: isVisible,
+          });
+        }
+      } catch {
+        continue;
+      }
+    }
+    
+    return { success: true, buttons: buttonList };
   }
   
   async getPageInfo() {
@@ -185,6 +285,14 @@ class PersistentBrowserService {
           }
           const result = await this.fillInput(selector, value);
           res.writeHead(result.success ? 200 : 400);
+          res.end(JSON.stringify(result));
+        } else if (pathname === '/list-inputs') {
+          const result = await this.listInputs();
+          res.writeHead(200);
+          res.end(JSON.stringify(result));
+        } else if (pathname === '/list-buttons') {
+          const result = await this.listButtons();
+          res.writeHead(200);
           res.end(JSON.stringify(result));
         } else if (pathname === '/info') {
           const info = await this.getPageInfo();

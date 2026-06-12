@@ -27,6 +27,14 @@ class PersistentBrowserClient {
     return this.request('/info');
   }
   
+  async listInputs() {
+    return this.request('/list-inputs');
+  }
+  
+  async listButtons() {
+    return this.request('/list-buttons');
+  }
+  
   async close() {
     return this.request('/close');
   }
