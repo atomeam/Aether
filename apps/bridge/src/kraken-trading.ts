@@ -13,7 +13,8 @@ export async function getKrakenBalance(apiKey: string, apiSecret: string): Promi
     console.error('Public API failed:', error);
   }
   
-  const nonce = Date.now().toString();
+  // Use millisecond timestamp as per Kraken examples
+  const nonce = (Date.now() * 1000).toString();
   
   // Try TradeBalance first (often more reliable)
   const tradeBalanceBody = `nonce=${nonce}&asset=`;
@@ -33,6 +34,7 @@ export async function getKrakenBalance(apiKey: string, apiSecret: string): Promi
   console.log('Kraken TradeBalance API Response:', JSON.stringify(tradeData));
   console.log('TradeBalance Request Body:', tradeBalanceBody);
   console.log('TradeBalance Path:', tradeBalancePath);
+  console.log('API Key (first 10 chars):', apiKey.substring(0, 10));
   
   if (tradeData.result) {
     return Object.entries(tradeData.result).map(([asset, balance]) => ({ 
@@ -43,7 +45,7 @@ export async function getKrakenBalance(apiKey: string, apiSecret: string): Promi
   
   // Fallback to Balance endpoint
   console.log('TradeBalance failed, trying Balance...');
-  const balanceNonce = (Date.now() + 1).toString();
+  const balanceNonce = ((Date.now() * 1000) + 1).toString();
   const body = `nonce=${balanceNonce}`;
   const path = '/0/private/Balance';
   const signature = await createKrakenSignature(apiSecret, path, body);
@@ -255,7 +257,7 @@ async function getTicker(pair: string): Promise<any> {
 }
 
 async function getOpenPositions(apiKey: string, apiSecret: string): Promise<any[]> {
-  const nonce = Date.now().toString();
+  const nonce = (Date.now() * 1000).toString();
   const bodyString = `nonce=${nonce}`;
   const path = '/0/private/OpenPositions';
   const signature = await createKrakenSignature(apiSecret, path, bodyString);
@@ -274,7 +276,7 @@ async function getOpenPositions(apiKey: string, apiSecret: string): Promise<any[
 }
 
 async function placeOrder(apiKey: string, apiSecret: string, pair: string, type: string, volume: number, price?: number): Promise<any> {
-  const nonce = Date.now().toString();
+  const nonce = (Date.now() * 1000).toString();
   // Build body as string for signature
   let bodyString = `nonce=${nonce}&pair=${pair}&type=${type}&volume=${volume.toString()}&ordertype=${price ? 'limit' : 'market'}`;
   if (price) {
@@ -298,23 +300,25 @@ async function placeOrder(apiKey: string, apiSecret: string, pair: string, type:
 }
 
 async function createKrakenSignature(apiSecret: string, path: string, body: string): Promise<string> {
-  // Kraken signature format: HMAC-SHA512 of (path + SHA256(nonce + body)) using base64-decoded secret
+  // Kraken signature format per documentation:
+  // HMAC-SHA512 of (path + SHA256(nonce + POST data)) using base64-decoded secret
+  
   const encoder = new TextEncoder();
   
   // Decode secret from base64
   const secretBuffer = Uint8Array.from(atob(apiSecret), c => c.charCodeAt(0));
   
-  // SHA256 of (nonce + body) - NOT just body
-  const message = body; // body already includes nonce
+  // SHA256 of (nonce + body)
+  const message = body;
   const messageBuffer = encoder.encode(message);
   const sha256Hash = await crypto.subtle.digest('SHA-256', messageBuffer);
   const sha256HashArray = new Uint8Array(sha256Hash);
   
   // HMAC-SHA512 of (path + SHA256 hash) using secret as key
-  const hmacMessage = encoder.encode(path);
-  const hmacMessageWithHash = new Uint8Array(hmacMessage.length + sha256HashArray.length);
-  hmacMessageWithHash.set(hmacMessage);
-  hmacMessageWithHash.set(sha256HashArray, hmacMessage.length);
+  const pathBuffer = encoder.encode(path);
+  const hmacMessage = new Uint8Array(pathBuffer.length + sha256HashArray.length);
+  hmacMessage.set(pathBuffer);
+  hmacMessage.set(sha256HashArray, pathBuffer.length);
   
   const key = await crypto.subtle.importKey(
     'raw',
@@ -327,7 +331,7 @@ async function createKrakenSignature(apiSecret: string, path: string, body: stri
   const signature = await crypto.subtle.sign(
     'HMAC',
     key,
-    hmacMessageWithHash
+    hmacMessage
   );
   
   const signatureArray = new Uint8Array(signature);
@@ -337,7 +341,7 @@ async function createKrakenSignature(apiSecret: string, path: string, body: stri
 
 async function convertToUSD(apiKey: string, apiSecret: string, asset: string, amount: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const nonce = Date.now().toString();
+    const nonce = (Date.now() * 1000).toString();
     const pair = `${asset}ZUSD`; // Convert asset to USD
     const bodyString = `nonce=${nonce}&pair=${pair}&type=sell&ordertype=market&volume=${amount}`;
     const path = '/0/private/AddOrder';
