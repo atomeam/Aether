@@ -10,6 +10,7 @@
  */
 
 import { default as app } from './server';
+import { checkKrakenHealth, getUSDCBaseDepositAddress } from '@aether/kraken-client';
 
 // Shared constants
 const VERSION = '0.16.2';
@@ -140,14 +141,39 @@ export default {
       const path = url.pathname;
       const method = request.method;
       
-      // GET /health - returns v0.2 contract with bindings
+      // GET /api/kraken/deposit — get USDC Base deposit address
+      if (path === '/api/kraken/deposit' && method === 'GET') {
+        try {
+          const address = await getUSDCBaseDepositAddress();
+          return json({ address, chain: 'Base', asset: 'USDC', minDeposit: '2.50', fee: '0' });
+        } catch (err) {
+          return json({ error: 'failed to get deposit address', details: err instanceof Error ? err.message : String(err) }, 500);
+        }
+      }
+
+      // GET /api/kraken/balance — check Kraken account balance
+      if (path === '/api/kraken/balance' && method === 'GET') {
+        try {
+          const health = await checkKrakenHealth();
+          return json(health);
+        } catch (err) {
+          return json({ connected: false, error: err instanceof Error ? err.message : String(err) }, 500);
+        }
+      }
+
+      // GET /health — bridge status + Kraken status
       if (path === '/health') {
+        let krakenHealth = { connected: false };
+        try {
+          krakenHealth = await checkKrakenHealth();
+        } catch { /* ignore */ }
         return json({
           ok: true,
           service: SERVICE,
           version: VERSION,
           ts: new Date().toISOString(),
           bindings: getBindings(env),
+          kraken: krakenHealth,
         });
       }
       

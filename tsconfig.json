@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@aether/kraken-client": [
+        "packages/kraken-client/src"
       ]
     },
     "allowImportingTsExtensions": true,

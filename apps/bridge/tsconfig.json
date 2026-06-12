@@ -10,13 +10,15 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "outDir": "./dist",
-    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "isolatedModules": true,
     "noEmit": false,
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@cloudflare/workers-types"],
+    "paths": {
+      "@aether/kraken-client": ["../../packages/kraken-client/src"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "../node_modules", "../apps/backend"]
