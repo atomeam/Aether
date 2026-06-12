@@ -27,8 +27,9 @@ class MasterViewer {
       skipKeywords: ['lesbian', 'group', 'threesome', 'orgy']
     };
     
+    // Force viewingTime to 120
     const loadedPreferences = this.loadJson(this.preferencesFile, {});
-    this.preferences = { ...defaultPreferences, ...loadedPreferences };
+    this.preferences = { ...defaultPreferences, ...loadedPreferences, viewingTime: 120 };
     
     this.scores = this.loadJson(this.scoresFile, {});
     
@@ -37,6 +38,12 @@ class MasterViewer {
     this.keepViewing = true;
     this.isPaused = false;
     this.speedMultiplier = 1.0;
+    this.zoomLevel = 1.0;
+    this.ambientMode = false;
+    this.favoriteGalleries = this.loadJson('favorites.json', []);
+    this.smoothTransitions = true;
+    this.qualityMode = false;
+    this.currentGallery = null;
     
     // Start keyboard input
     this.startKeyboardInput();
@@ -54,7 +61,13 @@ class MasterViewer {
     console.log('   " " (space) - Pause/Resume slideshow');
     console.log('   "+" - Speed up slideshow');
     console.log('   "-" - Slow down slideshow');
-    console.log('   "f" - Toggle fullscreen\n');
+    console.log('   "f" - Toggle fullscreen');
+    console.log('   "z" - Zoom in');
+    console.log('   "x" - Zoom out');
+    console.log('   "a" - Toggle ambient mode (dim background)');
+    console.log('   "h" - Add to favorites');
+    console.log('   "t" - Toggle smooth transitions');
+    console.log('   "o" - Toggle quality mode (high res only)\n');
     
     rl.on('line', (input) => {
       const cmd = input.toLowerCase().trim();
@@ -77,6 +90,29 @@ class MasterViewer {
         console.log('🐢 Speed: ' + this.speedMultiplier + 'x');
       } else if (cmd === 'f') {
         console.log('🖥️  Fullscreen toggle (use browser F11)');
+      } else if (cmd === 'z') {
+        this.zoomLevel = Math.min(this.zoomLevel + 0.25, 3.0);
+        console.log('🔍 Zoom: ' + this.zoomLevel + 'x');
+      } else if (cmd === 'x') {
+        this.zoomLevel = Math.max(this.zoomLevel - 0.25, 0.5);
+        console.log('🔍 Zoom: ' + this.zoomLevel + 'x');
+      } else if (cmd === 'a') {
+        this.ambientMode = !this.ambientMode;
+        console.log(this.ambientMode ? '🌙 Ambient mode ON' : '☀️ Ambient mode OFF');
+      } else if (cmd === 'h') {
+        if (this.currentGallery && !this.favoriteGalleries.includes(this.currentGallery.href)) {
+          this.favoriteGalleries.push(this.currentGallery.href);
+          this.saveJson('favorites.json', this.favoriteGalleries);
+          console.log('❤️  Added to favorites (' + this.favoriteGalleries.length + ' total)');
+        } else {
+          console.log('❤️  Already in favorites or no gallery loaded');
+        }
+      } else if (cmd === 't') {
+        this.smoothTransitions = !this.smoothTransitions;
+        console.log(this.smoothTransitions ? '✨ Smooth transitions ON' : '⚡ Smooth transitions OFF');
+      } else if (cmd === 'o') {
+        this.qualityMode = !this.qualityMode;
+        console.log(this.qualityMode ? '🎨 Quality mode ON' : '🎨 Quality mode OFF');
       }
     });
   }
@@ -306,6 +342,9 @@ class MasterViewer {
     console.log('Score: ' + gallery.score);
     console.log('Images: ' + gallery.imageCount);
     
+    // Set current gallery for keyboard controls
+    this.currentGallery = gallery;
+    
     // Check if should skip
     if (this.shouldSkipGallery(gallery)) {
       this.preferences.skipped++;
@@ -353,6 +392,30 @@ class MasterViewer {
       console.log('✅ Fullscreen enabled');
     }
     
+    // Apply ambient mode if enabled
+    if (this.ambientMode) {
+      await page.addStyleTag({
+        content: '.pswp { background: #000 !important; } .pswp__bg { opacity: 0.95 !important; }'
+      });
+      console.log('🌙 Ambient mode applied');
+    }
+    
+    // Apply zoom
+    if (this.zoomLevel !== 1.0) {
+      await page.addStyleTag({
+        content: '.pswp__img { transform: scale(' + this.zoomLevel + ') !important; }'
+      });
+      console.log('🔍 Zoom applied: ' + this.zoomLevel + 'x');
+    }
+    
+    // Apply smooth transitions
+    if (this.smoothTransitions) {
+      await page.addStyleTag({
+        content: '.pswp__img { transition: opacity 0.5s ease-in-out !important; }'
+      });
+      console.log('✨ Smooth transitions enabled');
+    }
+    
     // Try play button
     console.log('Trying play button...');
     const playClicked = await this.clickPlayButton(page);
@@ -364,46 +427,55 @@ class MasterViewer {
       console.log('⏱️  Viewing for ' + viewingTime + ' seconds...');
       console.log('⚡ Speed: ' + this.speedMultiplier + 'x');
       
-      // Progress feedback - show time remaining with pause and speed control
-      for (let elapsed = 0; elapsed < viewingTime; elapsed += 10) {
-        const remaining = viewingTime - elapsed;
-        console.log('   Time remaining: ' + remaining + 's | Speed: ' + this.speedMultiplier + 'x');
+      // Smart timing: longer on first and last images
+      const imageCount = Math.min(gallery.imageCount, 10);
+      const timePerImage = viewingTime / imageCount;
+      
+      for (let i = 0; i < imageCount; i++) {
+        // Smart timing: first and last get 2x time
+        const isFirstOrLast = (i === 0 || i === imageCount - 1);
+        const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
         
-        if (this.shouldSkip) {
-          console.log('⏭️  Skipped by user');
-          this.preferences.skipped++;
-          this.saveJson(this.preferencesFile, this.preferences);
-          this.shouldSkip = false;
+        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : ''));
+        
+        // Wait with speed and pause
+        const totalWait = adjustedTime * 1000 / this.speedMultiplier;
+        for (let elapsed = 0; elapsed < totalWait; elapsed += 1000) {
+          if (this.shouldSkip) {
+            console.log('⏭️  Skipped by user');
+            this.preferences.skipped++;
+            this.saveJson(this.preferencesFile, this.preferences);
+            this.shouldSkip = false;
+            
+            const closeButton = await page.$('.pswp__button--close');
+            if (closeButton) {
+              await closeButton.click();
+              await page.waitForTimeout(1000);
+            }
+            
+            return false;
+          }
           
-          // Close PhotoSwipe
-          const closeButton = await page.$('.pswp__button--close');
-          if (closeButton) {
-            await closeButton.click();
+          while (this.isPaused) {
+            console.log('⏸️  Paused...');
             await page.waitForTimeout(1000);
           }
           
-          return false;
-        }
-        
-        // Handle pause
-        while (this.isPaused) {
-          console.log('⏸️  Paused...');
           await page.waitForTimeout(1000);
         }
-        
-        // Adjust wait time based on speed
-        const adjustedWait = 10000 / this.speedMultiplier;
-        await page.waitForTimeout(adjustedWait);
       }
     } else {
       console.log('⚠️  Play button not found, manual viewing');
       
-      // Manual slideshow with progress
-      const imageTime = viewingTime / Math.min(gallery.imageCount, 10);
+      // Manual slideshow with smart timing
+      const imageCount = Math.min(gallery.imageCount, 10);
+      const timePerImage = viewingTime / imageCount;
       
-      for (let i = 0; i < Math.min(gallery.imageCount, 10); i++) {
-        console.log('📷 Image ' + (i + 1) + '/' + Math.min(gallery.imageCount, 10));
-        console.log('   Time remaining: ' + (viewingTime - (i * imageTime)).toFixed(0) + 's | Speed: ' + this.speedMultiplier + 'x');
+      for (let i = 0; i < imageCount; i++) {
+        const isFirstOrLast = (i === 0 || i === imageCount - 1);
+        const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
+        
+        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : ''));
         
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
@@ -420,17 +492,14 @@ class MasterViewer {
           return false;
         }
         
-        // Handle pause
         while (this.isPaused) {
           console.log('⏸️  Paused...');
           await page.waitForTimeout(1000);
         }
         
-        // Adjust wait time based on speed
-        const adjustedWait = (imageTime * 1000) / this.speedMultiplier;
+        const adjustedWait = (adjustedTime * 1000) / this.speedMultiplier;
         await page.waitForTimeout(adjustedWait);
         
-        // Try next
         const nextButton = await page.$('.pswp__button--arrow--next');
         if (nextButton) {
           await nextButton.click();
