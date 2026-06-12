@@ -20,15 +20,24 @@ Comprehensive system to view PornPics gallery images at high resolution with ful
 
 ### Control Features
 1. ✅ Keyboard skip - Press 's' or 'n' to skip current gallery
-2. ✅ Keyboard quit - Press 'q' to stop viewing
-3. ✅ Pause/Resume - Press space to pause/resume slideshow
-4. ✅ Speed control - Press + to speed up, - to slow down (0.5x to 3x)
-5. ✅ Fullscreen - Auto-enter fullscreen when slideshow starts
-6. ✅ Favorites - Press 'h' to add current gallery to favorites
-7. ✅ Favorites mode - Press 'p' to play from favorites only
-8. ✅ History tracking - Press 'r' to view recently viewed galleries
-9. ✅ Category selection - Press 'c' to see available categories
-10. ✅ Shuffle mode - Press 'u' to toggle random gallery selection
+2. ✅ Skip image - Press 'i' to skip current image only
+3. ✅ Keyboard quit - Press 'q' to stop viewing
+4. ✅ Pause/Resume - Press space to pause/resume slideshow
+5. ✅ Speed control - Press + to speed up, - to slow down (0.5x to 3x)
+6. ✅ Fullscreen - Auto-enter fullscreen when slideshow starts
+7. ✅ Favorites - Press 'h' to add current gallery to favorites
+8. ✅ Favorites mode - Press 'p' to play from favorites only
+9. ✅ History tracking - Press 'r' to view recently viewed galleries
+10. ✅ Category selection - Press 'c' to see available categories
+11. ✅ Shuffle mode - Press 'u' to toggle random gallery selection
+12. ✅ Loop mode - Press 'l' to loop current gallery repeatedly
+13. ✅ Random image order - Press 'o' to shuffle images within gallery
+14. ✅ Category-only mode - Press 'k' to stay in current category only
+15. ✅ Auto-skip low quality - Press 'z' to toggle quality filtering
+16. ✅ Gallery rating - Press 1-5 to rate current gallery
+17. ✅ Brightness control - Press b/B to decrease/increase brightness
+18. ✅ Contrast control - Press t/T to decrease/increase contrast
+19. ✅ Manual navigation - Arrow keys for next/prev image
 
 ## Implementation Details
 
@@ -221,6 +230,8 @@ for (let i = array.length - 1; i > 0; i--) {
 - `preferences.json` - User preferences and settings
 - `favorites.json` - Saved favorite galleries
 - `history.json` - Recently viewed galleries
+- `gallery-ratings.json` - Gallery ratings (1-5 stars)
+- `saved-images.json` - Downloaded images tracking
 
 ## Usage
 
@@ -231,6 +242,7 @@ node master-viewer.js
 ## Keyboard Controls
 
 - `s` or `n` - Skip current gallery
+- `i` - Skip current image only
 - `q` - Quit
 - `space` - Pause/Resume slideshow
 - `+` - Speed up slideshow
@@ -241,6 +253,18 @@ node master-viewer.js
 - `r` - View history (recently viewed)
 - `c` - Change category
 - `u` - Toggle shuffle mode
+- `l` - Toggle loop mode
+- `o` - Toggle random image order
+- `k` - Toggle category-only mode
+- `z` - Toggle auto-skip low quality
+- `d` - Download current image
+- `1-5` - Rate current gallery (1-5 stars)
+- `b` - Decrease brightness
+- `B` - Increase brightness
+- `t` - Decrease contrast
+- `T` - Increase contrast
+- `→` - Next image (manual)
+- `←` - Previous image (manual)
 
 ## Remember
 

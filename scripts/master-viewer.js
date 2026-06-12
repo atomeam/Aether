@@ -43,7 +43,18 @@ class MasterViewer {
     this.viewHistory = this.loadJson('history.json', []);
     this.shuffleMode = false;
     this.favoritesOnlyMode = false;
-    this.currentCategory = 'skirt';
+    this.currentCategory = 'bikini'; // Start with bikini instead of skirt
+    this.loopMode = false;
+    this.randomImageOrder = false;
+    this.categoryOnlyMode = false;
+    this.skipLowQuality = true;
+    this.minImageCount = 15;
+    this.currentImageIndex = 0;
+    this.savedImages = this.loadJson('saved-images.json', []);
+    this.galleryRatings = this.loadJson('gallery-ratings.json', {});
+    this.brightness = 100;
+    this.contrast = 100;
+    this.skipImage = false;
     
     // Start keyboard input
     this.startKeyboardInput();
@@ -57,6 +68,7 @@ class MasterViewer {
     
     console.log('\n🎮 Keyboard Controls:');
     console.log('   "s" or "n" - Skip current gallery');
+    console.log('   "i" - Skip current image only');
     console.log('   "q" - Quit');
     console.log('   " " (space) - Pause/Resume slideshow');
     console.log('   "+" - Speed up slideshow');
@@ -66,14 +78,29 @@ class MasterViewer {
     console.log('   "p" - Play from favorites only');
     console.log('   "r" - View history (recently viewed)');
     console.log('   "c" - Change category');
-    console.log('   "u" - Toggle shuffle mode\n');
+    console.log('   "u" - Toggle shuffle mode');
+    console.log('   "l" - Toggle loop mode');
+    console.log('   "o" - Toggle random image order');
+    console.log('   "k" - Toggle category-only mode');
+    console.log('   "z" - Toggle auto-skip low quality');
+    console.log('   "d" - Download current image');
+    console.log('   "1-5" - Rate current gallery (1-5 stars)');
+    console.log('   "b" - Decrease brightness');
+    console.log('   "B" - Increase brightness');
+    console.log('   "t" - Decrease contrast');
+    console.log('   "T" - Increase contrast');
+    console.log('   "→" - Next image (manual)');
+    console.log('   "←" - Previous image (manual)\n');
     
     rl.on('line', (input) => {
       const cmd = input.toLowerCase().trim();
       
       if (cmd === 's' || cmd === 'n') {
         this.shouldSkip = true;
-        console.log('⏭️  Skipping...');
+        console.log('⏭️  Skipping gallery...');
+      } else if (cmd === 'i') {
+        this.skipImage = true;
+        console.log('⏭️  Skipping image...');
       } else if (cmd === 'q') {
         this.keepViewing = false;
         console.log('🛑 Quitting...');
@@ -111,6 +138,45 @@ class MasterViewer {
       } else if (cmd === 'u') {
         this.shuffleMode = !this.shuffleMode;
         console.log(this.shuffleMode ? '🔀 Shuffle mode ON' : '📋 Sequential mode ON');
+      } else if (cmd === 'l') {
+        this.loopMode = !this.loopMode;
+        console.log(this.loopMode ? '🔄 Loop mode ON' : '➡️  Sequential mode ON');
+      } else if (cmd === 'o') {
+        this.randomImageOrder = !this.randomImageOrder;
+        console.log(this.randomImageOrder ? '🔀 Random image order ON' : '📋 Sequential image order ON');
+      } else if (cmd === 'k') {
+        this.categoryOnlyMode = !this.categoryOnlyMode;
+        console.log(this.categoryOnlyMode ? '📂 Category-only mode ON' : '🌐 Related galleries ON');
+      } else if (cmd === 'z') {
+        this.skipLowQuality = !this.skipLowQuality;
+        console.log(this.skipLowQuality ? '✅ Auto-skip low quality ON' : '⚠️  Auto-skip low quality OFF');
+      } else if (cmd === 'd') {
+        console.log('💾 Download feature - would save current image');
+      } else if (['1', '2', '3', '4', '5'].includes(cmd)) {
+        if (this.currentGallery) {
+          const rating = parseInt(cmd);
+          this.galleryRatings[this.currentGallery.href] = rating;
+          this.saveJson('gallery-ratings.json', this.galleryRatings);
+          console.log('⭐ Rated ' + rating + '/5 stars');
+        } else {
+          console.log('⚠️  No gallery loaded to rate');
+        }
+      } else if (input === 'b') {
+        this.brightness = Math.max(this.brightness - 10, 50);
+        console.log('🔆 Brightness: ' + this.brightness + '%');
+      } else if (input === 'B') {
+        this.brightness = Math.min(this.brightness + 10, 150);
+        console.log('🔆 Brightness: ' + this.brightness + '%');
+      } else if (input === 't') {
+        this.contrast = Math.max(this.contrast - 10, 50);
+        console.log('🎨 Contrast: ' + this.contrast + '%');
+      } else if (input === 'T') {
+        this.contrast = Math.min(this.contrast + 10, 150);
+        console.log('🎨 Contrast: ' + this.contrast + '%');
+      } else if (input === '→') {
+        console.log('➡️  Next image (manual)');
+      } else if (input === '←') {
+        console.log('⬅️  Previous image (manual)');
       }
     });
   }
@@ -259,6 +325,18 @@ class MasterViewer {
       return true;
     }
     
+    // Auto-skip low quality if enabled
+    if (this.skipLowQuality && gallery.imageCount < this.minImageCount) {
+      console.log('⏭️  Skipping (low quality: only ' + gallery.imageCount + ' images)');
+      return true;
+    }
+    
+    // Skip low-rated galleries
+    if (this.galleryRatings[gallery.href] && this.galleryRatings[gallery.href] < 3) {
+      console.log('⏭️  Skipping (low rating: ' + this.galleryRatings[gallery.href] + '/5)');
+      return true;
+    }
+    
     return false;
   }
   
@@ -339,9 +417,11 @@ class MasterViewer {
     console.log('\n🖼️  Gallery: ' + gallery.text);
     console.log('Score: ' + gallery.score);
     console.log('Images: ' + gallery.imageCount);
+    console.log('Rating: ' + (this.galleryRatings[gallery.href] || 'Not rated') + '/5');
     
     // Set current gallery for keyboard controls
     this.currentGallery = gallery;
+    this.currentImageIndex = 0;
     
     // Check if should skip
     if (this.shouldSkipGallery(gallery)) {
@@ -390,6 +470,14 @@ class MasterViewer {
       console.log('✅ Fullscreen enabled');
     }
     
+    // Apply brightness/contrast if adjusted
+    if (this.brightness !== 100 || this.contrast !== 100) {
+      await page.addStyleTag({
+        content: `.pswp__img { filter: brightness(${this.brightness}%) contrast(${this.contrast}%); }`
+      });
+      console.log('🎨 Applied brightness: ' + this.brightness + '%, contrast: ' + this.contrast + '%');
+    }
+    
     // Try play button
     console.log('Trying play button...');
     const playClicked = await this.clickPlayButton(page);
@@ -405,12 +493,25 @@ class MasterViewer {
       const imageCount = Math.min(gallery.imageCount, 10);
       const timePerImage = viewingTime / imageCount;
       
-      for (let i = 0; i < imageCount; i++) {
+      // Create image order (random if enabled)
+      let imageOrder = Array.from({ length: imageCount }, (_, i) => i);
+      if (this.randomImageOrder) {
+        for (let i = imageOrder.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [imageOrder[i], imageOrder[j]] = [imageOrder[j], imageOrder[i]];
+        }
+        console.log('🔀 Random image order');
+      }
+      
+      for (let idx = 0; idx < imageCount; idx++) {
+        const i = imageOrder[idx];
+        this.currentImageIndex = i + 1;
+        
         // Smart timing: first and last get 2x time
         const isFirstOrLast = (i === 0 || i === imageCount - 1);
         const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
         
-        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : ''));
+        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : '') + ' | Brightness: ' + this.brightness + '% | Contrast: ' + this.contrast + '%');
         
         // Wait with speed and pause
         const totalWait = adjustedTime * 1000 / this.speedMultiplier;
@@ -430,6 +531,12 @@ class MasterViewer {
             return false;
           }
           
+          if (this.skipImage) {
+            console.log('⏭️  Skipped image');
+            this.skipImage = false;
+            break;
+          }
+          
           while (this.isPaused) {
             console.log('⏸️  Paused...');
             await page.waitForTimeout(1000);
@@ -445,11 +552,24 @@ class MasterViewer {
       const imageCount = Math.min(gallery.imageCount, 10);
       const timePerImage = viewingTime / imageCount;
       
-      for (let i = 0; i < imageCount; i++) {
+      // Create image order (random if enabled)
+      let imageOrder = Array.from({ length: imageCount }, (_, i) => i);
+      if (this.randomImageOrder) {
+        for (let i = imageOrder.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [imageOrder[i], imageOrder[j]] = [imageOrder[j], imageOrder[i]];
+        }
+        console.log('🔀 Random image order');
+      }
+      
+      for (let idx = 0; idx < imageCount; idx++) {
+        const i = imageOrder[idx];
+        this.currentImageIndex = i + 1;
+        
         const isFirstOrLast = (i === 0 || i === imageCount - 1);
         const adjustedTime = isFirstOrLast ? timePerImage * 2 : timePerImage;
         
-        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : ''));
+        console.log('📷 Image ' + (i + 1) + '/' + imageCount + (isFirstOrLast ? ' (extended)' : '') + ' | Brightness: ' + this.brightness + '% | Contrast: ' + this.contrast + '%');
         
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
@@ -466,13 +586,18 @@ class MasterViewer {
           return false;
         }
         
-        while (this.isPaused) {
-          console.log('⏸️  Paused...');
-          await page.waitForTimeout(1000);
+        if (this.skipImage) {
+          console.log('⏭️  Skipped image');
+          this.skipImage = false;
+        } else {
+          while (this.isPaused) {
+            console.log('⏸️  Paused...');
+            await page.waitForTimeout(1000);
+          }
+          
+          const adjustedWait = (adjustedTime * 1000) / this.speedMultiplier;
+          await page.waitForTimeout(adjustedWait);
         }
-        
-        const adjustedWait = (adjustedTime * 1000) / this.speedMultiplier;
-        await page.waitForTimeout(adjustedWait);
         
         const nextButton = await page.$('.pswp__button--arrow--next');
         if (nextButton) {
@@ -606,7 +731,7 @@ class MasterViewer {
       }
       
       if (!currentGalleryUrl) {
-        console.log('❌ No fresh galleries found');
+        console.log('❌ No fresh galleries found in category');
         return;
       }
       
@@ -614,17 +739,20 @@ class MasterViewer {
       
       // Continuous viewing loop
       let galleryCount = 0;
-      const maxGalleries = 100;
+      const maxGalleries = this.loopMode ? 1000 : 100; // Higher limit for loop mode
       
       while (this.keepViewing && galleryCount < maxGalleries) {
         galleryCount++;
         
+        // Already on the gallery page from heart check
+        // Get image count
         const imageCount = await this.getImageCount(page);
         
-        console.log('\n🖼️  Gallery ' + galleryCount + '/' + maxGalleries);
+        console.log('\n🖼️  Gallery ' + galleryCount + '/' + (this.loopMode ? '∞' : maxGalleries));
         console.log('Title: ' + currentTitle);
         console.log('Images: ' + imageCount);
         
+        // View this gallery
         const gallery = {
           href: currentGalleryUrl,
           text: currentTitle,
@@ -636,69 +764,19 @@ class MasterViewer {
         
         const success = await this.viewGallery(page, gallery);
         if (!success) {
-          console.log('⏭️  Skipped, finding next...');
+          console.log('Skipped, finding next...');
         }
         
         console.log('\n✅ Gallery complete');
         
-        // Find next gallery from related
-        console.log('\n🔍 Finding next gallery from related...');
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-        await page.waitForTimeout(2000);
-        
-        let nextGalleryUrl = null;
-        let nextTitle = null;
-        
-        for (let i = 0; i < 5; i++) {
-          await page.evaluate(() => window.scrollBy(0, 500));
-          await page.waitForTimeout(1000);
-          
-          const visibleGalleries = await page.$$eval('a', (links) => 
-            links
-              .filter(link => {
-                const rect = link.getBoundingClientRect();
-                const href = link.href;
-                return rect.top > 0 && rect.top < window.innerHeight && 
-                       href && 
-                       href.includes('/galleries/');
-              })
-              .map(link => link.href)
-              .slice(0, 5)
-          );
-          
-          const filteredGalleries = visibleGalleries.filter(url => 
-            url !== currentGalleryUrl && !this.viewedGalleries.includes(url)
-          );
-          
-          for (const galleryUrl of filteredGalleries) {
-            await page.goto(galleryUrl);
-            await page.waitForTimeout(2000);
-            
-            const isHearted = await this.isHearted(page);
-            if (isHearted) {
-              console.log('❌ Hearted: ' + galleryUrl);
-              continue;
-            }
-            
-            const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
-            
-            console.log('✅ Unhearted: ' + title);
-            nextGalleryUrl = galleryUrl;
-            nextTitle = title;
-            break;
-          }
-          
-          if (nextGalleryUrl) {
-            break;
-          }
-        }
-        
-        if (!nextGalleryUrl) {
-          console.log('❌ No fresh related galleries found, going back to category');
+        // Find next gallery
+        if (this.categoryOnlyMode) {
+          // Stay in current category only
+          console.log('\n🔍 Finding next gallery in ' + this.currentCategory + '...');
           await page.goto('https://www.pornpics.com/' + this.currentCategory + '/');
           await page.waitForTimeout(3000);
           
-          const freshGalleries = await page.$$eval('a', links => 
+          const freshGalleries = await page.$$eval('a', links =>
             links
               .filter(link => link.href && link.href.includes('/galleries/'))
               .map(link => link.href)
@@ -727,20 +805,117 @@ class MasterViewer {
             
             const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
             
-            nextGalleryUrl = galleryUrl;
-            nextTitle = title;
+            currentGalleryUrl = galleryUrl;
+            currentTitle = title;
             break;
           }
           
-          if (!nextGalleryUrl) {
-            console.log('❌ No fresh galleries found anywhere, stopping');
+          if (!currentGalleryUrl) {
+            console.log('❌ No fresh galleries found in category, stopping');
             break;
           }
+        } else {
+          // Use related galleries
+          console.log('\n🔍 Finding next gallery from related...');
+          await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+          await page.waitForTimeout(2000);
+          
+          let nextGalleryUrl = null;
+          let nextTitle = null;
+          
+          for (let i = 0; i < 5; i++) {
+            await page.evaluate(() => window.scrollBy(0, 500));
+            await page.waitForTimeout(1000);
+            
+            const visibleGalleries = await page.$$eval('a', (links) =>
+              links
+                .filter(link => {
+                  const rect = link.getBoundingClientRect();
+                  return rect.top > 0 && rect.top < window.innerHeight &&
+                    link.href &&
+                    link.href.includes('/galleries/');
+                })
+                .map(link => link.href)
+                .slice(0, 5)
+            );
+            
+            const filteredGalleries = visibleGalleries.filter(url =>
+              url !== currentGalleryUrl && !this.viewedGalleries.includes(url)
+            );
+            
+            for (const galleryUrl of filteredGalleries) {
+              await page.goto(galleryUrl);
+              await page.waitForTimeout(2000);
+              
+              const isHearted = await this.isHearted(page);
+              if (isHearted) {
+                console.log('❌ Hearted: ' + galleryUrl);
+                continue;
+              }
+              
+              const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+              
+              console.log('✅ Unhearted: ' + title);
+              nextGalleryUrl = galleryUrl;
+              nextTitle = title;
+              break;
+            }
+            
+            if (nextGalleryUrl) {
+              break;
+            }
+          }
+          
+          if (!nextGalleryUrl) {
+            console.log('❌ No fresh related galleries found, going back to category');
+            await page.goto('https://www.pornpics.com/' + this.currentCategory + '/');
+            await page.waitForTimeout(3000);
+            
+            const freshGalleries = await page.$$eval('a', links =>
+              links
+                .filter(link => link.href && link.href.includes('/galleries/'))
+                .map(link => link.href)
+                .slice(0, 10)
+            );
+            
+            if (this.shuffleMode) {
+              for (let i = freshGalleries.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [freshGalleries[i], freshGalleries[j]] = [freshGalleries[j], freshGalleries[i]];
+              }
+            }
+            
+            for (const galleryUrl of freshGalleries) {
+              if (this.viewedGalleries.includes(galleryUrl)) {
+                continue;
+              }
+              
+              await page.goto(galleryUrl);
+              await page.waitForTimeout(2000);
+              
+              const isHearted = await this.isHearted(page);
+              if (isHearted) {
+                continue;
+              }
+              
+              const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+              
+              nextGalleryUrl = galleryUrl;
+              nextTitle = title;
+              break;
+            }
+            
+            if (!nextGalleryUrl) {
+              console.log('❌ No fresh galleries found anywhere, stopping');
+              break;
+            }
+          }
+          
+          // Update for next iteration
+          currentGalleryUrl = nextGalleryUrl;
+          currentTitle = nextTitle;
+          console.log('✅ Next: ' + currentTitle);
         }
-        
-        currentGalleryUrl = nextGalleryUrl;
-        currentTitle = nextTitle;
-        console.log('✅ Next: ' + currentTitle);
       }
       
       console.log('\n✅ Completed viewing ' + galleryCount + ' galleries');
@@ -757,4 +932,5 @@ class MasterViewer {
 }
 
 const viewer = new MasterViewer();
+
 viewer.run().catch(console.error);
