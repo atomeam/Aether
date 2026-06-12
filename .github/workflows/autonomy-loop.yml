@@ -10,6 +10,9 @@ permissions:
   pull-requests: write
   issues: write
 
+# Skip on push events - only run on schedule or manual dispatch
+if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
 jobs:
   automerge:
     runs-on: ubuntu-latest

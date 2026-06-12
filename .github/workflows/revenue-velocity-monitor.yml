@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+# Skip on push events - only run on schedule or manual dispatch
+if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
 env:
   REVENUE_THRESHOLD: ${{ inputs.threshold || '50000' }}
 

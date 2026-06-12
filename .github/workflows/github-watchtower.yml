@@ -9,6 +9,9 @@ permissions:
   contents: read
   pull-requests: read
 
+# Skip on push events - only run on schedule or manual dispatch
+if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
 jobs:
   watch:
     name: Monitor repo activity and open PRs

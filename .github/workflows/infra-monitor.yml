@@ -5,6 +5,9 @@ on:
     - cron: '0 * * * *' # Every hour
   workflow_dispatch: {}
 
+# Skip on push events - only run on schedule or manual dispatch
+if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
 jobs:
   monitor:
     name: Check Workers Builds and deployment status
