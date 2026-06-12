@@ -10,6 +10,7 @@
  */
 
 import { default as app } from './server';
+import { krakenTradingBot } from './kraken-trading';
 
 // Shared constants
 const VERSION = '0.16.2';
@@ -886,6 +887,22 @@ interface XPTPPaymentResponse {
       // GET /api/leads — health check for leads endpoint
       if (path === '/api/leads' && method === 'GET') {
         return json({ status: 'ready', endpoint: 'POST /api/leads' });
+      }
+
+      // POST /api/trading/kraken — autonomous Kraken trading bot
+      if (path === '/api/trading/kraken' && method === 'POST') {
+        return krakenTradingBot(env);
+      }
+
+      // GET /api/trading/kraken — health check for trading endpoint
+      if (path === '/api/trading/kraken' && method === 'GET') {
+        return json({ 
+          status: 'ready', 
+          endpoint: 'POST /api/trading/kraken',
+          description: 'Autonomous Kraken trading bot with leverage',
+          risk_warning: 'Trading with leverage involves significant risk. Only trade with money you can afford to lose.',
+          setup: 'Set KRAKEN_API_KEY and KRAKEN_API_SECRET in Cloudflare Workers environment variables'
+        });
       }
 
       // GET /api/council/history - get conversation history
@@ -1896,6 +1913,8 @@ interface Env {
   ADMIN_HMAC_SECRET: string;
   GITHUB_TOKEN: string;
   GITHUB_REPO: string; // format: "owner/repo"
+  KRAKEN_API_KEY: string;
+  KRAKEN_API_SECRET: string;
   GITHUB_WORKFLOW: string; // workflow filename
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
