@@ -2,59 +2,77 @@
 
 ## Overview
 
-Simple skill to view PornPics gallery images at high resolution by clicking them.
+Skill to view PornPics gallery images at high resolution by clicking them, then use heart and play controls.
 
 ## How It Works
 
 1. Navigate to gallery URL
-2. Find all image elements (`a img`)
-3. Click each image to open at high resolution
-4. View for 15 seconds
-5. Go back to gallery
-6. Repeat for all images
-7. Heart the gallery (`.gall-info-favorite`)
-8. Find related galleries
+2. Click first image to open fullscreen view
+3. Heart button and pause/play button appear at top
+4. Click heart to add to favorites
+5. Click play to start slideshow
+6. View all images automatically
 
 ## Key Points
 
-- **Click images directly** - This opens them at high resolution/fullscreen
-- **No screenshots** - Just click and view
-- **15 seconds per image** - Proper viewing time
-- **Heart after viewing** - Add to favorites
-- **Find related** - Navigate to next gallery
+- **Click first image** - Opens fullscreen view with controls
+- **Heart button** - `.favorite-button.btn-frameless` class
+- **Play button** - Located to the right of heart button
+- **Controls appear** - Only visible after clicking an image
+- **Slideshow mode** - Play button auto-advances through images
 
-## Implementation
+## Implementation Plan
 
+### Step 1: Navigate to Gallery
 ```javascript
-// Find all images
-const images = await page.$$('a img');
+await page.goto(galleryUrl);
+await page.waitForTimeout(3000);
+```
 
-// Click each image
-for (let i = 0; i < images.length; i++) {
-  await images[i].click();
-  await page.waitForTimeout(15000); // 15 seconds
-  await page.goBack();
-  await page.waitForTimeout(2000);
-}
+### Step 2: Click First Image
+```javascript
+// Find and click first image
+const firstImage = await page.$('img[src*="cdni"]');
+await firstImage.click();
+await page.waitForTimeout(3000);
+```
 
-// Heart the gallery
-const heartButton = await page.$('.gall-info-favorite');
+### Step 3: Click Heart
+```javascript
+// Heart button appears after clicking image
+const heartButton = await page.$('.favorite-button.btn-frameless');
 await heartButton.click();
+await page.waitForTimeout(2000);
+```
+
+### Step 4: Click Play
+```javascript
+// Play button is to the right of heart
+const playButton = await page.$('.favorite-button.btn-frameless + button, button:has-text("Play")');
+await playButton.click();
+await page.waitForTimeout(2000);
+```
+
+### Step 5: View Slideshow
+```javascript
+// Slideshow auto-advances, just wait
+await page.waitForTimeout(300000); // 5 minutes for full slideshow
 ```
 
 ## Scripts Available
 
-- `click-gallery-images.js` - Simple image clicker
+- `click-first-heart-play.js` - Click first image, heart, and play
 
 ## Usage
 
 ```bash
-node click-gallery-images.js
+node click-first-heart-play.js
 ```
 
 ## Remember
 
-- Click images to get high resolution
-- Don't navigate to URLs directly
-- Heart after viewing all images
-- Find related galleries for next viewing
+- Click first image to get controls to appear
+- Heart button: `.favorite-button.btn-frameless`
+- Play button is to the right of heart
+- Controls only appear after clicking an image
+- Play button starts automatic slideshow
