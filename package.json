@@ -25,5 +25,8 @@
   "devDependencies": {
     "turbo": "^2.9.14"
   },
-  "packageManager": "npm@10.9.8"
+  "packageManager": "npm@10.9.8",
+  "dependencies": {
+    "ethers": "^6.16.0"
+  }
 }

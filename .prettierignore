@@ -1,0 +1,9 @@
+node_modules
+dist
+.turbo
+coverage
+package-lock.json
+*.min.js
+*.min.css
+frontend.legacy
+logs

@@ -1,0 +1,42 @@
+{
+  "name": "@aether/llm-router",
+  "version": "1.0.0",
+  "description": "LLM routing and load balancing for multiple AI providers (OpenAI, Anthropic, Google)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "keywords": [
+    "llm",
+    "router",
+    "load-balancing",
+    "openai",
+    "anthropic",
+    "google",
+    "ai",
+    "machine-learning"
+  ],
+  "author": "Aether",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "@vitest/ui": "^1.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  }
+}

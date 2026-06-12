@@ -1,0 +1,47 @@
+{
+  "name": "@aether/docs",
+  "version": "1.0.0",
+  "description": "Documentation generation and management tools for the Aether monorepo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "generate:api": "node dist/generators/api-doc-generator.js",
+    "generate:architecture": "node dist/generators/architecture-generator.js",
+    "generate:components": "node dist/generators/component-doc-generator.js",
+    "generate:examples": "node dist/generators/examples-generator.js",
+    "generate:types": "node dist/generators/type-doc-generator.js",
+    "generate:all": "node dist/generators/all-docs.js",
+    "generate:package-readmes": "node dist/generators/package-readme-generator.js"
+  },
+  "keywords": [
+    "documentation",
+    "generator",
+    "api-docs",
+    "architecture",
+    "typescript"
+  ],
+  "author": "Aether Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aether/contracts": "file:../contracts",
+    "@aether/logger": "file:../logger",
+    "@aether/file-system": "file:../file-system",
+    "typedoc": "^0.25.0",
+    "markdown-it": "^14.0.0",
+    "glob": "^10.3.0",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/markdown-it": "^13.0.7",
+    "@types/node": "^20.10.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

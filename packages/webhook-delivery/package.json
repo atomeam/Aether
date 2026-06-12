@@ -1,0 +1,1 @@
+{"name":"@aether/webhook-delivery","version":"1.0.0","type":"module","main":"src/index.ts","scripts":{"build":"tsc","typecheck":"tsc --noEmit"},"devDependencies":{"@types/node":"^22.14.0","typescript":"~5.8.2"}}
