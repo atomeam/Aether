@@ -78,7 +78,24 @@ class SingletonBrowserManager {
       this.page = await context.newPage();
       console.log('✅ Page created');
     } else {
-      console.log('✅ Reusing existing page');
+      // Check if page is still valid
+      try {
+        const url = this.page.url();
+        if (url === 'about:blank' || !url) {
+          console.log('⚠️  Page is on about:blank, creating new page...');
+          const context = await this.getContext();
+          await this.page.close();
+          this.page = await context.newPage();
+          console.log('✅ New page created');
+        } else {
+          console.log('✅ Reusing existing page');
+        }
+      } catch (error) {
+        console.log('⚠️  Page is invalid, creating new page...');
+        const context = await this.getContext();
+        this.page = await context.newPage();
+        console.log('✅ New page created');
+      }
     }
     return this.page;
   }
