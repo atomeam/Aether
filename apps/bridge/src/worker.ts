@@ -151,6 +151,45 @@ export default {
         });
       }
       
+      // GET /pay - quick payment redirect (workaround for Vercel routing)
+      if (path === '/pay' && method === 'GET') {
+        const amount = parseInt(url.searchParams.get('amount') || '49', 10);
+        const email = url.searchParams.get('email') || '';
+
+        // Aether wallet address (USDC on Base)
+        const walletAddress = '0xDe497AF77d0edf1cC8B902Ae854987F67c375Fa0';
+
+        try {
+          const response = await fetch('https://xptp.net/api/v1/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount_usd: amount,
+              options: [
+                { chain: 'base', token: 'USDC', address: walletAddress },
+                { chain: 'ethereum', token: 'ETH', address: walletAddress },
+                { chain: 'polygon', token: 'USDC', address: walletAddress },
+              ],
+              webhook_url: 'https://bridge.a-to-mind.com/api/billing/webhook',
+              redirect_url: 'https://aether.a-to-mind.com?checkout=success',
+              metadata: { email, tier: 'pro' },
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.text();
+            return json({ error: 'XPTP API error', details: error }, 500);
+          }
+
+          const payment = await response.json();
+          
+          // Redirect to XPTP payment page
+          return Response.redirect(payment.payment_url, 302);
+        } catch (err) {
+          return json({ error: 'checkout failed', details: err instanceof Error ? err.message : 'unknown' }, 500);
+        }
+      }
+
       // GET /crew/status - summary with all bindings
       if (path === '/crew/status' || path === '/crew') {
         const bindings = getBindings(env);
