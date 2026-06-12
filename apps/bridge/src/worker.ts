@@ -778,6 +778,11 @@ export default {
         return json({ ok: true });
       }
 
+      // GET /api/leads — health check for leads endpoint
+      if (path === '/api/leads' && method === 'GET') {
+        return json({ status: 'ready', endpoint: 'POST /api/leads' });
+      }
+
       // GET /api/council/history - get conversation history
       if (path === '/api/council/history') {
         const session_id = url.searchParams.get('session_id');
