@@ -4,7 +4,7 @@ const BRIDGE_URL = 'https://bridge.a-to-mind.com';
 
 const TIERS = [
   { name: 'Free', price: '$0', tagline: 'Explore the bridge API', features: ['Public bridge endpoints', 'Community support', 'Rate-limited access'], cta: 'Get started' },
-  { name: 'Pro', price: '$49/mo', tagline: 'Automation for one business', features: ['API key + priority rate limits', 'Council session logs & replay', 'Email support'], cta: 'Start trial', priceId: 'price_pro_monthly' },
+  { name: 'Pro', price: '$49', tagline: 'Automation for one business', features: ['API key + priority rate limits', 'Council session logs & replay', 'Email support'], cta: 'Pay with Crypto', amount: 49 },
   { name: 'Enterprise', price: 'Custom', tagline: 'Your own agent council', features: ['Dedicated agent team', 'Custom integrations (Slack, Notion, Jira)', 'SLA + direct line'], cta: 'Contact sales' },
 ];
 
@@ -29,12 +29,12 @@ export default function PricingContact() {
     }
   };
 
-  const startCheckout = async (priceId: string) => {
+  const startCheckout = async (amount: number) => {
     try {
       const r = await fetch(`${BRIDGE_URL}/api/billing/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, email }),
+        body: JSON.stringify({ amount, email }),
       });
       if (!r.ok) throw new Error('Checkout failed');
       const { url } = await r.json();
@@ -69,9 +69,9 @@ export default function PricingContact() {
             <ul className="space-y-2 text-white/60 text-xs flex-1">
               {t.features.map((f) => <li key={f}>— {f}</li>)}
             </ul>
-            {t.priceId ? (
+            {t.amount ? (
               <button
-                onClick={() => startCheckout(t.priceId)}
+                onClick={() => startCheckout(t.amount)}
                 disabled={!email}
                 className="mt-6 block w-full text-center py-2 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >

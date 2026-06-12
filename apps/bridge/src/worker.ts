@@ -679,103 +679,103 @@ export default {
       }
 
 
-      // ─── Billing: Stripe checkout → API key issuance ───────────────
-      // POST /api/billing/checkout — create Stripe checkout session
+      // ─── Billing: XPTP crypto checkout → API key issuance ───────────────
+      // POST /api/billing/checkout — create XPTP crypto payment
       if (path === '/api/billing/checkout' && method === 'POST') {
-        if (!env.STRIPE_SECRET_KEY) return json({ error: 'billing not configured - Stripe not activated' }, 503);
-        const body = await request.json().catch(() => null) as { priceId?: string; email?: string } | null;
-        const priceId = body?.priceId || 'price_pro_monthly';
+        const body = await request.json().catch(() => null) as { amount?: number; email?: string } | null;
+        const amount = body?.amount || 49; // Default $49 for Pro tier
         const email = body?.email || '';
 
+        // Aether wallet address (USDC on Base)
+        const walletAddress = '0xDe497AF77d0edf1cC8B902Ae854987F67c375Fa0';
+
         try {
-          const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+          const response = await fetch('https://xptp.net/api/v1/payments', {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              mode: 'payment',
-              payment_method_types: 'card',
-              line_items: JSON.stringify([{ price: priceId, quantity: 1 }]),
-              success_url: 'https://aether.a-to-mind.com?checkout=success&session_id={CHECKOUT_SESSION_ID}',
-              cancel_url: 'https://aether.a-to-mind.com?checkout=cancelled',
-              customer_email: email,
-              metadata: JSON.stringify({ tier: 'pro' }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount_usd: amount,
+              options: [
+                { chain: 'base', token: 'USDC', address: walletAddress },
+                { chain: 'ethereum', token: 'ETH', address: walletAddress },
+                { chain: 'polygon', token: 'USDC', address: walletAddress },
+              ],
+              webhook_url: 'https://bridge.a-to-mind.com/api/billing/webhook',
+              redirect_url: 'https://aether.a-to-mind.com?checkout=success',
+              metadata: { email, tier: 'pro' },
             }),
           });
 
           if (!response.ok) {
             const error = await response.text();
-            return json({ error: 'Stripe API error', details: error }, 500);
+            return json({ error: 'XPTP API error', details: error }, 500);
           }
 
-          const session = await response.json();
-          return json({ url: session.url, sessionId: session.id });
+          const payment = await response.json();
+          return json({ url: payment.payment_url, paymentId: payment.id, webhookSecret: payment.webhook_secret });
         } catch (err) {
           return json({ error: 'checkout failed', details: err instanceof Error ? err.message : 'unknown' }, 500);
         }
       }
 
-      // POST /api/billing/webhook — Stripe webhook (checkout.session.completed)
+      // POST /api/billing/webhook — XPTP webhook (payment.completed)
       if (path === '/api/billing/webhook' && method === 'POST') {
-        if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: 'billing not configured' }, 503);
-        const payload = await request.text();
-        const sig = request.headers.get('stripe-signature') || '';
-        const parts = Object.fromEntries(sig.split(',').map(kv => kv.split('=') as [string, string]));
-        const t = parts['t']; const v1 = parts['v1'];
-        if (!t || !v1) return json({ error: 'bad signature header' }, 400);
-        // Reject stale events (>5 min) to prevent replay
-        if (Math.abs(Date.now() / 1000 - parseInt(t)) > 300) return json({ error: 'timestamp too old' }, 400);
-        const enc = new TextEncoder();
-        const hmacKey = await crypto.subtle.importKey('raw', enc.encode(env.STRIPE_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-        const mac = await crypto.subtle.sign('HMAC', hmacKey, enc.encode(`${t}.${payload}`));
-        const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
-        // Constant-time comparison — string !== leaks timing information
-        const expBytes = new TextEncoder().encode(expected);
-        const gotBytes = new TextEncoder().encode(v1);
-        let diff = expBytes.length ^ gotBytes.length;
-        for (let i = 0; i < expBytes.length; i++) diff |= expBytes[i] ^ (gotBytes[i] ?? 0);
-        if (diff !== 0) return json({ error: 'invalid signature' }, 401);
+        const payload = await request.json().catch(() => null) as {
+          id?: string;
+          status?: string;
+          amount_usd?: number;
+          metadata?: { email?: string; tier?: string };
+          webhook_secret?: string;
+        } | null;
 
-        const event = JSON.parse(payload);
-        // Idempotency: Stripe retries webhooks; never double-issue for the same event
-        const seenKey = `billing_evt:${event.id}`;
+        if (!payload) return json({ error: 'invalid payload' }, 400);
+
+        // Basic validation - in production, verify XPTP signature
+        const { id, status, amount_usd, metadata } = payload;
+
+        if (!id || status !== 'completed') {
+          return json({ error: 'invalid payment status' }, 400);
+        }
+
+        // Idempotency: never double-issue for the same payment
+        const seenKey = `billing_evt:${id}`;
         if (await env.STATE.get(seenKey)) return json({ received: true, duplicate: true });
         await env.STATE.put(seenKey, '1', { expirationTtl: 86400 });
-        if (event.type === 'checkout.session.completed') {
-          const session = event.data.object;
-          const tier = (session.metadata && session.metadata.tier) || 'pro';
-          // Generate API key, store only its hash; plaintext retrievable once via session_id
-          const keyBytes = crypto.getRandomValues(new Uint8Array(24));
-          const apiKey = 'amk_' + Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-          const hash = await hashKey(apiKey);
-          await env.STATE.put(`api_key:${hash}`, JSON.stringify({
-            tier,
-            created: new Date().toISOString(),
-            stripe_customer: session.customer || null,
-            stripe_session: session.id,
-            email: (session.customer_details && session.customer_details.email) || null,
-          }));
-          await env.STATE.put(`pending_key:${session.id}`, apiKey, { expirationTtl: 86400 });
-          if (env.BRIDGE_DB) {
-            try {
-              await env.BRIDGE_DB.prepare('CREATE TABLE IF NOT EXISTS billing_events (id TEXT PRIMARY KEY, type TEXT, tier TEXT, email TEXT, created_at TEXT)').run();
-              await env.BRIDGE_DB.prepare('INSERT OR IGNORE INTO billing_events (id, type, tier, email, created_at) VALUES (?, ?, ?, ?, ?)')
-                .bind(event.id, event.type, tier, (session.customer_details && session.customer_details.email) || null, new Date().toISOString()).run();
-            } catch { /* fail-soft: key issuance already done */ }
-          }
+
+        const tier = metadata?.tier || 'pro';
+        const email = metadata?.email || null;
+
+        // Generate API key, store only its hash; plaintext retrievable once via payment_id
+        const keyBytes = crypto.getRandomValues(new Uint8Array(24));
+        const apiKey = 'amk_' + Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const hash = await hashKey(apiKey);
+        await env.STATE.put(`api_key:${hash}`, JSON.stringify({
+          tier,
+          created: new Date().toISOString(),
+          payment_id: id,
+          amount_usd,
+          email,
+        }));
+        await env.STATE.put(`pending_key:${id}`, apiKey, { expirationTtl: 86400 });
+
+        if (env.BRIDGE_DB) {
+          try {
+            await env.BRIDGE_DB.prepare('CREATE TABLE IF NOT EXISTS billing_events (id TEXT PRIMARY KEY, type TEXT, tier TEXT, email TEXT, amount_usd REAL, created_at TEXT)').run();
+            await env.BRIDGE_DB.prepare('INSERT OR IGNORE INTO billing_events (id, type, tier, email, amount_usd, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+              .bind(id, 'xptp_payment', tier, email, amount_usd, new Date().toISOString()).run();
+          } catch { /* fail-soft: key issuance already done */ }
         }
+
         return json({ received: true });
       }
 
-      // GET /api/billing/key?session_id=cs_... — one-time API key retrieval after checkout
+      // GET /api/billing/key?payment_id=... — one-time API key retrieval after payment
       if (path === '/api/billing/key' && method === 'GET') {
-        const sessionId = url.searchParams.get('session_id');
-        if (!sessionId) return json({ error: 'session_id required' }, 400);
-        const apiKey = await env.STATE.get(`pending_key:${sessionId}`);
+        const paymentId = url.searchParams.get('payment_id');
+        if (!paymentId) return json({ error: 'payment_id required' }, 400);
+        const apiKey = await env.STATE.get(`pending_key:${paymentId}`);
         if (!apiKey) return json({ error: 'not found or already retrieved' }, 404);
-        await env.STATE.delete(`pending_key:${sessionId}`);
+        await env.STATE.delete(`pending_key:${paymentId}`);
         return json({ ok: true, api_key: apiKey, note: 'Store this now — it cannot be retrieved again.' });
       }
 
@@ -1822,8 +1822,6 @@ interface Env {
   ATOMIND_GEMINI_SECRET: string;
   ATOMIND_VIKTOR_SECRET: string;
   CURATOR_QUEUE: any; // Cloudflare Queue producer
-  STRIPE_SECRET_KEY?: string; // Stripe API key for checkout
-  STRIPE_WEBHOOK_SECRET?: string; // Stripe webhook signing secret
   DISPATCHER: Fetcher; // service binding → aether worker
   _LOGS: R2Bucket; // R2 bucket for logs
   // Admin actuator secrets

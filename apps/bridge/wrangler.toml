@@ -79,10 +79,6 @@ service = "aether"
 [vars]
 WORKER_ROLE = "executor"
 
-# Stripe secrets (set via: npx wrangler secret put STRIPE_SECRET_KEY)
-# STRIPE_SECRET_KEY = "sk_test_..."
-# STRIPE_WEBHOOK_SECRET = "whsec_..."
-
 [[routes]]
 pattern = "bridge.a-to-mind.com"
 custom_domain = true
