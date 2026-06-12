@@ -237,6 +237,105 @@ export default {
         }
       }
 
+      // GET /crypto-payment-link-generator - micro-SaaS tool
+      if (path === '/crypto-payment-link-generator' && method === 'GET') {
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Crypto Payment Link Generator</title>
+  <meta name="description" content="Generate crypto payment links with zero configuration. No KYC, no signup, 0.5% fee, instant settlement.">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: linear-gradient(135deg, #020202 0%, #0a0a0a 100%); color: #e0e0e0; }
+    h1 { color: #ffd700; text-align: center; margin-bottom: 10px; }
+    p { text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; color: rgba(255,255,255,0.8); font-weight: 500; }
+    input { width: 100%; padding: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #e0e0e0; font-size: 16px; box-sizing: border-box; }
+    input:focus { outline: none; border-color: #ffd700; }
+    button { width: 100%; background: #ffd700; color: #000; padding: 15px 30px; border: none; cursor: pointer; font-size: 16px; font-weight: 700; border-radius: 8px; transition: all 0.2s; }
+    button:hover { background: #ffed4a; transform: translateY(-2px); }
+    .result { background: rgba(255,215,0,0.1); padding: 20px; margin-top: 20px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); }
+    .price { font-size: 2.5em; font-weight: 800; color: #ffd700; margin: 20px 0; text-align: center; }
+    .features { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin: 30px 0; }
+    .features ul { list-style: none; padding: 0; }
+    .features li { padding: 8px 0; color: rgba(255,255,255,0.7); }
+    .features li:before { content: "✓ "; color: #ffd700; }
+    .buy-button { display: block; background: #ffd700; color: #000; padding: 20px 40px; text-decoration: none; font-size: 1.2em; font-weight: 700; border-radius: 10px; margin: 30px auto; text-align: center; transition: all 0.2s; }
+    .buy-button:hover { background: #ffed4a; transform: translateY(-2px); }
+    .copy-button { background: rgba(255,215,0,0.2); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-size: 14px; }
+    .copy-button:hover { background: rgba(255,215,0,0.3); }
+  </style>
+</head>
+<body>
+  <h1>Crypto Payment Link Generator</h1>
+  <p>Generate crypto payment links with zero configuration.</p>
+  
+  <div class="price">$9 one-time</div>
+  
+  <div class="features">
+    <ul>
+      <li>No account signup required</li>
+      <li>No KYC verification</li>
+      <li>0.5% transaction fee</li>
+      <li>Instant settlement</li>
+      <li>Multi-chain support (Base, Ethereum, Polygon)</li>
+    </ul>
+  </div>
+  
+  <div class="form-group">
+    <label>Email:</label>
+    <input type="email" id="email" placeholder="your@email.com">
+  </div>
+  
+  <div class="form-group">
+    <label>Amount (USD):</label>
+    <input type="number" id="amount" placeholder="49" value="49">
+  </div>
+  
+  <button onclick="generateLink()">Generate Payment Link</button>
+  
+  <div class="result" id="result" style="display: none;">
+    <label style="display: block; margin-bottom: 10px;">Your Payment Link:</label>
+    <input type="text" id="paymentLink" readonly>
+    <button class="copy-button" onclick="copyLink()">Copy Link</button>
+    <p style="margin-top: 15px; font-size: 0.85rem; color: rgba(255,255,255,0.5);">
+      Share this link to accept crypto payments instantly.
+    </p>
+  </div>
+  
+  <a href="https://bridge.a-to-mind.com/pay?amount=9" class="buy-button">Buy Lifetime Access - $9</a>
+  <p style="text-align: center; margin-top: 20px; color: rgba(255,255,255,0.4); font-size: 0.85rem;">
+    One-time payment • Lifetime access • Instant delivery
+  </p>
+  
+  <script>
+    function generateLink() {
+      const email = document.getElementById('email').value;
+      const amount = document.getElementById('amount').value;
+      if (!email) {
+        alert('Please enter your email');
+        return;
+      }
+      const link = "https://bridge.a-to-mind.com/pay?amount=" + amount + "&email=" + encodeURIComponent(email);
+      document.getElementById('paymentLink').value = link;
+      document.getElementById('result').style.display = 'block';
+    }
+    
+    function copyLink() {
+      const link = document.getElementById('paymentLink');
+      link.select();
+      document.execCommand('copy');
+      alert('Link copied to clipboard!');
+    }
+  </script>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+
       // GET /crew/status - summary with all bindings
       if (path === '/crew/status' || path === '/crew') {
         const bindings = getBindings(env);

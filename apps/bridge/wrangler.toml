@@ -82,3 +82,7 @@ WORKER_ROLE = "executor"
 [[routes]]
 pattern = "bridge.a-to-mind.com"
 custom_domain = true
+
+[[routes]]
+pattern = "crypto-payment-link-generator.a-to-mind.com"
+custom_domain = true
