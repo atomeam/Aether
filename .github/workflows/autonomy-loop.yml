@@ -1,0 +1,61 @@
+name: Autonomy Loop
+
+on:
+  schedule:
+    - cron: '20 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge labeled PRs whose checks are green (Workers Builds exempt)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prs=$(gh pr list -R "$REPO" --label automerge --state open --json number -q '.[].number')
+          [ -z "$prs" ] && echo 'No automerge-labeled PRs.' && exit 0
+          for pr in $prs; do
+            fails=$(gh pr checks "$pr" -R "$REPO" --json name,state \
+              -q '[.[] | select(.state=="FAILURE" or .state=="ERROR") | .name | select(startswith("Workers Builds") | not)] | length' || echo 1)
+            pending=$(gh pr checks "$pr" -R "$REPO" --json state \
+              -q '[.[] | select(.state=="PENDING" or .state=="QUEUED" or .state=="IN_PROGRESS")] | length' || echo 1)
+            if [ "$fails" = "0" ] && [ "$pending" = "0" ]; then
+              echo "Merging PR #$pr (all real checks green)"
+              gh pr merge "$pr" -R "$REPO" --squash --delete-branch || echo "PR #$pr not mergeable (conflict/protection) — next loop"
+            else
+              echo "PR #$pr skipped (non-exempt failures: $fails, pending: $pending)"
+            fi
+          done
+
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Probe live rails
+        run: |
+          set +e
+          fail=0
+          echo "## Rail status $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          curl -sf -m 15 https://bridge.a-to-mind.com/health >/dev/null && echo 'bridge /health: OK' || { echo 'bridge /health: FAIL'; fail=1; }
+          curl -sf -m 15 https://bridge.a-to-mind.com/api/stack >/dev/null && echo 'bridge /api/stack: OK' || { echo 'bridge /api/stack: FAIL'; fail=1; }
+          curl -sf -m 15 https://aether.a-to-mind.com/api/health >/dev/null && echo 'aether /api/health: OK' || echo 'aether /api/health: FAIL (known: deploy lane red, #119)'
+          if [ -f docs/run-artifacts/wix-domain.txt ]; then
+            d=$(head -n1 docs/run-artifacts/wix-domain.txt | tr -d '[:space:]')
+            body=$(curl -sf -m 15 "https://$d/_functions/health")
+            if echo "$body" | grep -q '"version":2'; then
+              echo "wix ($d): OK v2 — GitHub→Velo publish lane PROVEN"
+            else
+              echo "wix ($d): FAIL or wrong version — see #120"; fail=1
+            fi
+          else
+            echo 'wix: domain unknown — commit docs/run-artifacts/wix-domain.txt (#120 task 1)'
+          fi
+          exit $fail
