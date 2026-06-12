@@ -1,0 +1,62 @@
+name: GitHub Watchtower
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Every hour
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  watch:
+    name: Monitor repo activity and open PRs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check recent commits
+        id: commits
+        run: |
+          COMMITS=$(gh api repos/atomeam/Aether/commits --paginate -q '.[:5] | .[] | {sha, message: .commit.message[:50], author: .author.login, date: .commit.committer.date}' || echo "[]")
+          echo "$COMMITS"
+          echo "commits<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Check open PRs
+        id: prs
+        run: |
+          PRS=$(gh pr list --state open --json number,title,headRefName,createdAt,author --jq '.[] | {number, title, head: .headRefName, created: .createdAt, author: .author.login}' || echo "[]")
+          echo "$PRS"
+          echo "prs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$PRS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Check Issue #117 status
+        id: issue117
+        run: |
+          ISSUE=$(gh issue view 117 --json state,title,url --jq '{state, title, url}' || echo "{}")
+          echo "$ISSUE"
+          echo "issue117<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$ISSUE" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Alert on new critical PRs
+        if: contains(steps.prs.outputs.prs, 'deploy') || contains(steps.prs.outputs.prs, 'billing') || contains(steps.prs.outputs.prs, 'stripe')
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"👀 *GitHub Watchtower*\nCritical PRs detected:\n${{ steps.prs.outputs.prs }}\"}" || echo "Slack notification failed"
+
+      - name: Log to Notion (via bridge)
+        run: |
+          curl -sf -X POST "https://bridge.a-to-mind.com/api/github/status" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"recent_commits\": \"${{ steps.commits.outputs.commits }}\",
+              \"open_prs\": \"${{ steps.prs.outputs.prs }}\",
+              \"issue117_status\": \"${{ steps.issue117.outputs.issue117 }}\",
+              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+            }" 2>/dev/null || echo "Bridge endpoint not available"

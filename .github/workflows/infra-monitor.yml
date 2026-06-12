@@ -1,0 +1,52 @@
+name: Infrastructure Monitor
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Every hour
+  workflow_dispatch: {}
+
+jobs:
+  monitor:
+    name: Check Workers Builds and deployment status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Workers Builds status
+        id: workers
+        run: |
+          # Workers Builds status check (requires CF_API_TOKEN)
+          if [ -n "${{ secrets.CF_API_TOKEN }}" ]; then
+            echo "Workers Builds: API token available, status check possible"
+            echo "status=checkable" >> "$GITHUB_OUTPUT"
+          else
+            echo "Workers Builds: API token missing, cannot check status"
+            echo "status=blocked" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check recent deployments
+        id: deployments
+        run: |
+          # Check last 5 deployments via GitHub API
+          DEPLOYMENTS=$(gh api repos/atomeam/Aether/deployments --paginate -q '.[:5] | .[] | {environment, state, created_at, sha}' || echo "[]")
+          echo "$DEPLOYMENTS"
+          echo "deployments<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$DEPLOYMENTS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Alert on deployment failures
+        if: contains(steps.deployments.outputs.deployments, 'inactive') || contains(steps.deployments.outputs.deployments, 'error')
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚨 *Infrastructure Alert*\nRecent deployment failures detected:\n${{ steps.deployments.outputs.deployments }}\"}" || echo "Slack notification failed"
+
+      - name: Log to Notion (via bridge)
+        run: |
+          curl -sf -X POST "https://bridge.a-to-mind.com/api/infra/status" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"workers_builds_status\": \"${{ steps.workers.outputs.status }}\",
+              \"recent_deployments\": \"${{ steps.deployments.outputs.deployments }}\",
+              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+            }" 2>/dev/null || echo "Bridge endpoint not available"

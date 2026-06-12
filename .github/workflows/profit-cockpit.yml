@@ -1,0 +1,78 @@
+name: Profit Cockpit
+
+on:
+  schedule:
+    - cron: '40 * * * *' # Every hour at :40
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  profit:
+    name: Refresh profit metrics
+    runs-on: ubuntu-latest
+    if: ${{ secrets.STRIPE_SECRET_KEY != '' }}
+    steps:
+      - name: Fetch Stripe revenue (last 24h)
+        id: revenue
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: |
+          SINCE=$(date -d '24 hours ago' +%s 2>/dev/null || date -v-24H +%s)
+
+          RESPONSE=$(curl -s "https://api.stripe.com/v1/charges?created[gte]=${SINCE}&limit=100" \
+            -u "${STRIPE_SECRET_KEY}:" \
+            -H "Stripe-Version: 2024-12-18.acacia")
+
+          TOTAL=$(echo "$RESPONSE" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          charges = data.get('data', [])
+          total = sum(c['amount'] for c in charges if c.get('paid'))
+          print(f'total_cents={total}')
+          print(f'total_dollars={total/100:.2f}')
+          print(f'count={len(charges)}')
+          " 2>/dev/null || echo "total_cents=0")
+
+          echo "$TOTAL"
+          echo "total_cents=$(echo "$TOTAL" | head -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          echo "total_dollars=$(echo "$TOTAL" | sed -n '2p' | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$TOTAL" | sed -n '3p' | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Check bridge health
+        id: bridge
+        run: |
+          BRIDGE_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "https://bridge.a-to-mind.com/health" --max-time 10)
+          echo "bridge_status=$BRIDGE_HEALTH" >> "$GITHUB_OUTPUT"
+
+      - name: Check Workers Builds status
+        id: workers
+        run: |
+          if [ -n "${{ secrets.CF_API_TOKEN }}" ]; then
+            echo "workers_status=checkable" >> "$GITHUB_OUTPUT"
+          else
+            echo "workers_status=blocked" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log profit metrics to Notion (via bridge)
+        run: |
+          curl -sf -X POST "https://bridge.a-to-mind.com/api/profit/metrics" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"revenue_24h_cents\": ${{ steps.revenue.outputs.total_cents }},
+              \"revenue_24h_dollars\": \"${{ steps.revenue.outputs.total_dollars }}\",
+              \"transaction_count\": ${{ steps.revenue.outputs.count }},
+              \"bridge_health\": \"${{ steps.bridge.outputs.bridge_status }}\",
+              \"workers_builds_status\": \"${{ steps.workers.outputs.workers_status }}\",
+              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+            }" 2>/dev/null || echo "Bridge endpoint not available"
+
+      - name: Alert on revenue spike
+        if: steps.revenue.outputs.total_cents > 10000 # $100+
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"💰 *Profit Cockpit Alert*\nRevenue spike detected: \$${{ steps.revenue.outputs.total_dollars }} in last 24h\nTransactions: ${{ steps.revenue.outputs.count }}\"}" || echo "Slack notification failed"
