@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "test": "vitest run",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "zod": "^3.22.4"
