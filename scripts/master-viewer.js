@@ -6,7 +6,6 @@
 
 const { chromium } = require('playwright');
 const fs = require('fs');
-const http = require('http');
 const readline = require('readline');
 
 class MasterViewer {
@@ -16,21 +15,28 @@ class MasterViewer {
     this.scoresFile = 'gallery-scores.json';
     
     this.viewedGalleries = this.loadJson(this.viewedFile, []);
-    this.preferences = this.loadJson(this.preferencesFile, {
+    
+    const defaultPreferences = {
       categories: {},
       keywords: {},
       dislikedKeywords: {},
-      imageCountRange: [10, 30],
+      imageCountRange: [10, 100],
       totalViewed: 0,
       skipped: 0,
-      viewingTime: 200,
+      viewingTime: 120,
       skipKeywords: ['lesbian', 'group', 'threesome', 'orgy']
-    });
+    };
+    
+    const loadedPreferences = this.loadJson(this.preferencesFile, {});
+    this.preferences = { ...defaultPreferences, ...loadedPreferences };
+    
     this.scores = this.loadJson(this.scoresFile, {});
     
     this.categories = ['skirt', 'bikini', 'pussy', 'milf', 'teen', 'blonde', 'brunette'];
     this.shouldSkip = false;
     this.keepViewing = true;
+    this.isPaused = false;
+    this.speedMultiplier = 1.0;
     
     // Start keyboard input
     this.startKeyboardInput();
@@ -43,17 +49,34 @@ class MasterViewer {
     });
     
     console.log('\n🎮 Keyboard Controls:');
-    console.log('   Press "s" or "n" to skip current gallery');
-    console.log('   Press "q" to quit\n');
+    console.log('   "s" or "n" - Skip current gallery');
+    console.log('   "q" - Quit');
+    console.log('   " " (space) - Pause/Resume slideshow');
+    console.log('   "+" - Speed up slideshow');
+    console.log('   "-" - Slow down slideshow');
+    console.log('   "f" - Toggle fullscreen\n');
     
     rl.on('line', (input) => {
-      if (input.toLowerCase() === 's' || input.toLowerCase() === 'n') {
+      const cmd = input.toLowerCase().trim();
+      
+      if (cmd === 's' || cmd === 'n') {
         this.shouldSkip = true;
         console.log('⏭️  Skipping...');
-      } else if (input.toLowerCase() === 'q') {
+      } else if (cmd === 'q') {
         this.keepViewing = false;
         console.log('🛑 Quitting...');
         process.exit(0);
+      } else if (cmd === ' ') {
+        this.isPaused = !this.isPaused;
+        console.log(this.isPaused ? '⏸️  Paused' : '▶️  Resumed');
+      } else if (cmd === '+') {
+        this.speedMultiplier = Math.min(this.speedMultiplier + 0.25, 3.0);
+        console.log('⚡ Speed: ' + this.speedMultiplier + 'x');
+      } else if (cmd === '-') {
+        this.speedMultiplier = Math.max(this.speedMultiplier - 0.25, 0.5);
+        console.log('🐢 Speed: ' + this.speedMultiplier + 'x');
+      } else if (cmd === 'f') {
+        console.log('🖥️  Fullscreen toggle (use browser F11)');
       }
     });
   }
@@ -321,6 +344,15 @@ class MasterViewer {
     
     await page.waitForTimeout(3000);
     
+    // Enter fullscreen
+    console.log('🖥️  Entering fullscreen...');
+    const fullscreenButton = await page.$('.pswp__button--fullscreen-button');
+    if (fullscreenButton) {
+      await fullscreenButton.click();
+      await page.waitForTimeout(1000);
+      console.log('✅ Fullscreen enabled');
+    }
+    
     // Try play button
     console.log('Trying play button...');
     const playClicked = await this.clickPlayButton(page);
@@ -330,11 +362,12 @@ class MasterViewer {
     if (playClicked) {
       console.log('✅ Play clicked - slideshow started');
       console.log('⏱️  Viewing for ' + viewingTime + ' seconds...');
+      console.log('⚡ Speed: ' + this.speedMultiplier + 'x');
       
-      // Progress feedback - show time remaining
+      // Progress feedback - show time remaining with pause and speed control
       for (let elapsed = 0; elapsed < viewingTime; elapsed += 10) {
         const remaining = viewingTime - elapsed;
-        console.log('   Time remaining: ' + remaining + 's');
+        console.log('   Time remaining: ' + remaining + 's | Speed: ' + this.speedMultiplier + 'x');
         
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
@@ -352,7 +385,15 @@ class MasterViewer {
           return false;
         }
         
-        await page.waitForTimeout(10000);
+        // Handle pause
+        while (this.isPaused) {
+          console.log('⏸️  Paused...');
+          await page.waitForTimeout(1000);
+        }
+        
+        // Adjust wait time based on speed
+        const adjustedWait = 10000 / this.speedMultiplier;
+        await page.waitForTimeout(adjustedWait);
       }
     } else {
       console.log('⚠️  Play button not found, manual viewing');
@@ -362,7 +403,7 @@ class MasterViewer {
       
       for (let i = 0; i < Math.min(gallery.imageCount, 10); i++) {
         console.log('📷 Image ' + (i + 1) + '/' + Math.min(gallery.imageCount, 10));
-        console.log('   Time remaining: ' + (viewingTime - (i * imageTime)).toFixed(0) + 's');
+        console.log('   Time remaining: ' + (viewingTime - (i * imageTime)).toFixed(0) + 's | Speed: ' + this.speedMultiplier + 'x');
         
         if (this.shouldSkip) {
           console.log('⏭️  Skipped by user');
@@ -379,7 +420,15 @@ class MasterViewer {
           return false;
         }
         
-        await page.waitForTimeout(imageTime * 1000);
+        // Handle pause
+        while (this.isPaused) {
+          console.log('⏸️  Paused...');
+          await page.waitForTimeout(1000);
+        }
+        
+        // Adjust wait time based on speed
+        const adjustedWait = (imageTime * 1000) / this.speedMultiplier;
+        await page.waitForTimeout(adjustedWait);
         
         // Try next
         const nextButton = await page.$('.pswp__button--arrow--next');
@@ -445,51 +494,38 @@ class MasterViewer {
       let currentGalleryUrl = null;
       let currentTitle = null;
       
-      for (let i = 0; i < 5; i++) {
-        await page.evaluate(() => window.scrollBy(0, 500));
-        await page.waitForTimeout(1000);
-        
-        // Find visible gallery links
-        const visibleGalleries = await page.$$eval('a', links => 
-          links
-            .filter(link => {
-              const rect = link.getBoundingClientRect();
-              return rect.top > 0 && rect.top < window.innerHeight && 
-                     link.href && link.href.includes('/galleries/');
-            })
-            .map(link => link.href)
-            .slice(0, 5)
-        );
-        
-        console.log('Visible galleries: ' + visibleGalleries.length);
-        
-        for (const galleryUrl of visibleGalleries) {
-          if (this.viewedGalleries.includes(galleryUrl)) {
-            continue;
-          }
-          
-          // Navigate to gallery to check heart status and get title
-          await page.goto(galleryUrl);
-          await page.waitForTimeout(2000);
-          
-          const isHearted = await this.isHearted(page);
-          if (isHearted) {
-            console.log('❌ Hearted: ' + galleryUrl);
-            continue;
-          }
-          
-          // Get title from page
-          const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
-          
-          console.log('✅ Unhearted: ' + title);
-          currentGalleryUrl = galleryUrl;
-          currentTitle = title;
-          break;
+      // Get all gallery links first
+      const allGalleries = await page.$$eval('a', links => 
+        links
+          .filter(link => link.href && link.href.includes('/galleries/'))
+          .map(link => link.href)
+          .slice(0, 20)
+      );
+      
+      console.log('Total galleries: ' + allGalleries.length);
+      
+      for (const galleryUrl of allGalleries) {
+        if (this.viewedGalleries.includes(galleryUrl)) {
+          continue;
         }
         
-        if (currentGalleryUrl) {
-          break;
+        // Navigate to gallery to check heart status and get title
+        await page.goto(galleryUrl);
+        await page.waitForTimeout(2000);
+        
+        const isHearted = await this.isHearted(page);
+        if (isHearted) {
+          console.log('❌ Hearted');
+          continue;
         }
+        
+        // Get title from page
+        const title = await page.$eval('h1, .gall-info-title, title', el => el.textContent).catch(() => 'Gallery');
+        
+        console.log('✅ Unhearted: ' + title);
+        currentGalleryUrl = galleryUrl;
+        currentTitle = title;
+        break;
       }
       
       if (!currentGalleryUrl) {
@@ -544,24 +580,27 @@ class MasterViewer {
           await page.waitForTimeout(1000);
           
           // Find visible related galleries
-          const visibleGalleries = await page.$$eval('a', (links, currentUrl, viewed) => 
+          const visibleGalleries = await page.$$eval('a', (links) => 
             links
               .filter(link => {
                 const rect = link.getBoundingClientRect();
                 const href = link.href;
                 return rect.top > 0 && rect.top < window.innerHeight && 
                        href && 
-                       href.includes('/galleries/') && 
-                       href !== currentUrl &&
-                       !viewed.includes(href);
+                       href.includes('/galleries/');
               })
               .map(link => link.href)
               .slice(0, 5)
-          , currentGalleryUrl, this.viewedGalleries);
+          );
           
           console.log('Visible related: ' + visibleGalleries.length);
           
-          for (const galleryUrl of visibleGalleries) {
+          // Filter out viewed and current
+          const filteredGalleries = visibleGalleries.filter(url => 
+            url !== currentGalleryUrl && !this.viewedGalleries.includes(url)
+          );
+          
+          for (const galleryUrl of filteredGalleries) {
             // Navigate to gallery to check heart status and get title
             await page.goto(galleryUrl);
             await page.waitForTimeout(2000);
