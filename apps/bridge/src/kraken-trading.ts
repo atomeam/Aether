@@ -46,13 +46,59 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
     const usdBalance = balance.find(b => b.asset === 'ZUSD')?.balance || '0';
     const usdBalanceNum = parseFloat(usdBalance);
 
+    // If no USD, try to convert available assets to USD
     if (usdBalanceNum < POSITION_SIZE_USD) {
-      return Response.json({ 
-        status: 'insufficient_balance',
-        balance: usdBalanceNum,
-        required: POSITION_SIZE_USD,
-        message: 'Need at least $10 to start trading'
-      });
+      const availableAssets = balance.filter(b => parseFloat(b.balance) > 0);
+      
+      if (availableAssets.length === 0) {
+        return Response.json({ 
+          status: 'no_funds',
+          balance: balance,
+          message: 'No funds available in account. Please deposit funds to start trading.'
+        });
+      }
+
+      // Try to convert available assets to USD
+      for (const asset of availableAssets) {
+        if (asset.asset === 'ZUSD') continue;
+        
+        try {
+          // Try to convert asset to USD
+          const conversion = await convertToUSD(apiKey, apiSecret, asset.asset, asset.balance);
+          if (conversion.success) {
+            // Wait a moment for conversion to settle
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Check balance again
+            const newBalance = await getBalance(apiKey, apiSecret);
+            const newUsdBalance = newBalance.find(b => b.asset === 'ZUSD')?.balance || '0';
+            const newUsdBalanceNum = parseFloat(newUsdBalance);
+            
+            if (newUsdBalanceNum >= POSITION_SIZE_USD) {
+              console.log(`Converted ${asset.asset} to USD successfully`);
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`Failed to convert ${asset.asset}:`, error);
+          continue;
+        }
+      }
+
+      // Check balance again after conversion attempts
+      const finalBalance = await getBalance(apiKey, apiSecret);
+      const finalUsdBalance = finalBalance.find(b => b.asset === 'ZUSD')?.balance || '0';
+      const finalUsdBalanceNum = parseFloat(finalUsdBalance);
+
+      if (finalUsdBalanceNum < POSITION_SIZE_USD) {
+        return Response.json({ 
+          status: 'insufficient_balance_after_conversion',
+          balance: finalBalance,
+          usd_balance: finalUsdBalanceNum,
+          required: POSITION_SIZE_USD,
+          message: 'Could not convert enough assets to USD. Please deposit funds or try manual conversion.'
+        });
+      }
     }
 
     // Get current price
@@ -112,7 +158,7 @@ RISK WARNING: Trading with leverage involves significant risk. Only trade with m
   }
 }
 
-async function getBalance(apiKey: string, apiSecret: string): Promise<any[]> {
+async function getBalance(apiKey: string, apiSecret: string): Promise<{ asset: string; balance: string }[]> {
   const nonce = Date.now().toString();
   const body = `nonce=${nonce}`;
   const path = '/0/private/Balance';
@@ -219,4 +265,40 @@ async function createKrakenSignature(apiSecret: string, path: string, body: stri
   const signatureArray = new Uint8Array(signature);
   const signatureBase64 = btoa(String.fromCharCode(...signatureArray));
   return signatureBase64;
+}
+
+async function convertToUSD(apiKey: string, apiSecret: string, asset: string, amount: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const nonce = Date.now().toString();
+    const pair = `${asset}ZUSD`; // Convert asset to USD
+    const body = new URLSearchParams({
+      nonce,
+      pair,
+      type: 'sell',
+      ordertype: 'market',
+      volume: amount
+    });
+    const bodyString = body.toString();
+    const path = '/0/private/AddOrder';
+    const signature = await createKrakenSignature(apiSecret, path, bodyString);
+
+    const response = await fetch('https://api.kraken.com/0/private/AddOrder', {
+      method: 'POST',
+      headers: {
+        'API-Key': apiKey,
+        'API-Sign': signature,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: bodyString
+    });
+    const data = await response.json();
+    
+    if (data.error && data.error.length > 0) {
+      return { success: false, error: data.error.join(', ') };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'unknown' };
+  }
 }
