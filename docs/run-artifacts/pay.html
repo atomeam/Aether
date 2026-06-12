@@ -317,15 +317,20 @@
         <div class="payment-name">PayPal</div>
         <div class="payment-badge">Instant</div>
       </div>
+      <div class="payment-method" onclick="selectPayment('kofi', this)">
+        <div class="payment-icon">☕</div>
+        <div class="payment-name">Ko-fi</div>
+        <div class="payment-badge">No Fee</div>
+      </div>
+      <div class="payment-method" onclick="selectPayment('cashapp', this)">
+        <div class="payment-icon">💵</div>
+        <div class="payment-name">Cash App</div>
+        <div class="payment-badge">Instant</div>
+      </div>
       <div class="payment-method" onclick="selectPayment('crypto', this)">
         <div class="payment-icon">₿</div>
         <div class="payment-name">Crypto</div>
         <div class="payment-badge">0.5% fee</div>
-      </div>
-      <div class="payment-method" onclick="selectPayment('direct', this)">
-        <div class="payment-icon">🔗</div>
-        <div class="payment-name">Direct</div>
-        <div class="payment-badge">No fee</div>
       </div>
     </div>
 
@@ -420,13 +425,18 @@
         // Redirect to Stripe checkout
         window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}&method=stripe`;
       } else if (selectedPayment === 'paypal') {
-        // Redirect to PayPal (you'll need to set this up)
-        window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}&method=paypal`;
+        // Redirect to PayPal
+        window.open('https://paypal.me/atombomb', '_blank');
+        alert(`Send $${selectedPrice} to paypal.me/atombomb\n\nThen email us at support@a-to-mind.com with your PayPal email for access.`);
+      } else if (selectedPayment === 'kofi') {
+        // Redirect to Ko-fi
+        window.open('https://ko-fi.com/atombomb', '_blank');
+        alert(`Send $${selectedPrice} to ko-fi.com/atombomb\n\nThen email us at support@a-to-mind.com with your Ko-fi username for access.`);
+      } else if (selectedPayment === 'cashapp') {
+        // Cash App instructions
+        alert(`Send $${selectedPrice} to Cash App\n\nCashtag: $atombomb\n\nThen email us at support@a-to-mind.com with your Cash App tag for access.`);
       } else if (selectedPayment === 'crypto') {
         window.location.href = `https://bridge.a-to-mind.com/pay?amount=${selectedPrice}&email=${encodeURIComponent(email)}`;
-      } else if (selectedPayment === 'direct') {
-        // Show direct payment instructions
-        alert(`Send $${selectedPrice} to:\n\nBTC: bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh\nETH: 0x74e4...476708\nUSDC: 0x74e4...476708\n\nEmail us at support@a-to-mind.com after sending with your transaction ID.`);
       }
     }
     

@@ -168,7 +168,7 @@ export default {
                 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
               },
               body: new URLSearchParams({
-                'payment_method_types': 'card',
+                'payment_method_types[0]': 'card',
                 'line_items[0][price_data][currency]': 'usd',
                 'line_items[0][price_data][product_data][name]': 'Aether Pro Access',
                 'line_items[0][price_data][product_data][description]': 'Autonomous agent teams, priority rate limits, council session logs',
