@@ -1,0 +1,163 @@
+name: Client Sentiment Feedback Loop
+
+on:
+  # Triggered via repository_dispatch from external integrations
+  # (Slack bot, email webhook, support system)
+  repository_dispatch:
+    types: [support_message]
+  # Also runs on schedule to check #ops-runs for urgent messages
+  schedule:
+    - cron: '*/15 * * * *' # Every 15 minutes
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Test message to analyze sentiment'
+        required: false
+        default: 'This is urgent - our billing system is down and customers cannot checkout'
+      source:
+        description: 'Source of the message'
+        required: false
+        default: 'manual-test'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze sentiment and route P0 tasks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Extract message
+        id: extract
+        run: |
+          # From repository_dispatch
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            MESSAGE=$(echo '${{ toJSON(github.event.client_payload) }}' | python3 -c "
+          import json, sys
+          payload = json.load(sys.stdin)
+          print(payload.get('message', ''))
+          ")
+            SOURCE=$(echo '${{ toJSON(github.event.client_payload) }}' | python3 -c "
+          import json, sys
+          payload = json.load(sys.stdin)
+          print(payload.get('source', 'unknown'))
+          ")
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MESSAGE="${{ inputs.message }}"
+            SOURCE="${{ inputs.source }}"
+          else
+            # Schedule run - skip if no message
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "message<<EOF"
+            echo "$MESSAGE"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "source=$SOURCE" >> "$GITHUB_OUTPUT"
+
+      - name: Analyze sentiment
+        if: steps.extract.outputs.skip != 'true'
+        id: sentiment
+        run: |
+          MESSAGE="${{ steps.extract.outputs.message }}"
+
+          # Keyword-based sentiment analysis (no external API needed)
+          python3 << 'PYEOF'
+          import re, json
+
+          message = """${{ steps.extract.outputs.message }}"""
+          message_lower = message.lower()
+
+          # Urgency keywords
+          critical_keywords = ['critical', 'emergency', 'outage', 'down', 'broken', 'crash', 'data loss', 'security breach', 'cannot access', 'blocked']
+          urgent_keywords = ['urgent', 'asap', 'immediately', 'high priority', 'time sensitive', 'deadline', 'escalate', 'failing', 'error', 'bug']
+          negative_keywords = ['frustrated', 'disappointed', 'unacceptable', 'terrible', 'worst', 'angry', 'complaint', 'refund', 'cancel']
+
+          critical_count = sum(1 for k in critical_keywords if k in message_lower)
+          urgent_count = sum(1 for k in urgent_keywords if k in message_lower)
+          negative_count = sum(1 for k in negative_keywords if k in message_lower)
+
+          # Determine severity
+          if critical_count >= 2 or (critical_count >= 1 and urgent_count >= 1):
+              severity = "P0"
+              action = "force_insert"
+          elif urgent_count >= 2 or (urgent_count >= 1 and negative_count >= 1):
+              severity = "P1"
+              action = "create_task"
+          elif critical_count >= 1 or urgent_count >= 1 or negative_count >= 2:
+              severity = "P2"
+              action = "create_task"
+          else:
+              severity = "none"
+              action = "log_only"
+
+          # Summary
+          triggers = []
+          if critical_count: triggers.append(f"{critical_count} critical")
+          if urgent_count: triggers.append(f"{urgent_count} urgent")
+          if negative_count: triggers.append(f"{negative_count} negative")
+
+          summary = f"Detected: {', '.join(triggers) if triggers else 'no urgent signals'}"
+
+          with open('$GITHUB_OUTPUT' if '$GITHUB_OUTPUT' else '/dev/null', 'a') as f:
+              f.write(f"severity={severity}\n")
+              f.write(f"action={action}\n")
+              f.write(f"summary={summary}\n")
+
+          print(f"Severity: {severity}")
+          print(f"Action: {action}")
+          print(f"Summary: {summary}")
+          PYEOF
+
+        env:
+          GITHUB_OUTPUT: ${{ github.output || '' }}
+
+      - name: Create P0 task alert
+        if: steps.sentiment.outputs.severity == 'P0' || steps.sentiment.outputs.severity == 'P1'
+        run: |
+          SEVERITY="${{ steps.sentiment.outputs.severity }}"
+          SOURCE="${{ steps.extract.outputs.source }}"
+          SUMMARY="${{ steps.sentiment.outputs.summary }}"
+          MESSAGE="${{ steps.extract.outputs.message }}"
+
+          echo "🚨 ${SEVERITY} task detected from ${SOURCE}"
+          echo "Summary: ${SUMMARY}"
+          echo "Message: ${MESSAGE}"
+
+      - name: Alert #ops-runs channel
+        if: (steps.sentiment.outputs.severity == 'P0' || steps.sentiment.outputs.severity == 'P1') && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          SEVERITY="${{ steps.sentiment.outputs.severity }}"
+          SOURCE="${{ steps.extract.outputs.source }}"
+          SUMMARY="${{ steps.sentiment.outputs.summary }}"
+
+          EMOJI="🚨"
+          if [ "$SEVERITY" = "P1" ]; then EMOJI="⚠️"; fi
+
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"${EMOJI} *Client Sentiment Alert — ${SEVERITY}*\nSource: ${SOURCE}\n${SUMMARY}\n\nMessage preview: $(echo '${{ steps.extract.outputs.message }}' | head -c 200)\"}" \
+            || echo "Slack notification failed"
+
+      - name: Log to Notion via bridge
+        if: steps.sentiment.outputs.action == 'force_insert' || steps.sentiment.outputs.action == 'create_task'
+        run: |
+          curl -sf -X POST "https://bridge.a-to-mind.com/api/billing/webhook" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"type\": \"sentiment.alert\",
+              \"data\": {
+                \"severity\": \"${{ steps.sentiment.outputs.severity }}\",
+                \"source\": \"${{ steps.extract.outputs.source }}\",
+                \"summary\": \"${{ steps.sentiment.outputs.summary }}\",
+                \"action\": \"${{ steps.sentiment.outputs.action }}\"
+              }
+            }" 2>/dev/null || echo "Bridge webhook not available"
