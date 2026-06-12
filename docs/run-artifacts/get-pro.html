@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Aether Pro Access</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #020202;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #c4a661 0%, #e8d5a3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .price {
+      font-size: 4rem;
+      font-weight: 800;
+      color: #c4a661;
+      margin: 2rem 0;
+    }
+    .features {
+      text-align: left;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: rgba(196, 166, 97, 0.05);
+      border: 1px solid rgba(196, 166, 97, 0.2);
+      border-radius: 8px;
+    }
+    .features ul {
+      list-style: none;
+    }
+    .features li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .features li:last-child {
+      border-bottom: none;
+    }
+    .email-input {
+      width: 100%;
+      padding: 1rem;
+      margin: 1rem 0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      outline: none;
+    }
+    .email-input:focus {
+      border-color: #c4a661;
+    }
+    .pay-button {
+      width: 100%;
+      padding: 1.25rem;
+      background: #c4a661;
+      color: #020202;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .pay-button:hover {
+      background: #e8d5a3;
+      transform: translateY(-2px);
+    }
+    .info {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    .networks {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .network {
+      padding: 0.5rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Aether Pro Access</h1>
+    <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">
+      Autonomous agent teams. Measurable output. No babysitting.
+    </p>
+
+    <div class="price">$49</div>
+
+    <div class="features">
+      <ul>
+        <li>✓ API key with priority rate limits</li>
+        <li>✓ Council session logs & replay</li>
+        <li>✓ Email support</li>
+        <li>✓ Multi-chain crypto payments</li>
+      </ul>
+    </div>
+
+    <input
+      type="email"
+      id="email"
+      class="email-input"
+      placeholder="your@email.com"
+    />
+
+    <button
+      class="pay-button"
+      onclick="pay()"
+    >
+      Pay with Crypto
+    </button>
+
+    <div class="info">
+      <p>Payments powered by XPTP • 0.5% fee • Instant settlement</p>
+      <div class="networks">
+        <span class="network">Base USDC</span>
+        <span class="network">Ethereum ETH</span>
+        <span class="network">Polygon USDC</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function pay() {
+      const email = document.getElementById('email').value;
+      const url = `https://bridge.a-to-mind.com/pay?amount=49&email=${encodeURIComponent(email)}`;
+      window.open(url, '_blank');
+    }
+  </script>
+</body>
+</html>
