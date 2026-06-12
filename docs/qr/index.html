@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether Pro - QR Code</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #020202;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #c4a661;
+    }
+    .qr-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 2rem 0;
+    }
+    .qr-code {
+      width: 200px;
+      height: 200px;
+      background: #000;
+      margin: 0 auto;
+    }
+    .url {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: #c4a661;
+      word-break: break-all;
+      margin: 1rem 0;
+      padding: 0.5rem;
+      background: rgba(196, 166, 97, 0.1);
+      border-radius: 4px;
+    }
+    .info {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Aether Pro Access</h1>
+    <p style="margin-bottom: 1rem;">Scan to pay with crypto</p>
+
+    <div class="qr-container">
+      <img
+        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://aether-pay.pages.dev"
+        alt="QR Code for Aether Pro Payment"
+        class="qr-code"
+      />
+    </div>
+
+    <div class="url">
+      https://aether-pay.pages.dev
+    </div>
+
+    <div class="info">
+      <p>$49 • Base USDC • Ethereum ETH • Polygon USDC</p>
+      <p style="margin-top: 0.5rem;">No KYC • Instant settlement</p>
+    </div>
+  </div>
+</body>
+</html>
