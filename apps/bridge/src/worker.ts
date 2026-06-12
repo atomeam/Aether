@@ -181,7 +181,7 @@ export default {
             return json({ error: 'XPTP API error', details: error }, 500);
           }
 
-          const payment = await response.json();
+          const payment = await response.json() as XPTPPaymentResponse;
           
           // Redirect to XPTP payment page
           return Response.redirect(payment.payment_url, 302);
@@ -719,7 +719,15 @@ export default {
 
 
       // ─── Billing: XPTP crypto checkout → API key issuance ───────────────
-      // POST /api/billing/checkout — create XPTP crypto payment
+interface XPTPPaymentResponse {
+  id: string;
+  payment_url: string;
+  webhook_secret?: string;
+  status?: string;
+  confirmed?: boolean;
+}
+
+// POST /api/billing/checkout — create XPTP crypto payment
       if (path === '/api/billing/checkout' && method === 'POST') {
         const body = await request.json().catch(() => null) as { amount?: number; email?: string } | null;
         const amount = body?.amount || 49; // Default $49 for Pro tier
@@ -750,8 +758,9 @@ export default {
             return json({ error: 'XPTP API error', details: error }, 500);
           }
 
-          const payment = await response.json();
-          return json({ url: payment.payment_url, paymentId: payment.id, webhookSecret: payment.webhook_secret });
+          const payment = await response.json() as XPTPPaymentResponse;
+          // Never return webhook_secret to the client — server-to-server only
+          return json({ url: payment.payment_url, paymentId: payment.id });
         } catch (err) {
           return json({ error: 'checkout failed', details: err instanceof Error ? err.message : 'unknown' }, 500);
         }
@@ -769,11 +778,30 @@ export default {
 
         if (!payload) return json({ error: 'invalid payload' }, 400);
 
-        // Basic validation - in production, verify XPTP signature
         const { id, status, amount_usd, metadata } = payload;
 
         if (!id || status !== 'completed') {
           return json({ error: 'invalid payment status' }, 400);
+        }
+
+        // CRITICAL: Verify payment with XPTP's own API before issuing any key.
+        // This prevents forged webhook payloads from stealing API keys.
+        let verified = false;
+        try {
+          const verifyRes = await fetch(`https://xptp.net/api/v1/payments/${id}`, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (verifyRes.ok) {
+            const verifiedPayment = await verifyRes.json() as XPTPPaymentResponse;
+            verified = verifiedPayment.status === 'completed' && verifiedPayment.confirmed === true;
+          }
+        } catch {
+          // Network failure — fail closed (don't issue key)
+          return json({ error: 'payment verification failed' }, 500);
+        }
+
+        if (!verified) {
+          return json({ error: 'payment not verified' }, 400);
         }
 
         // Idempotency: never double-issue for the same payment
@@ -1871,7 +1899,8 @@ interface Env {
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
   NOTION_RUNS_DB_ID: string;
-  STRIPE_WEBHOOK_SECRET: string; // billing: Stripe webhook signing secret
+  // Stripe (deprecated — billing now via XPTP)
+  STRIPE_WEBHOOK_SECRET?: string; // billing: Stripe webhook signing secret
 }
 
 // ─── Admin Actuator Auth (HMAC + Replay Protection) ─────────────────────
