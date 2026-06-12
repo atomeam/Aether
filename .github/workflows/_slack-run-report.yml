@@ -39,28 +39,32 @@ jobs:
   report:
     name: Post RUN header to Slack
     runs-on: ubuntu-latest
+    if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
     steps:
       - name: Post RUN header
         run: |
-          RUN_HEADER="RUN: ${{ inputs.run_id }}"
-TASK: ${{ inputs.task_id }}
-TYPE: ${{ inputs.type }}
-ACTOR: ${{ inputs.actor }}
-STATE: ${{ inputs.state }}
-STARTED: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-ENDED: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-PR: ${{ github.server_url }}/${{ github.repository }}/pull/new/${{ inputs.run_id }}
-CI: ${{ inputs.ci_run_url }}
-EVIDENCE: See CI run"
+          STARTED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          ENDED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+          RUN_HEADER="RUN: ${{ inputs.run_id }}
+          TASK: ${{ inputs.task_id }}
+          TYPE: ${{ inputs.type }}
+          ACTOR: ${{ inputs.actor }}
+          STATE: ${{ inputs.state }}
+          STARTED: ${STARTED}
+          ENDED: ${ENDED}
+          COMMIT: ${{ inputs.commit_sha }}
+          CI: ${{ inputs.ci_run_url }}
+          EVIDENCE: See CI run"
+
+          RESULT_LINE=""
           if [ -n "${{ inputs.result }}" ]; then
-            RESULT="RESULT (${{ inputs.run_id }}): ${{ inputs.result }}"
+            RESULT_LINE="RESULT (${{ inputs.run_id }}): ${{ inputs.result }}"
           fi
 
-          PAYLOAD="{
-            \"text\": \"${RUN_HEADER}\n${TASK}\n${TYPE}\n${ACTOR}\n${STATE}\n${STARTED}\n${ENDED}\n${PR}\n${CI}\n${EVIDENCE}\n${RESULT}\"
-          }"
+          # Escape newlines for JSON
+          MESSAGE=$(echo -e "${RUN_HEADER}\n${RESULT_LINE}" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
 
-          curl -X POST "${SLACK_WEBHOOK_URL}" \
+          curl -sf -X POST "${SLACK_WEBHOOK_URL}" \
             -H "Content-Type: application/json" \
-            -d "${PAYLOAD}"
+            -d "{\"text\": ${MESSAGE}}" || echo "Slack webhook failed (is SLACK_WEBHOOK_URL configured?)"

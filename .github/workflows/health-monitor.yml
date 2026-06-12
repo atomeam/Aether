@@ -1,0 +1,66 @@
+name: Service Health Monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Every 30 minutes
+  workflow_dispatch: {}
+
+jobs:
+  health-check:
+    name: Check Aether service health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all endpoints
+        id: health
+        run: |
+          FAILURES=""
+          RESULTS=""
+
+          check_endpoint() {
+            local name="$1"
+            local url="$2"
+            local expected_status="${3:-200}"
+
+            HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+
+            if [ "$HTTP_CODE" = "$expected_status" ]; then
+              RESULTS="${RESULTS}✅ ${name} (${HTTP_CODE})\n"
+            else
+              RESULTS="${RESULTS}❌ ${name} (${HTTP_CODE}, expected ${expected_status})\n"
+              FAILURES="${FAILURES}${name} "
+            fi
+          }
+
+          # Core services
+          check_endpoint "Bridge /health" "https://bridge.a-to-mind.com/health"
+          check_endpoint "Bridge /api/stack" "https://bridge.a-to-mind.com/api/stack"
+          check_endpoint "Apex SPA" "https://a-to-mind.com"
+          check_endpoint "Backend /api/health" "https://a-to-mind.com/api/health"
+
+          echo -e "$RESULTS"
+
+          if [ -n "$FAILURES" ]; then
+            echo "status=degraded" >> "$GITHUB_OUTPUT"
+            {
+              echo "failures<<EOF"
+              echo "$FAILURES"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "status=healthy" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo "results<<EOF"
+            echo -e "$RESULTS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Alert on failures (Slack)
+        if: steps.health.outputs.status == 'degraded' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚨 *Service Health Alert*\nDegraded services detected:\n${{ steps.health.outputs.results }}\nFailing: ${{ steps.health.outputs.failures }}\"}"

@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@aether/ledger": "file:../../packages/ledger",

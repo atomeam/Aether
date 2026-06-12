@@ -1,0 +1,84 @@
+name: Stale Branch Cleanup
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Every Monday at 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    name: Flag stale branches
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Find stale branches (>14 days, no open PR)
+        id: stale
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STALE_DAYS=14
+          NOW=$(date +%s)
+          CUTOFF=$((NOW - STALE_DAYS * 86400))
+          STALE_BRANCHES=""
+          PROTECTED="main|master|production|staging"
+
+          for branch in $(git branch -r --merged origin/main | grep -v HEAD | sed 's/origin\///' | grep -vE "^($PROTECTED)$"); do
+            LAST_COMMIT_DATE=$(git log -1 --format=%ct "origin/$branch" 2>/dev/null || echo "0")
+            if [ "$LAST_COMMIT_DATE" -lt "$CUTOFF" ] && [ "$LAST_COMMIT_DATE" -gt "0" ]; then
+              # Check if branch has an open PR
+              OPEN_PR=$(gh pr list --head "$branch" --state open --json number --jq 'length')
+              if [ "$OPEN_PR" = "0" ]; then
+                AGE_DAYS=$(( (NOW - LAST_COMMIT_DATE) / 86400 ))
+                STALE_BRANCHES="${STALE_BRANCHES}• \`${branch}\` (${AGE_DAYS}d old, merged)\n"
+              fi
+            fi
+          done
+
+          if [ -z "$STALE_BRANCHES" ]; then
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+            echo "No stale branches found."
+          else
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "branches<<EOF"
+              echo -e "$STALE_BRANCHES"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Delete stale merged branches
+        if: steps.stale.outputs.stale == 'true'
+        run: |
+          PROTECTED="main|master|production|staging"
+          STALE_DAYS=14
+          NOW=$(date +%s)
+          CUTOFF=$((NOW - STALE_DAYS * 86400))
+
+          for branch in $(git branch -r --merged origin/main | grep -v HEAD | sed 's/origin\///' | grep -vE "^($PROTECTED)$"); do
+            LAST_COMMIT_DATE=$(git log -1 --format=%ct "origin/$branch" 2>/dev/null || echo "0")
+            if [ "$LAST_COMMIT_DATE" -lt "$CUTOFF" ] && [ "$LAST_COMMIT_DATE" -gt "0" ]; then
+              OPEN_PR=$(gh pr list --head "$branch" --state open --json number --jq 'length' 2>/dev/null || echo "1")
+              if [ "$OPEN_PR" = "0" ]; then
+                echo "Deleting stale branch: $branch"
+                git push origin --delete "$branch" 2>/dev/null || echo "  (already deleted)"
+              fi
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post to Slack (if webhook configured)
+        if: steps.stale.outputs.stale == 'true' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"🧹 *Stale Branch Cleanup*\nDeleted merged branches older than 14 days:\n${{ steps.stale.outputs.branches }}\"}"
