@@ -160,6 +160,7 @@ export const EXAMPLE_WORKFLOWS: Workflow[] = [
       { name: 'build', tool: 'http_request', args: { url: 'https://api.vercel.com/deploy', method: 'POST' } },
     ],
     on_failure: 'stop',
+    timeout: 300000,
   },
   {
     name: 'fix-and-commit',
@@ -168,6 +169,8 @@ export const EXAMPLE_WORKFLOWS: Workflow[] = [
       { name: 'check-diff', tool: 'git_diff', args: {} },
       { name: 'stage', tool: 'git_commit', args: { message: 'Auto-fix via workflow' }, retry: 2 },
     ],
+    on_failure: 'stop',
+    timeout: 300000,
   },
 ];
 

@@ -47,8 +47,8 @@ export async function collectTelemetry(): Promise<{
   
   // Lessons
   try {
-    const { getLearnedPatterns } = await import('@aether/lessons');
-    const patterns = await getLearnedPatterns();
+    const { getPatternConfidences } = await import('@aether/lessons');
+    const patterns = await getPatternConfidences();
     events.push({
       event: 'lessons.patterns',
       source: 'lessons',

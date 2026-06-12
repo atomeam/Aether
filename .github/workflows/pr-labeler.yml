@@ -1,0 +1,74 @@
+name: PR Auto-Label
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Auto-label PR by size and scope
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Compute PR size and scope labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          ADDITIONS=${{ github.event.pull_request.additions }}
+          DELETIONS=${{ github.event.pull_request.deletions }}
+          TOTAL=$((ADDITIONS + DELETIONS))
+          LABELS=""
+
+          # Size labels
+          if [ "$TOTAL" -le 10 ]; then
+            LABELS="size/XS"
+          elif [ "$TOTAL" -le 50 ]; then
+            LABELS="size/S"
+          elif [ "$TOTAL" -le 200 ]; then
+            LABELS="size/M"
+          elif [ "$TOTAL" -le 500 ]; then
+            LABELS="size/L"
+          else
+            LABELS="size/XL"
+          fi
+
+          # Scope labels based on changed files
+          CHANGED_FILES=$(git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD" 2>/dev/null || echo "")
+
+          if echo "$CHANGED_FILES" | grep -q "^apps/bridge/"; then
+            LABELS="$LABELS,scope/bridge"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^apps/backend/"; then
+            LABELS="$LABELS,scope/backend"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^apps/frontend/\|^src/"; then
+            LABELS="$LABELS,scope/frontend"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^apps/notion-worker/"; then
+            LABELS="$LABELS,scope/notion-worker"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^packages/"; then
+            LABELS="$LABELS,scope/packages"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+            LABELS="$LABELS,scope/ci"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "wrangler\.toml"; then
+            LABELS="$LABELS,scope/infra"
+          fi
+
+          # Apply labels
+          for label in $(echo "$LABELS" | tr ',' '\n'); do
+            gh label create "$label" --force --repo "${{ github.repository }}" 2>/dev/null || true
+            gh pr edit "$PR_NUMBER" --add-label "$label" --repo "${{ github.repository }}" 2>/dev/null || true
+          done
+
+          echo "Applied labels: $LABELS"

@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "type": "module",
   "main": "src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "typescript": "~5.8.2",
     "zod": "^3.24.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
   }
 }

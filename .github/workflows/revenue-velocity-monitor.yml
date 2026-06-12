@@ -1,0 +1,99 @@
+name: Revenue Velocity Monitor
+
+on:
+  # Runs on a schedule to check recent Stripe activity
+  schedule:
+    - cron: '0 */6 * * *' # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      threshold:
+        description: 'Revenue threshold in cents (default 50000 = $500)'
+        required: false
+        default: '50000'
+
+permissions:
+  contents: read
+
+env:
+  REVENUE_THRESHOLD: ${{ inputs.threshold || '50000' }}
+
+jobs:
+  monitor:
+    name: Check Stripe revenue and attribute to milestones
+    runs-on: ubuntu-latest
+    # Only run if Stripe key is configured
+    if: ${{ secrets.STRIPE_SECRET_KEY != '' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Fetch recent Stripe charges
+        id: stripe
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: |
+          # Fetch charges from last 6 hours
+          SINCE=$(date -d '6 hours ago' +%s 2>/dev/null || date -v-6H +%s)
+
+          RESPONSE=$(curl -s "https://api.stripe.com/v1/charges?created[gte]=${SINCE}&limit=100" \
+            -u "${STRIPE_SECRET_KEY}:" \
+            -H "Stripe-Version: 2024-12-18.acacia")
+
+          # Extract high-value charges
+          HIGH_VALUE=$(echo "$RESPONSE" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          charges = data.get('data', [])
+          threshold = int('${REVENUE_THRESHOLD}')
+          high = [c for c in charges if c.get('amount', 0) >= threshold and c.get('paid')]
+          total = sum(c['amount'] for c in high)
+          print(f'count={len(high)}')
+          print(f'total_cents={total}')
+          print(f'total_dollars={total/100:.2f}')
+          for c in high:
+            print(f'  - \${c[\"amount\"]/100:.2f} ({c.get(\"description\", \"no description\")})')
+          " 2>/dev/null || echo "count=0")
+
+          echo "$HIGH_VALUE"
+
+          COUNT=$(echo "$HIGH_VALUE" | head -1 | cut -d= -f2)
+          TOTAL=$(echo "$HIGH_VALUE" | sed -n '3p' | cut -d= -f2)
+
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+
+          if [ "$COUNT" != "0" ]; then
+            echo "has_revenue=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "details<<EOF"
+              echo "$HIGH_VALUE"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_revenue=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post revenue alert to Slack
+        if: steps.stripe.outputs.has_revenue == 'true' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"💰 *Revenue Velocity Alert*\n${{ steps.stripe.outputs.count }} charge(s) over \$${REVENUE_THRESHOLD%00} in the last 6 hours.\nTotal: \$${{ steps.stripe.outputs.total }}\n\n${{ steps.stripe.outputs.details }}\"}" \
+            || echo "Slack notification failed"
+
+      - name: Log to Notion Runs Ledger (via bridge webhook)
+        if: steps.stripe.outputs.has_revenue == 'true'
+        run: |
+          # Post to the bridge webhook for Notion logging
+          curl -sf -X POST "https://bridge.a-to-mind.com/api/billing/webhook" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"type\": \"revenue.velocity.alert\",
+              \"data\": {
+                \"count\": ${{ steps.stripe.outputs.count }},
+                \"total\": \"${{ steps.stripe.outputs.total }}\",
+                \"period\": \"6h\",
+                \"threshold\": ${REVENUE_THRESHOLD}
+              }
+            }" 2>/dev/null || echo "Bridge webhook not available (expected if not yet deployed)"

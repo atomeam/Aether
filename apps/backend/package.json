@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node dist/server.cjs",
-    "build": "esbuild server.ts --bundle --external:vite --platform=node --format=cjs --external:express --external:@google/genai --external:dotenv --external:zod --sourcemap --outfile=dist/server.cjs"
+    "build": "esbuild server.ts --bundle --external:vite --platform=node --format=cjs --external:express --external:@google/genai --external:dotenv --external:zod --sourcemap --outfile=dist/server.cjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@aether/contracts": "file:../../packages/contracts",

@@ -1,0 +1,93 @@
+name: Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Every Monday at 08:00 UTC
+  pull_request:
+    paths:
+      - 'package-lock.json'
+      - '**/package.json'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        id: audit
+        continue-on-error: true
+        run: |
+          npm audit --json > audit-results.json 2>&1 || true
+          
+          # Parse results
+          python3 << 'PYEOF'
+          import json
+          
+          with open('audit-results.json') as f:
+              try:
+                  data = json.load(f)
+              except:
+                  print("No audit data available")
+                  exit(0)
+          
+          vulns = data.get('vulnerabilities', {})
+          
+          critical = sum(1 for v in vulns.values() if v.get('severity') == 'critical')
+          high = sum(1 for v in vulns.values() if v.get('severity') == 'high')
+          moderate = sum(1 for v in vulns.values() if v.get('severity') == 'moderate')
+          low = sum(1 for v in vulns.values() if v.get('severity') == 'low')
+          
+          print(f"Critical: {critical}, High: {high}, Moderate: {moderate}, Low: {low}")
+          
+          if critical > 0 or high > 0:
+              print("⚠️  ACTION REQUIRED: Critical or high severity vulnerabilities found")
+              exit(1)
+          elif moderate > 0:
+              print("ℹ️  Moderate vulnerabilities found - review recommended")
+          else:
+              print("✅ No significant vulnerabilities found")
+          PYEOF
+
+      - name: Check for outdated dependencies
+        run: |
+          echo "## Outdated Dependencies"
+          npm outdated --json 2>/dev/null | python3 -c "
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              major = [(k, v) for k, v in data.items() if v.get('current', '').split('.')[0] != v.get('latest', '').split('.')[0]]
+              if major:
+                  print(f'Found {len(major)} major version updates available:')
+                  for name, info in major[:10]:
+                      print(f'  {name}: {info.get(\"current\")} → {info.get(\"latest\")}')
+              else:
+                  print('All major versions up to date')
+          except:
+              print('No outdated info available')
+          " || true
+
+      - name: Alert on critical vulnerabilities
+        if: steps.audit.outcome == 'failure' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "🔒 *Security Audit Alert*\nCritical or high severity vulnerabilities found in Aether dependencies.\nRun `npm audit` for details."}' \
+            || echo "Slack notification skipped"

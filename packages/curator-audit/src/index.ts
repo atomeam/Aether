@@ -115,7 +115,7 @@ export function verifyChainIntegrity(): { valid: boolean; brokenAt?: number; err
       errors.push(`Line ${i + 1}: Hash mismatch`);
     }
     
-    expectedPreviousHash = record.hash;
+    expectedPreviousHash = record.hash ?? '';
   }
   
   if (expectedPreviousHash !== chainState.lastHash) {
@@ -140,7 +140,7 @@ export function getDecisions(options?: { since?: number; tool?: string; decision
   if (tool) records = records.filter(r => r.tool === tool);
   if (decision) records = records.filter(r => r.decision === decision);
   
-  return records.slice(-limit);
+  return Promise.resolve(records.slice(-limit));
 }
 
 export async function getStats() {
