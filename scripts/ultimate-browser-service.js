@@ -1266,14 +1266,20 @@ class UltimateBrowserService {
     if (!this.page) await this.startBrowser();
     
     const screenshotPath = path.join(this.screenshotsDir, `screenshot-${Date.now()}.png`);
-    await this.page.screenshot({
+    const screenshotOptions = {
       path: screenshotPath,
       fullPage: options.fullPage || false,
       clip: options.clip,
       type: options.type || 'png',
-      quality: options.quality || 80,
       mask: options.mask
-    });
+    };
+    
+    // Quality is only supported for JPEG
+    if (options.type === 'jpeg' || options.type === 'jpg') {
+      screenshotOptions.quality = options.quality || 80;
+    }
+    
+    await this.page.screenshot(screenshotOptions);
     
     return { success: true, screenshotPath };
   }
@@ -1666,9 +1672,17 @@ class UltimateBrowserService {
         const id = await button.getAttribute('id');
         const className = await button.getAttribute('class');
         const isVisible = await button.isVisible();
+        const ariaLabel = await button.getAttribute('aria-label');
         
-        if (text && text.trim()) {
-          buttonList.push({ text: text.trim(), id, className, visible: isVisible });
+        // Include buttons even if text is empty if they have aria-label
+        if ((text && text.trim()) || ariaLabel) {
+          buttonList.push({ 
+            text: text ? text.trim() : '', 
+            id, 
+            className, 
+            visible: isVisible,
+            ariaLabel
+          });
         }
       } catch {
         continue;
@@ -2123,7 +2137,14 @@ class UltimateBrowserService {
   async getPerformanceMetrics() {
     if (!this.page) await this.startBrowser();
     
-    const metrics = await this.page.metrics();
+    const metrics = await this.page.evaluate(() => {
+      return {
+        timestamp: performance.now(),
+        memory: performance.memory || null,
+        navigation: performance.getEntriesByType('navigation')[0]
+      };
+    });
+    
     return { success: true, metrics };
   }
   

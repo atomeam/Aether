@@ -3,9 +3,30 @@
  * Complete client for 150+ browser automation features
  */
 
+const http = require('http');
+
 class UltimateBrowserClient {
   constructor(baseUrl = 'http://localhost:3456') {
     this.baseUrl = baseUrl;
+  }
+  
+  request(path, params = {}) {
+    return new Promise((resolve, reject) => {
+      const url = new URL(path, this.baseUrl);
+      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+      
+      http.get(url, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch {
+            resolve(data);
+          }
+        });
+      }).on('error', reject);
+    });
   }
   
   // ==================== MULTI-BROWSER ====================
