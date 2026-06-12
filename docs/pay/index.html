@@ -214,14 +214,29 @@
       const loading = document.getElementById('loading');
       loading.classList.add('active');
       
-      const url = `https://bridge.a-to-mind.com/pay?amount=49&email=${encodeURIComponent(email)}`;
-      window.location.href = url;
+      // Get referral code from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref') || '';
+      
+      const paymentUrl = `https://bridge.a-to-mind.com/pay?amount=49&email=${encodeURIComponent(email)}&ref=${encodeURIComponent(ref)}`;
+      window.location.href = paymentUrl;
     }
     
     // Allow Enter key to submit
     document.getElementById('email').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         pay();
+      }
+    });
+    
+    // Auto-fill referral code if present
+    window.addEventListener('load', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      if (ref) {
+        console.log('Referral code:', ref);
+        // Store for payment submission
+        window.referralCode = ref;
       }
     });
   </script>

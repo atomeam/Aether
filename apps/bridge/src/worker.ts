@@ -772,13 +772,14 @@ interface XPTPPaymentResponse {
           id?: string;
           status?: string;
           amount_usd?: number;
-          metadata?: { email?: string; tier?: string };
+          metadata?: { email?: string; tier?: string; ref?: string };
           webhook_secret?: string;
         } | null;
 
         if (!payload) return json({ error: 'invalid payload' }, 400);
 
         const { id, status, amount_usd, metadata } = payload;
+        const ref = metadata?.ref || null;
 
         if (!id || status !== 'completed') {
           return json({ error: 'invalid payment status' }, 400);
