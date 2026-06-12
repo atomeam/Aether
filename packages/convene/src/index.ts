@@ -50,8 +50,8 @@ export const ConveneSessionSchema = z.object({
   recommended: z.enum(['approve', 'deny', 'escalate']),
   resolution: z.enum(['auto_executed', 'escalated_to_triage', 'rejected', 'pending']),
   narrative: z.string(),
-  createdAt: number,
-  resolvedAt: number,
+  createdAt: z.number(),
+  resolvedAt: z.number(),
 });
 
 export type ConveneSession = z.infer<typeof ConveneSessionSchema>;
@@ -159,20 +159,19 @@ export function castVote(
   const content = fs.readFileSync(CONVENE_PATH, 'utf-8');
   const lines = content.trim().split('\n').filter(Boolean);
   
-  let found = false;
+  let resultVote: ParticipantVote | null = null;
   const newLines: string[] = [];
   
   for (const line of lines) {
     const session = ConveneSessionSchema.parse(JSON.parse(line));
     
     if (session.sessionId === sessionId) {
-      found = true;
-      
       // Add vote
       const fullVote: ParticipantVote = {
-        assistantId: crypto.randomUUID(), // New ID per vote
+        assistantId: crypto.randomUUID(),
         ...vote,
       };
+      resultVote = fullVote;
       session.votes.push(fullVote);
       
       // Compute consensus
@@ -212,11 +211,11 @@ export function castVote(
     newLines.push(JSON.stringify(session));
   }
   
-  if (found) {
+  if (resultVote) {
     fs.writeFileSync(CONVENE_PATH, newLines.join('\n') + '\n');
   }
   
-  return found ? vote : null;
+  return resultVote;
 }
 
 // Resolve a session

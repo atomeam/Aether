@@ -181,7 +181,9 @@ export class TaskQueue extends EventEmitter {
   private running = 0;
   private paused = false;
 
-  constructor(private concurrency = 1) {}
+  constructor(private concurrency = 1) {
+    super();
+  }
 
   enqueue<T>(data: T, options?: { id?: string; priority?: number; maxAttempts?: number }): string {
     const task: Task<T> = {

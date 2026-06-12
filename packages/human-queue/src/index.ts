@@ -70,23 +70,23 @@ export function resolve(id: string, status: 'approved' | 'rejected', resolvedBy 
   const content = fs.readFileSync(QUEUE_PATH, 'utf-8');
   const lines = content.trim().split('\n').filter(Boolean);
   
-  let found = false;
+  let resolvedItem: QueueItem | null = null;
   const newLines = lines.map(line => {
     const item: QueueItem = JSON.parse(line);
     if (item.id === id) {
-      found = true;
       item.status = status;
       item.resolvedAt = Date.now();
       item.resolvedBy = resolvedBy;
+      resolvedItem = item;
     }
     return JSON.stringify(item);
   });
   
-  if (found) {
+  if (resolvedItem) {
     fs.writeFileSync(QUEUE_PATH, newLines.join('\n') + '\n');
   }
   
-  return found ? { id, status, resolvedAt: Date.now(), resolvedBy } : null;
+  return resolvedItem;
 }
 
 // Get queue stats

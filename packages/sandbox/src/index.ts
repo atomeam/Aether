@@ -401,7 +401,7 @@ export function enforce(tool: string, profileId: string, args: Record<string, un
         attemptedPath: resolved,
         timestamp: Date.now(),
       });
-      return { allowed: false, reason: pathReason, sandboxRoot };
+      return { allowed: false, reason: pathReason ?? 'Path not allowed', sandboxRoot };
     }
     
     // Return adjusted args with sandbox path

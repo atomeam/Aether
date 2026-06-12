@@ -5,7 +5,7 @@
  * This is the bridge from internal runtime to Loxa product.
  */
 
-import { readLessons, getPatternConfidence, getLearnedPatterns } from '@aether/lessons';
+import { readLessons, getPatternConfidence } from '@aether/lessons';
 import { getStats } from '@aether/curator-audit';
 import { getStats as getTriageStats } from '@aether/triage';
 import crypto from 'crypto';

@@ -83,7 +83,7 @@ export function readLessons(options?: {
   }
   
   // Limit
-  return lessons.slice(-limit);
+  return Promise.resolve(lessons.slice(-limit));
 }
 
 // Get confidence for a pattern

@@ -55,9 +55,9 @@ const gitStatusTool: Tool = {
   name: 'git_status',
   description: 'Check git repository status',
   async execute(args) {
-    const { exec } = await import('child_process');
+    const childProcess = await import('child_process');
     const { promisify } = await import('util');
-    const execAsync = promisify(exec.exec);
+    const execAsync = promisify(childProcess.exec);
     
     const cwd = args.cwd as string || process.cwd();
     const { stdout } = await execAsync('git status --short', { cwd });
@@ -73,9 +73,9 @@ const gitCommitTool: Tool = {
     const message = args.message as string;
     if (!message) throw new Error('message required');
     
-    const { exec } = await import('child_process');
+    const childProcess = await import('child_process');
     const { promisify } = await import('util');
-    const execAsync = promisify(exec.exec);
+    const execAsync = promisify(childProcess.exec);
     
     const cwd = args.cwd as string || process.cwd();
     
@@ -90,9 +90,9 @@ const gitDiffTool: Tool = {
   name: 'git_diff',
   description: 'Show uncommitted changes',
   async execute(args) {
-    const { exec } = await import('child_process');
+    const childProcess = await import('child_process');
     const { promisify } = await import('util');
-    const execAsync = promisify(exec.exec);
+    const execAsync = promisify(childProcess.exec);
     
     const cwd = args.cwd as string || process.cwd();
     const file = args.file as string || '';
