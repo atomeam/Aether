@@ -35,6 +35,10 @@ class PersistentBrowserClient {
     return this.request('/list-buttons');
   }
   
+  async takeScreenshot() {
+    return this.request('/screenshot');
+  }
+  
   async close() {
     return this.request('/close');
   }

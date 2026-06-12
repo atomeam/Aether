@@ -231,6 +231,13 @@ class PersistentBrowserService {
     };
   }
   
+  async takeScreenshot() {
+    if (!this.page) await this.startBrowser();
+    
+    const screenshot = await this.page.screenshot({ encoding: 'base64' });
+    return { success: true, screenshot };
+  }
+  
   async close() {
     if (this.page) {
       await this.page.close();
@@ -298,6 +305,10 @@ class PersistentBrowserService {
           const info = await this.getPageInfo();
           res.writeHead(200);
           res.end(JSON.stringify(info));
+        } else if (pathname === '/screenshot') {
+          const result = await this.takeScreenshot();
+          res.writeHead(200);
+          res.end(JSON.stringify(result));
         } else if (pathname === '/close') {
           await this.close();
           res.writeHead(200);
