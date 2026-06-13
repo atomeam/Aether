@@ -1,6 +1,7 @@
 // Extended env types for bridge
 // Extends @aether/env with bridge-specific bindings
 
+// Cloudflare bindings - using unknown for external types
 export interface BridgeBindings {
   DB: D1Database;
   BRIDGE_DB: D1Database;
@@ -8,7 +9,7 @@ export interface BridgeBindings {
   STATE_CACHE: KVNamespace;
   METRICS: KVNamespace;
   _LOGS: R2Bucket;
-  MYBROWSER: Browser;
+  MYBROWSER: unknown; // Browser from @cloudflare/workers-types
   CURATOR_QUEUE: Queue;
   DISPATCHER: Fetcher;
   AETHER: Fetcher;

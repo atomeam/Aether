@@ -1,4 +1,4 @@
-import { BridgeEnv } from '../types';
+import { KrakenBridgeEnv } from './types';
 
 // Kraken Trading Bot for Cloudflare Workers
 // CONSERVATIVE STRATEGY - Small positions, tight stops, managed risk
@@ -71,7 +71,7 @@ export async function getKrakenBalance(apiKey: string, apiSecret: string): Promi
   return data.result ? Object.entries(data.result).map(([asset, balance]) => ({ asset, balance: (balance as any).toString() })) : [];
 }
 
-export async function krakenTradingBot(env: BridgeEnv, checkOnly: boolean = false): Promise<Response> {
+export async function krakenTradingBot(env: KrakenBridgeEnv, checkOnly: boolean = false): Promise<Response> {
   const apiKey = env.KRAKEN_API_KEY?.trim();
   const apiSecret = env.KRAKEN_API_SECRET?.trim();
 
