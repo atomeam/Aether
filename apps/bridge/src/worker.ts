@@ -669,7 +669,29 @@ export default {
           timestamp: new Date().toISOString()
         });
       }
-      
+
+      // GET /api/health - full health status
+      if (path === '/api/health') {
+        const bindings = {
+          db: !!env.DB,
+          bridgeDb: !!env.BRIDGE_DB,
+          state: !!env.STATE,
+          stateCache: !!env.STATE_CACHE,
+          metrics: !!env.METRICS,
+          logs: !!env._LOGS,
+          browser: !!env.MYBROWSER,
+          queue: !!env.CURATOR_QUEUE,
+          dispatcher: !!env.DISPATCHER,
+        };
+        const allBound = Object.values(bindings).every(Boolean);
+        return json({
+          status: allBound ? 'healthy' : 'degraded',
+          timestamp: new Date().toISOString(),
+          worker: 'aether-bridge',
+          bindings,
+        });
+      }
+
       // Legacy API: /api/execute
       if (path === '/api/execute' && method === 'POST') {
         return json({ success: true, result: { message: 'Execution queued' } });
