@@ -13,6 +13,11 @@ on:
       worker:
         description: 'Specific worker to deploy (blank = all changed)'
         required: false
+        default: 'false'
+      skip_build:
+        description: 'Skip build step (for workers with pre-existing TS errors)'
+        required: false
+        default: 'false'
 
 permissions:
   contents: read
@@ -69,7 +74,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@49933ea5288caeca8642d4e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -78,6 +83,7 @@ jobs:
         run: npm install
 
       - name: Build dependencies
+        if: inputs.skip_build != 'true'
         run: npx turbo run build --filter=@aether/${{ matrix.worker }}...
 
       - name: Deploy ${{ matrix.worker }} to Cloudflare
