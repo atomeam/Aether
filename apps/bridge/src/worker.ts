@@ -188,7 +188,7 @@ export default {
               return json({ error: 'Stripe API error', details: error }, 500);
             }
 
-            const session = await stripeResponse.json();
+            const session = (await stripeResponse.json()) as { url: string };
             return Response.redirect(session.url, 303);
           } catch (err) {
             return json({ error: 'Stripe checkout failed', details: err instanceof Error ? err.message : 'unknown' }, 500);
