@@ -112,7 +112,8 @@ async function level3_formInteraction(trainer) {
   // Find password input
   const passwordInput = await trainer.page.$('#password');
   if (passwordInput) {
-    await passwordInput.fill('SuperSecretPassword!');
+    const password = process.env.TRAINING_PASSWORD || 'SuperSecretPassword!';
+    await passwordInput.fill(password);
     trainer.log('✅ Filled password');
   }
   
@@ -321,8 +322,9 @@ async function level10_fullWorkflow(trainer) {
   await trainer.screenshot('01-login-page');
   
   // Step 2: Login
+  const password = process.env.TRAINING_PASSWORD || 'SuperSecretPassword!';
   await trainer.page.fill('#username', 'tomsmith');
-  await trainer.page.fill('#password', 'SuperSecretPassword!');
+  await trainer.page.fill('#password', password);
   await trainer.page.click('button[type="submit"]');
   await trainer.page.waitForLoadState('networkidle');
   await trainer.screenshot('02-logged-in');

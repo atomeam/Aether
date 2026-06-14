@@ -11,6 +11,15 @@ async function fillPasswordAndClickNext() {
   try {
     console.log('🚀 Filling password and clicking Next...');
     
+    // Get password from environment variable
+    const password = process.env.GOOGLE_PASSWORD;
+    if (!password) {
+      console.error('❌ GOOGLE_PASSWORD environment variable not set');
+      console.log('💡 Please set GOOGLE_PASSWORD in your .env file');
+      console.log('📋 Browser is still alive for manual completion');
+      return;
+    }
+    
     // Wait a moment for password page to load
     console.log('📝 Waiting for password page to load...');
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -39,7 +48,7 @@ async function fillPasswordAndClickNext() {
     let filled = false;
     for (const selector of passwordSelectors) {
       try {
-        await client.fillInput(selector, 'J@denb11');
+        await client.fillInput(selector, password);
         console.log(`✅ Filled password with selector: ${selector}`);
         filled = true;
         break;
@@ -57,7 +66,7 @@ async function fillPasswordAndClickNext() {
         if (input.visible && (input.type === 'password' || input.name === 'Passwd' || input.id?.includes('Passwd'))) {
           console.log(`📝 Found password input: name=${input.name}, id=${input.id}`);
           try {
-            await client.fillInput(`input[name="${input.name}"]`, 'J@denb11');
+            await client.fillInput(`input[name="${input.name}"]`, password);
             console.log('✅ Filled password');
             filled = true;
             break;
