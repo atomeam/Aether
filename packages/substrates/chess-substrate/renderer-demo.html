@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Substrate - Renderer Demo</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #0a0a0a;
+      color: #ffffff;
+      font-family: monospace;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    canvas {
+      border: 2px solid #333;
+      border-radius: 8px;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+    }
+    button:hover {
+      background: #764ba2;
+    }
+    .info {
+      margin-top: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chess Substrate - Renderer Demo</h1>
+  <div id="canvas-container"></div>
+  <div class="info">
+    <p>Click a piece to select, click destination to move</p>
+  </div>
+  <div class="controls">
+    <button onclick="resetGame()">Reset</button>
+    <button onclick="undoMove()">Undo</button>
+  </div>
+
+  <script type="module">
+    import { ChessEngine } from './src/engine/chess-engine.js';
+    import { SubstrateAPI } from './src/api/substrate-api.js';
+    import { ChessRenderer } from './src/renderer/chess-renderer.js';
+
+    let engine = new ChessEngine();
+    let api = new SubstrateAPI(engine);
+    let renderer = null;
+    let selectedSquare = null;
+
+    function init() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 480;
+      canvas.height = 480;
+      document.getElementById('canvas-container').appendChild(canvas);
+
+      renderer = new ChessRenderer({
+        canvas,
+        cellSize: 60,
+        colors: {
+          lightSquare: '#f0d9b5',
+          darkSquare: '#b58863',
+          whitePiece: '#ffffff',
+          blackPiece: '#000000',
+          highlight: '#7b61ff',
+          lastMove: '#cdd26a'
+        }
+      });
+
+      canvas.addEventListener('click', handleClick);
+      render();
+    }
+
+    function render() {
+      const state = api.getState({
+        agentId: 'demo-agent',
+        timestamp: Date.now()
+      });
+      renderer.render(state.gameState);
+    }
+
+    function handleClick(e) {
+      const rect = e.target.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const file = Math.floor(x / 60);
+      const rank = Math.floor(y / 60);
+
+      if (selectedSquare) {
+        // Try to move
+        const moveResponse = api.submitMove({
+          agentId: 'demo-agent',
+          timestamp: Date.now(),
+          move: {
+            from: selectedSquare,
+            to: { file, rank },
+            piece: { type: 'pawn', color: 'white', hasMoved: false },
+            capturedPiece: null,
+            special: 'normal'
+          }
+        });
+
+        if (moveResponse.success) {
+          selectedSquare = null;
+        }
+        render();
+      } else {
+        // Select piece
+        const state = api.getState({
+          agentId: 'demo-agent',
+          timestamp: Date.now()
+        });
+        const square = state.gameState.board.squares[rank][file];
+        if (square.piece && square.piece.color === state.gameState.currentPlayer) {
+          selectedSquare = { file, rank };
+        }
+        render();
+      }
+    }
+
+    function reset() {
+      engine = new ChessEngine();
+      api = new SubstrateAPI(engine);
+      selectedSquare = null;
+      render();
+    }
+
+    function undo() {
+      // Simple reset for now
+      reset();
+    }
+
+    window.resetGame = reset;
+    window.undoMove = undo;
+
+    init();
+  </script>
+</body>
+</html>

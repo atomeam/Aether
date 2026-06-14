@@ -11,6 +11,13 @@
 
 import { default as app } from './server';
 import { krakenTradingBot } from './kraken-trading';
+import { handleEmailValidation } from './rapidapi-apis/email-validator';
+import { handleIPGeolocation } from './rapidapi-apis/ip-geolocation';
+import { handleTextAnalysis } from './rapidapi-apis/text-analyzer';
+import { handleURLShortener } from './rapidapi-apis/url-shortener';
+import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
+import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
+import { handleAToMindRequest } from './a-to-mind-api';
 
 // Shared constants
 const VERSION = '0.16.2';
@@ -146,6 +153,17 @@ export default {
         return json({
           ok: true,
           service: SERVICE,
+          version: VERSION,
+          ts: new Date().toISOString(),
+          bindings: getBindings(env),
+        });
+      }
+
+      // GET /api/health - API health endpoint (PR #142)
+      if (path === '/api/health') {
+        return json({
+          ok: true,
+          worker: SERVICE,
           version: VERSION,
           ts: new Date().toISOString(),
           bindings: getBindings(env),
@@ -327,6 +345,746 @@ export default {
       link.select();
       document.execCommand('copy');
       alert('Link copied to clipboard!');
+    }
+  </script>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+
+      // GET /network-as-code - landing page for Network as Code API
+      if (path === '/network-as-code' && method === 'GET') {
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Network as Code API - Device Status & Reachability</title>
+  <meta name="description" content="Monitor device status, reachability, and network conditions via API. Real-time device insights for telecom applications.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+    .features {
+      text-align: left;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+    }
+    .features h2 {
+      color: #00d2ff;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+    .features ul {
+      list-style: none;
+    }
+    .features li {
+      padding: 0.75rem 0;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .features li:before {
+      content: "📡 ";
+    }
+    .endpoints {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .endpoint {
+      padding: 1.5rem;
+      background: rgba(0, 210, 255, 0.1);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .endpoint:hover {
+      border-color: #00d2ff;
+      background: rgba(0, 210, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .endpoint h3 {
+      color: #00d2ff;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .endpoint p {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .try-button {
+      width: 100%;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2rem;
+    }
+    .try-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 210, 255, 0.4);
+    }
+    .code-example {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      text-align: left;
+    }
+    .code-example h3 {
+      color: #00d2ff;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+    .code-example pre {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      color: #00ff00;
+    }
+    .info {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .rapidapi-link {
+      color: #00d2ff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Network as Code API</h1>
+    <p class="subtitle">Monitor device status, reachability, and network conditions. Real-time telecom insights.</p>
+    
+    <div class="badge">📡 Telecom Network Intelligence</div>
+
+    <div class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>📡 Device reachability status monitoring</li>
+        <li>🌍 Device roaming status tracking</li>
+        <li>📱 Device status verification</li>
+        <li>🎯 Geofencing subscription management</li>
+        <li>🔐 SIM swap detection</li>
+        <li>📊 Quality-of-Service on demand</li>
+        <li>🔀 Network slicing configuration</li>
+        <li>📍 Location verification and retrieval</li>
+      </ul>
+    </div>
+
+    <div class="endpoints">
+      <div class="endpoint">
+        <h3>Device Status</h3>
+        <p>v0.5.1</p>
+      </div>
+      <div class="endpoint">
+        <h3>Reachability</h3>
+        <p>v0.7</p>
+      </div>
+      <div class="endpoint">
+        <h3>Roaming Status</h3>
+        <p>v0.7</p>
+      </div>
+      <div class="endpoint">
+        <h3>Geofencing</h3>
+        <p>v0.3.0</p>
+      </div>
+      <div class="endpoint">
+        <h3>SIM Swap</h3>
+        <p>v1.0.0</p>
+      </div>
+      <div class="endpoint">
+        <h3>QoS</h3>
+        <p>v1.0.0</p>
+      </div>
+    </div>
+
+    <div class="code-example">
+      <h3>Quick Start Example</h3>
+      <pre>curl --request POST \\
+  --url https://network-as-code.p.rapidapi.com/device-status/device-reachability-status-subscriptions/v0.7/subscriptions \\
+  --header 'Content-Type: application/json' \\
+  --header 'x-rapidapi-host: network-as-code.p.rapidapi.com' \\
+  --header 'x-rapidapi-key: YOUR_API_KEY' \\
+  --data '{"sink":"https://endpoint.example.com/sink","protocol":"HTTP","types":["org.camaraproject.device-reachability-status-subscriptions.v0.reachability-data"],"config":{"subscriptionDetail":{"device":{"phoneNumber":"+99999991000"}},"subscriptionMaxEvents":5,"initialEvent":true}}'</pre>
+    </div>
+
+    <button class="try-button" onclick="openRapidAPI()">
+      Get API Key on RapidAPI
+    </button>
+
+    <div class="info">
+      <p>Available on <a href="https://rapidapi.com/atom-bomb-network-as-code/api" target="_blank" class="rapidapi-link">RapidAPI</a> • Multiple endpoints • Real-time data</p>
+    </div>
+  </div>
+
+  <script>
+    function openRapidAPI() {
+      window.open('https://rapidapi.com/atom-bomb-network-as-code/api', '_blank');
+    }
+  </script>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+
+      // GET /ai-image-generator - landing page for AI image API
+      if (path === '/ai-image-generator' && method === 'GET') {
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Text to Image Generator - Flux Free API</title>
+  <meta name="description" content="Generate stunning AI images from text using Flux. Free API with multiple styles including Ghibli art.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+    .features {
+      text-align: left;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+    }
+    .features h2 {
+      color: #667eea;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+    .features ul {
+      list-style: none;
+    }
+    .features li {
+      padding: 0.75rem 0;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .features li:before {
+      content: "✨ ";
+      color: #667eea;
+    }
+    .endpoints {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .endpoint {
+      padding: 1.5rem;
+      background: rgba(102, 126, 234, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .endpoint:hover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
+    }
+    .endpoint h3 {
+      color: #667eea;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .endpoint p {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .try-button {
+      width: 100%;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2rem;
+    }
+    .try-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    }
+    .demo {
+      margin-top: 2rem;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+    }
+    .demo h2 {
+      color: #667eea;
+      margin-bottom: 1rem;
+    }
+    .prompt-input {
+      width: 100%;
+      padding: 1rem;
+      margin: 1rem 0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 1rem;
+    }
+    .prompt-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .generate-button {
+      width: 100%;
+      padding: 1rem;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .generate-button:hover {
+      background: #764ba2;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      display: none;
+    }
+    .result.active {
+      display: block;
+    }
+    .info {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .rapidapi-link {
+      color: #667eea;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI Text to Image Generator</h1>
+    <p class="subtitle">Generate stunning AI images from text using Flux. Multiple styles, free API access.</p>
+    
+    <div class="badge">🚀 Powered by Flux AI</div>
+
+    <div class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>✨ Generate images from text descriptions</li>
+        <li>🎨 Multiple styles including Ghibli art</li>
+        <li>⚡ Fast image generation</li>
+        <li>🆓 Free API access</li>
+        <li>🎯 Pro image generation with enhanced quality</li>
+        <li>🔧 Simple REST API integration</li>
+      </ul>
+    </div>
+
+    <div class="endpoints">
+      <div class="endpoint">
+        <h3>Generate Images</h3>
+        <p>Basic text to image</p>
+      </div>
+      <div class="endpoint">
+        <h3>Ghibli Style</h3>
+        <p>Studio Ghibli art style</p>
+      </div>
+      <div class="endpoint">
+        <h3>Quick Generate</h3>
+        <p>Fast image generation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Pro Generate</h3>
+        <p>Enhanced quality images</p>
+      </div>
+    </div>
+
+    <div class="demo">
+      <h2>Try It Now</h2>
+      <input
+        type="text"
+        id="prompt"
+        class="prompt-input"
+        placeholder="A beautiful sunset over mountains..."
+      />
+      <button class="generate-button" onclick="generateImage()">Generate Image</button>
+      <div class="result" id="result"></div>
+    </div>
+
+    <button class="try-button" onclick="openRapidAPI()">
+      Get API Key on RapidAPI
+    </button>
+
+    <div class="info">
+      <p>Available on <a href="https://rapidapi.com/atom-bomb-ai-text-to-image-generator-flux-free-api/api" target="_blank" class="rapidapi-link">RapidAPI</a> • Free tier available • Easy integration</p>
+    </div>
+  </div>
+
+  <script>
+    function openRapidAPI() {
+      window.open('https://rapidapi.com/atom-bomb-ai-text-to-image-generator-flux-free-api/api', '_blank');
+    }
+    
+    function generateImage() {
+      const prompt = document.getElementById('prompt').value;
+      if (!prompt) {
+        alert('Please enter a prompt');
+        return;
+      }
+      
+      const result = document.getElementById('result');
+      result.classList.add('active');
+      result.innerHTML = '<p>🎨 Generating image...</p>';
+      
+      // This would call the actual API
+      // For demo, just show a message
+      setTimeout(() => {
+        result.innerHTML = '<p>✅ Image generation requires API key from RapidAPI</p><p><a href="https://rapidapi.com/atom-bomb-ai-text-to-image-generator-flux-free-api/api" target="_blank" style="color: #667eea;">Get your free API key</a></p>';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+
+      // RapidAPI - Email Validation API
+      if (path === '/api/rapidapi/email-validator' && method === 'POST') {
+        return handleEmailValidation(request);
+      }
+
+      // RapidAPI - IP Geolocation API
+      if (path === '/api/rapidapi/ip-geolocation' && method === 'POST') {
+        return handleIPGeolocation(request, request.cf);
+      }
+
+      // RapidAPI - Text Analysis API
+      if (path === '/api/rapidapi/text-analyzer' && method === 'POST') {
+        return handleTextAnalysis(request);
+      }
+
+      // RapidAPI - URL Shortener API
+      if (path === '/api/rapidapi/url-shortener' && method === 'POST') {
+        return handleURLShortener(request);
+      }
+
+      // RapidAPI - QR Code Generator API
+      if (path === '/api/rapidapi/qr-code-generator' && method === 'POST') {
+        return handleQRCodeGenerator(request);
+      }
+
+      // RapidAPI - Currency Converter API
+      if (path === '/api/rapidapi/currency-converter' && method === 'POST') {
+        return handleCurrencyConverter(request);
+      }
+
+      // a-to-mind API - Comprehensive automation API
+      if (path.startsWith('/api/a-to-mind/')) {
+        return handleAToMindRequest(request, path);
+      }
+
+      // GET / - a-to-mind.com landing page
+      if (path === '/' && url.hostname === 'a-to-mind.com') {
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>a-to-mind - Comprehensive Automation API</title>
+  <meta name="description" content="Analyze text, generate content, transform data, validate input, extract patterns, and compare documents. 7 endpoints with multiple options.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 2rem;
+      font-size: 1.2rem;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+    .features {
+      text-align: left;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+    }
+    .features h2 {
+      color: #ffffff;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+    .features ul {
+      list-style: none;
+    }
+    .features li {
+      padding: 0.75rem 0;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .features li:before {
+      content: "✨ ";
+    }
+    .endpoints {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .endpoint {
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .endpoint:hover {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .endpoint h3 {
+      color: #ffffff;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .endpoint p {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .try-button {
+      width: 100%;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2rem;
+    }
+    .try-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    .info {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .rapidapi-link {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>a-to-mind</h1>
+    <p class="subtitle">Comprehensive Automation API - Analyze, Generate, Transform, Validate, Extract, Compare</p>
+    
+    <div class="badge">🚀 7 Endpoints • Multiple Options • Full Documentation</div>
+
+    <div class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>✨ Analyze text for metrics, sentiment, and keywords</li>
+        <li>🎨 Generate summaries, titles, and hashtags</li>
+        <li>🔄 Transform data (uppercase, lowercase, reverse, base64, JSON)</li>
+        <li>✅ Validate emails, URLs, phone numbers, and JSON</li>
+        <li>📤 Extract emails, URLs, phone numbers, hashtags, mentions</li>
+        <li>📊 Compare texts and JSON objects for similarity</li>
+        <li>💪 Health check for API monitoring</li>
+      </ul>
+    </div>
+
+    <div class="endpoints">
+      <div class="endpoint">
+        <h3>Health Check</h3>
+        <p>Monitor API status</p>
+      </div>
+      <div class="endpoint">
+        <h3>Analyze</h3>
+        <p>Text analysis</p>
+      </div>
+      <div class="endpoint">
+        <h3>Generate</h3>
+        <p>Content generation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Transform</h3>
+        <p>Data transformation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Validate</h3>
+        <p>Data validation</p>
+      </div>
+      <div class="endpoint">
+        <h3>Extract</h3>
+        <p>Pattern extraction</p>
+      </div>
+      <div class="endpoint">
+        <h3>Compare</h3>
+        <p>Data comparison</p>
+      </div>
+    </div>
+
+    <button class="try-button" onclick="openRapidAPI()">
+      Get API Key on RapidAPI
+    </button>
+
+    <div class="info">
+      <p>Available on <a href="https://rapidapi.com/atom-bomb-a-to-mind/api" target="_blank" class="rapidapi-link">RapidAPI</a> • Free tier available • Easy integration</p>
+    </div>
+  </div>
+
+  <script>
+    function openRapidAPI() {
+      window.open('https://rapidapi.com/atom-bomb-a-to-mind/api', '_blank');
     }
   </script>
 </body>

@@ -1,0 +1,87 @@
+name: Self-Healing Infrastructure Monitor
+
+on:
+  schedule:
+    # Run every hour
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'check'
+        type: choice
+        options:
+          - check
+          - heal-all
+          - report
+
+permissions:
+  contents: read
+
+jobs:
+  self-healing:
+    name: Self-Healing Monitor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install self-healing dependencies
+        run: |
+          cd tools/self-healing
+          npm install
+
+      - name: Check all services
+        if: github.event.inputs.action == 'check' || github.event.inputs.action == ''
+        run: |
+          cd tools/self-healing
+          npm run check
+
+      - name: Heal all services
+        if: github.event.inputs.action == 'heal-all'
+        run: |
+          cd tools/self-healing
+          npm run check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+      - name: Generate healing report
+        if: github.event.inputs.action == 'report' || github.event.inputs.action == ''
+        run: |
+          cd tools/self-healing
+          npm run summary
+
+      - name: Upload healing log
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.4
+        with:
+          name: healing-log
+          path: tools/self-healing/healing-log.json
+          retention-days: 90
+
+      - name: Notify on healing events
+        if: always() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          cd tools/self-healing
+          
+          # Check if there were any healing events
+          HEALING_COUNT=$(node -e "
+            const log = require('./healing-log.json');
+            console.log(log.length);
+          ")
+          
+          if [ "$HEALING_COUNT" -gt 0 ]; then
+            curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"text\": \"🔧 Self-Healing Alert: $HEALING_COUNT healing events detected in Aether. Check the healing log for details.\"}" \
+              || echo "Slack notification skipped"
+          fi

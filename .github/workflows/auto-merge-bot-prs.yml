@@ -1,0 +1,44 @@
+name: Auto-Merge Bot PRs
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, approved]
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'devin-ai-integration[bot]'
+    steps:
+      - name: Wait for checks
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          allowed-conclusions: success,neutral
+          wait-interval: 10
+      
+      - name: Auto-merge PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            // Check if PR is from bot and is mergeable
+            if (pullRequest.user.login === 'devin-ai-integration[bot]' && pullRequest.mergeable) {
+              // Merge the PR
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                merge_method: 'merge'
+              });
+              
+              console.log(`✅ Auto-merged PR #${context.issue.number}`);
+            } else {
+              console.log(`❌ Skipping - PR not mergeable or not from bot`);
+            }

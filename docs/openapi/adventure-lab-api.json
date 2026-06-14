@@ -1,0 +1,737 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Adventure Lab Mutation API",
+    "version": "1.0.0",
+    "description": "Mutation API for adventure lab substrate - handles game state mutations, player actions, and adventure progression"
+  },
+  "servers": [
+    {
+      "url": "https://aether-bridge.atomeam.workers.dev",
+      "description": "Production Cloudflare Worker"
+    },
+    {
+      "url": "http://localhost:8787",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/api/adventure-lab/health": {
+      "get": {
+        "summary": "Adventure lab health check",
+        "description": "Returns the health status of the adventure lab mutation system",
+        "operationId": "getAdventureLabHealth",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdventureLabHealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/mutate/state": {
+      "post": {
+        "summary": "Mutate adventure state",
+        "description": "Mutates the adventure state with a specified mutation operation",
+        "operationId": "mutateState",
+        "tags": ["Mutations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutateStateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mutation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutateStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/mutate/player": {
+      "post": {
+        "summary": "Mutate player state",
+        "description": "Mutates player-specific state (inventory, position, stats)",
+        "operationId": "mutatePlayer",
+        "tags": ["Mutations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutatePlayerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Player mutation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutatePlayerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/mutate/world": {
+      "post": {
+        "summary": "Mutate world state",
+        "description": "Mutates world-level state (environment, NPCs, global events)",
+        "operationId": "mutateWorld",
+        "tags": ["Mutations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutateWorldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "World mutation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutateWorldResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/state": {
+      "get": {
+        "summary": "Get current state",
+        "description": "Retrieves the current adventure state",
+        "operationId": "getState",
+        "tags": ["State"],
+        "parameters": [
+          {
+            "name": "adventureId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Adventure ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetStateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Adventure not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/action": {
+      "post": {
+        "summary": "Execute player action",
+        "description": "Executes a player action and returns the resulting state mutation",
+        "operationId": "executeAction",
+        "tags": ["Actions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/validate": {
+      "post": {
+        "summary": "Validate mutation",
+        "description": "Validates a mutation before execution (dry run)",
+        "operationId": "validateMutation",
+        "tags": ["Validation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/rollback": {
+      "post": {
+        "summary": "Rollback mutation",
+        "description": "Rolls back a specific mutation by ID",
+        "operationId": "rollbackMutation",
+        "tags": ["Mutations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rollback result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adventure-lab/history": {
+      "get": {
+        "summary": "Get mutation history",
+        "description": "Retrieves the mutation history for an adventure",
+        "operationId": "getMutationHistory",
+        "tags": ["History"],
+        "parameters": [
+          {
+            "name": "adventureId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Adventure ID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Limit number of results"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mutation history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMutationHistoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdventureLabHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "healthy"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "activeAdventures": {
+            "type": "integer",
+            "example": 5
+          },
+          "totalMutations": {
+            "type": "integer",
+            "example": 1234
+          }
+        }
+      },
+      "MutateStateRequest": {
+        "type": "object",
+        "required": ["adventureId", "mutation"],
+        "properties": {
+          "adventureId": {
+            "type": "string",
+            "description": "Adventure ID"
+          },
+          "mutation": {
+            "type": "object",
+            "required": ["type", "data"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["set", "increment", "decrement", "append", "remove"],
+                "description": "Mutation type"
+              },
+              "data": {
+                "type": "object",
+                "description": "Mutation data"
+              },
+              "path": {
+                "type": "string",
+                "description": "Path to mutate (e.g., 'player.inventory')"
+              }
+            }
+          }
+        }
+      },
+      "MutateStateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "mutationId": {
+            "type": "string"
+          },
+          "previousState": {
+            "type": "object"
+          },
+          "newState": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MutatePlayerRequest": {
+        "type": "object",
+        "required": ["adventureId", "playerId", "mutation"],
+        "properties": {
+          "adventureId": {
+            "type": "string",
+            "description": "Adventure ID"
+          },
+          "playerId": {
+            "type": "string",
+            "description": "Player ID"
+          },
+          "mutation": {
+            "type": "object",
+            "required": ["type", "data"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["add_item", "remove_item", "update_stat", "move", "set_position"],
+                "description": "Player mutation type"
+              },
+              "data": {
+                "type": "object",
+                "description": "Mutation data"
+              }
+            }
+          }
+        }
+      },
+      "MutatePlayerResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "mutationId": {
+            "type": "string"
+          },
+          "playerState": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MutateWorldRequest": {
+        "type": "object",
+        "required": ["adventureId", "mutation"],
+        "properties": {
+          "adventureId": {
+            "type": "string",
+            "description": "Adventure ID"
+          },
+          "mutation": {
+            "type": "object",
+            "required": ["type", "data"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["spawn_npc", "despawn_npc", "trigger_event", "update_environment"],
+                "description": "World mutation type"
+              },
+              "data": {
+                "type": "object",
+                "description": "Mutation data"
+              }
+            }
+          }
+        }
+      },
+      "MutateWorldResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "mutationId": {
+            "type": "string"
+          },
+          "worldState": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GetStateResponse": {
+        "type": "object",
+        "properties": {
+          "adventureId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "object"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ExecuteActionRequest": {
+        "type": "object",
+        "required": ["adventureId", "playerId", "action"],
+        "properties": {
+          "adventureId": {
+            "type": "string",
+            "description": "Adventure ID"
+          },
+          "playerId": {
+            "type": "string",
+            "description": "Player ID"
+          },
+          "action": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Action type"
+              },
+              "parameters": {
+                "type": "object",
+                "description": "Action parameters"
+              }
+            }
+          }
+        }
+      },
+      "ExecuteActionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "mutationId": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          },
+          "newState": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ValidateMutationRequest": {
+        "type": "object",
+        "required": ["mutation"],
+        "properties": {
+          "mutation": {
+            "type": "object",
+            "description": "Mutation to validate"
+          },
+          "adventureId": {
+            "type": "string",
+            "description": "Adventure ID (optional for dry run)"
+          }
+        }
+      },
+      "ValidateMutationResponse": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimatedImpact": {
+            "type": "object"
+          }
+        }
+      },
+      "RollbackMutationRequest": {
+        "type": "object",
+        "required": ["adventureId", "mutationId"],
+        "properties": {
+          "adventureId": {
+            "type": "string",
+            "description": "Adventure ID"
+          },
+          "mutationId": {
+            "type": "string",
+            "description": "Mutation ID to rollback"
+          }
+        }
+      },
+      "RollbackMutationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "previousState": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GetMutationHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "adventureId": {
+            "type": "string"
+          },
+          "mutations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mutationId": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "actor": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "tags": [
+      {
+        "name": "Health",
+        "description": "Health check endpoints"
+      },
+      {
+        "name": "Mutations",
+        "description": "State mutation endpoints"
+      },
+      {
+        "name": "State",
+        "description": "State retrieval endpoints"
+      },
+      {
+        "name": "Actions",
+        "description": "Player action endpoints"
+      },
+      {
+        "name": "Validation",
+        "description": "Mutation validation endpoints"
+      },
+      {
+        "name": "History",
+        "description": "Mutation history endpoints"
+      }
+    ]
+  }
+}

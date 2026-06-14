@@ -1,0 +1,15 @@
+{
+  "name": "cost-optimizer",
+  "version": "1.0.0",
+  "description": "Cloud cost optimization bot for Aether",
+  "main": "cost-optimizer.js",
+  "scripts": {
+    "collect": "node cost-optimizer.js collect",
+    "analyze": "node cost-optimizer.js analyze",
+    "report": "node cost-optimizer.js report",
+    "optimizations": "node cost-optimizer.js optimizations",
+    "metrics": "node cost-optimizer.js metrics"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

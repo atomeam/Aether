@@ -1,0 +1,14 @@
+{
+  "name": "content-cleaner",
+  "version": "1.0.0",
+  "description": "Sprint page content cleaner - removes outdated content like email warm-up tables",
+  "main": "content-cleaner.js",
+  "scripts": {
+    "clean": "node content-cleaner.js clean",
+    "clean-type": "node content-cleaner.js clean-type",
+    "stats": "node content-cleaner.js stats",
+    "add-rule": "node content-cleaner.js add-rule"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

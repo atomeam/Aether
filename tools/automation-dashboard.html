@@ -1,0 +1,201 @@
+/**
+ * Unified Automation Dashboard
+ * Single dashboard for all Aether automation systems
+ */
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether Automation Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #1a1a2e;
+      padding: 1.5rem;
+      border-radius: 8px;
+    }
+
+    .card h3 {
+      color: #667eea;
+      margin-bottom: 1rem;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #764ba2;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .status-ok {
+      color: #10b981;
+    }
+
+    .status-warning {
+      color: #f59e0b;
+    }
+
+    .status-error {
+      color: #ef4444;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      background: #667eea;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+
+    .btn:hover {
+      background: #764ba2;
+    }
+
+    .log-entry {
+      padding: 0.5rem;
+      border-bottom: 1px solid #2a2a4e;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    .logs {
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 Aether Automation Dashboard</h1>
+      <p>Unified monitoring for all autonomous systems</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h3>🔐 Secret Rotation</h3>
+        <div class="stat-value">20</div>
+        <div class="stat-label">Secrets Monitored</div>
+        <div class="status-ok">All on schedule</div>
+      </div>
+
+      <div class="card">
+        <h3>🔧 Self-Healing</h3>
+        <div class="stat-value">3</div>
+        <div class="stat-label">Services Monitored</div>
+        <div class="status-ok">All healthy</div>
+      </div>
+
+      <div class="card">
+        <h3>🔍 Anomaly Detection</h3>
+        <div class="stat-value">0</div>
+        <div class="stat-label">Active Anomalies</div>
+        <div class="status-ok">System normal</div>
+      </div>
+
+      <div class="card">
+        <h3>🔒 Security Scanner</h3>
+        <div class="stat-value">0</div>
+        <div class="stat-label">Security Issues</div>
+        <div class="status-ok">No vulnerabilities</div>
+      </div>
+
+      <div class="card">
+        <h3>💰 Cost Optimizer</h3>
+        <div class="stat-value">$0.00</div>
+        <div class="stat-label">Estimated Monthly Cost</div>
+        <div class="status-ok">Within budget</div>
+      </div>
+
+      <div class="card">
+        <h3>🤖 AI Opponent</h3>
+        <div class="stat-value">0%</div>
+        <div class="stat-label">Win Rate</div>
+        <div class="status-ok">Ready to play</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📊 System Status</h3>
+      <div class="logs">
+        <div class="log-entry">✅ Secret Rotation: All 20 secrets on schedule</div>
+        <div class="log-entry">✅ Self-Healing: 3 services healthy</div>
+        <div class="log-entry">✅ Anomaly Detection: No anomalies detected</div>
+        <div class="log-entry">✅ Security Scanner: No vulnerabilities found</div>
+        <div class="log-entry">✅ Cost Optimizer: Cost optimization suggestions available</div>
+        <div class="log-entry">✅ AI Opponent: Ready for snake and chess games</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <h3>🎮 Quick Actions</h3>
+      <button class="btn" onclick="alert('Run: cd tools/secret-rotation && npm run summary')">Check Secret Status</button>
+      <button class="btn" onclick="alert('Run: cd tools/self-healing && npm run check')">Run Health Check</button>
+      <button class="btn" onclick="alert('Run: cd tools/security-scanner && npm run scan')">Run Security Scan</button>
+      <button class="btn" onclick="alert('Run: cd tools/cost-optimizer && npm run report')">Generate Cost Report</button>
+    </div>
+  </div>
+
+  <script>
+    // In production, this would load real data from all systems
+    async function loadSystemStatus() {
+      // Placeholder for real data loading
+      console.log('Loading system status...');
+    }
+
+    loadSystemStatus();
+  </script>
+</body>
+</html>

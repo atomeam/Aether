@@ -1,0 +1,22 @@
+{
+  "name": "github-automation",
+  "version": "1.0.0",
+  "description": "GitHub automation system - auto-PR, auto-merge, branch management, alternative platforms",
+  "main": "github-automation.js",
+  "scripts": {
+    "create-pr": "node github-automation.js create-pr",
+    "merge-pr": "node github-automation.js merge-pr",
+    "create-branch": "node github-automation.js create-branch",
+    "commit": "node github-automation.js commit",
+    "enable-auto-merge": "node github-automation.js enable-auto-merge",
+    "disable-auto-merge": "node github-automation.js disable-auto-merge",
+    "stats": "node github-automation.js stats",
+    "history": "node github-automation.js history",
+    "switch": "node alt-platform.js switch",
+    "configure": "node alt-platform.js configure",
+    "create-mr": "node alt-platform.js create-mr",
+    "merge": "node alt-platform.js merge"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

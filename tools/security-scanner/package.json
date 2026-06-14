@@ -1,0 +1,16 @@
+{
+  "name": "security-scanner",
+  "version": "1.0.0",
+  "description": "Automated security scanning pipeline for Aether",
+  "main": "security-scanner.js",
+  "scripts": {
+    "scan": "node security-scanner.js scan",
+    "secrets": "node security-scanner.js secrets",
+    "dependencies": "node security-scanner.js dependencies",
+    "config": "node security-scanner.js config",
+    "latest": "node security-scanner.js latest",
+    "history": "node security-scanner.js history"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

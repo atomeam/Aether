@@ -49,15 +49,15 @@ max_retries = 3
 [browser]
 binding = "MYBROWSER"
 
-# ACTIONS queue - needs to be created via Cloudflare API
-# [[queues.producers]]
-# binding = "ACTIONS"
-# queue = "bridge-actions"
+# ACTIONS queue
+[[queues.producers]]
+binding = "ACTIONS"
+queue = "bridge-actions"
 
-# [[queues.consumers]]
-# queue = "bridge-actions"
-# max_batch_size = 10
-# max_retries = 3
+[[queues.consumers]]
+queue = "bridge-actions"
+max_batch_size = 10
+max_retries = 3
 
 [[services]]
 binding = "DISPATCHER"
@@ -85,4 +85,16 @@ custom_domain = true
 
 [[routes]]
 pattern = "crypto-payment-link-generator.a-to-mind.com"
+custom_domain = true
+
+[[routes]]
+pattern = "ai-image-generator.a-to-mind.com"
+custom_domain = true
+
+[[routes]]
+pattern = "network-as-code.a-to-mind.com"
+custom_domain = true
+
+[[routes]]
+pattern = "a-to-mind.com"
 custom_domain = true

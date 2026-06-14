@@ -1,0 +1,16 @@
+{
+  "name": "ai-opponent",
+  "version": "1.0.0",
+  "description": "AI game opponent system for substrate games",
+  "main": "ai-opponent.js",
+  "scripts": {
+    "move": "node ai-opponent.js move",
+    "difficulty": "node ai-opponent.js difficulty",
+    "result": "node ai-opponent.js result",
+    "performance": "node ai-opponent.js performance",
+    "reset": "node ai-opponent.js reset",
+    "unified": "node unified-ai-opponent.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,20 @@
+{
+  "name": "revenue-analytics",
+  "version": "1.0.0",
+  "description": "Unified Revenue & Analytics Dashboard - revenue, customers, unit economics, operations, automation ROI, forecasting, recommendations",
+  "main": "orchestrator.js",
+  "scripts": {
+    "revenue-tracker": "node revenue-tracker.js",
+    "customer-analytics": "node customer-analytics.js",
+    "unit-economics": "node unit-economics.js",
+    "operational-tracker": "node operational-tracker.js",
+    "automation-roi": "node automation-roi.js",
+    "ai-forecasting": "node ai-forecasting.js",
+    "recommendations": "node recommendations.js",
+    "dashboard": "node dashboard.js",
+    "orchestrator": "node orchestrator.js",
+    "run": "node orchestrator.js run"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

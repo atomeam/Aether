@@ -1,0 +1,16 @@
+{
+  "name": "reconciliation-integration",
+  "version": "1.0.0",
+  "description": "Stripe and Wix ledger integration for reconciliation delivery - read-only access",
+  "main": "unified-integration.js",
+  "scripts": {
+    "stripe": "node stripe-integration.js",
+    "wix": "node wix-integration.js",
+    "unified": "node unified-integration.js",
+    "configure": "node unified-integration.js configure",
+    "test": "node unified-integration.js test",
+    "report": "node unified-integration.js report"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

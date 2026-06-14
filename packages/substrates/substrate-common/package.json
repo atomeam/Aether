@@ -1,0 +1,24 @@
+{
+  "name": "@substrate/common",
+  "version": "1.0.0",
+  "description": "Shared utilities for Game Matrix Substrate implementations",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "demo": "node --loader ts-node/esm src/demo/llm-demo.ts"
+  },
+  "keywords": [
+    "substrate",
+    "llm",
+    "nli",
+    "parsing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "form-automation",
+  "version": "1.0.0",
+  "description": "Form publishing automation system - one-click publishing and link generation",
+  "main": "form-publisher.js",
+  "scripts": {
+    "add": "node form-publisher.js add",
+    "publish": "node form-publisher.js publish",
+    "auto-publish": "node form-publisher.js auto-publish",
+    "unpublish": "node form-publisher.js unpublish",
+    "responses": "node form-publisher.js responses",
+    "list": "node form-publisher.js list"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

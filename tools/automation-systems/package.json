@@ -1,0 +1,21 @@
+{
+  "name": "automation-systems",
+  "version": "1.0.0",
+  "description": "Autonomous automation systems with AI intelligence and safety - support, content, SEO, lead generation, A/B testing, feature development",
+  "main": "orchestrator.js",
+  "scripts": {
+    "customer-support": "node customer-support.js",
+    "content-generator": "node content-generator.js",
+    "seo": "node seo.js",
+    "lead-generation": "node lead-generation.js",
+    "ab-testing": "node ab-testing.js",
+    "feature-development": "node feature-development.js",
+    "orchestrator": "node orchestrator.js",
+    "integration": "node aether-integration.js",
+    "ai": "node automation-ai.js",
+    "safety": "node automation-safety.js",
+    "run-all": "node orchestrator.js run '{\"support\":{\"enabled\":true},\"content\":{\"enabled\":true},\"seo\":{\"enabled\":true},\"leads\":{\"enabled\":true},\"testing\":{\"enabled\":true},\"features\":{\"enabled\":true}}'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

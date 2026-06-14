@@ -1,0 +1,322 @@
+[
+  {
+    "name": "responseTime",
+    "value": 230.23248171293847,
+    "timestamp": "2026-06-14T04:28:58.362Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.009902210984132794,
+    "timestamp": "2026-06-14T04:28:58.373Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.42057607675264425,
+    "timestamp": "2026-06-14T04:28:58.373Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.4172276197972823,
+    "timestamp": "2026-06-14T04:28:58.374Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 230.14326624703486,
+    "timestamp": "2026-06-14T04:28:58.490Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.009101652921487489,
+    "timestamp": "2026-06-14T04:28:58.491Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.4452958798448009,
+    "timestamp": "2026-06-14T04:28:58.491Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.3987412662714803,
+    "timestamp": "2026-06-14T04:28:58.491Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 249.3403778513109,
+    "timestamp": "2026-06-14T04:28:58.597Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.021732384714592597,
+    "timestamp": "2026-06-14T04:28:58.598Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.11721684409891078,
+    "timestamp": "2026-06-14T04:28:58.598Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.36800640682890245,
+    "timestamp": "2026-06-14T04:28:58.598Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 227.30224647845046,
+    "timestamp": "2026-06-14T04:28:58.705Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.007938325892286007,
+    "timestamp": "2026-06-14T04:28:58.705Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.1958014058699042,
+    "timestamp": "2026-06-14T04:28:58.706Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.25086440604718274,
+    "timestamp": "2026-06-14T04:28:58.706Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 207.00408287285242,
+    "timestamp": "2026-06-14T04:28:58.812Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.0021734415072941354,
+    "timestamp": "2026-06-14T04:28:58.813Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.39834005081050966,
+    "timestamp": "2026-06-14T04:28:58.813Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.49243214732825874,
+    "timestamp": "2026-06-14T04:28:58.814Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 244.96686081049774,
+    "timestamp": "2026-06-14T04:28:58.923Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.02606439892962093,
+    "timestamp": "2026-06-14T04:28:58.923Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.31198135789925346,
+    "timestamp": "2026-06-14T04:28:58.924Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.5451593007370295,
+    "timestamp": "2026-06-14T04:28:58.924Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 168.49361489859268,
+    "timestamp": "2026-06-14T04:28:59.031Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.005755958948876812,
+    "timestamp": "2026-06-14T04:28:59.032Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 1.109196482885978,
+    "timestamp": "2026-06-14T04:28:59.032Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.37196500272444494,
+    "timestamp": "2026-06-14T04:28:59.032Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 224.04790822871445,
+    "timestamp": "2026-06-14T04:28:59.141Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0,
+    "timestamp": "2026-06-14T04:28:59.141Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.1778166283181971,
+    "timestamp": "2026-06-14T04:28:59.142Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.25293624624300104,
+    "timestamp": "2026-06-14T04:28:59.142Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 197.2299912198083,
+    "timestamp": "2026-06-14T04:28:59.250Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0,
+    "timestamp": "2026-06-14T04:28:59.251Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.19835404462626108,
+    "timestamp": "2026-06-14T04:28:59.251Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.43701711726408665,
+    "timestamp": "2026-06-14T04:28:59.252Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "responseTime",
+    "value": 159.70584002753034,
+    "timestamp": "2026-06-14T04:28:59.359Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "errorRate",
+    "value": 0.005947266226034857,
+    "timestamp": "2026-06-14T04:28:59.359Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "cpuUsage",
+    "value": 0.3861744590718608,
+    "timestamp": "2026-06-14T04:28:59.359Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  },
+  {
+    "name": "memoryUsage",
+    "value": 0.5260277023623476,
+    "timestamp": "2026-06-14T04:28:59.360Z",
+    "metadata": {
+      "source": "simulation"
+    }
+  }
+]
