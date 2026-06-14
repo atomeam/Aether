@@ -1,0 +1,26 @@
+{
+  "name": "autonomous-saas-builder",
+  "version": "1.0.0",
+  "description": "Autonomous Micro-SaaS Builder - Generates revenue-producing products automatically",
+  "main": "index.js",
+  "scripts": {
+    "market-research": "node market-research.js",
+    "product-generator": "node product-generator.js",
+    "code-generator": "node code-generator.js",
+    "deployment": "node deployment.js",
+    "payments": "node payments.js",
+    "monitoring": "node monitoring.js",
+    "optimization": "node optimization.js",
+    "launch": "node launch.js",
+    "orchestrator": "node orchestrator.js",
+    "build": "node index.js build",
+    "build-simple": "node index.js build-simple",
+    "init": "node index.js init",
+    "dashboard": "start dashboard.html"
+  },
+  "dependencies": {
+    "stripe": "^14.10.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {}
+}

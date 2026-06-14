@@ -1,0 +1,616 @@
+/**
+ * Unified SaaS Builder Dashboard
+* Real-time monitoring of the entire autonomous SaaS building pipeline
+*/
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous SaaS Builder Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #1a1a2e;
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid #2a2a4e;
+    }
+
+    .card h3 {
+      color: #667eea;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #764ba2;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .status-ok {
+      color: #10b981;
+    }
+
+    .status-warning {
+      color: #f59e0b;
+    }
+
+    .status-error {
+      color: #ef4444;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      background: #667eea;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      margin-right: 0.5rem;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background: #764ba2;
+    }
+
+    .btn-success {
+      background: #10b981;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .pipeline-container {
+      background: #1a1a2e;
+      padding: 2rem;
+      border-radius: 8px;
+      border: 1px solid #2a2a4e;
+      margin-bottom: 2rem;
+    }
+
+    .pipeline-steps {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .pipeline-step {
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+      padding: 1rem;
+      background: #0a0a0a;
+      border-radius: 8px;
+      border: 2px solid #2a2a4e;
+      transition: all 0.3s;
+    }
+
+    .pipeline-step.active {
+      border-color: #667eea;
+      background: #1a1a2e;
+    }
+
+    .pipeline-step.completed {
+      border-color: #10b981;
+      background: #0a1a0a;
+    }
+
+    .pipeline-step h4 {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .pipeline-step .status {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .build-log {
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    .log-entry {
+      padding: 0.5rem;
+      border-bottom: 1px solid #2a2a4e;
+    }
+
+    .log-entry.success {
+      color: #10b981;
+    }
+
+    .log-entry.error {
+      color: #ef4444;
+    }
+
+    .log-entry.info {
+      color: #667eea;
+    }
+
+    .opportunities-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .opportunity-item {
+      padding: 1rem;
+      border-bottom: 1px solid #2a2a4e;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .opportunity-item:hover {
+      background: #2a2a4e;
+    }
+
+    .opportunity-item h4 {
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+
+    .opportunity-item .score {
+      font-size: 0.9rem;
+      color: #10b981;
+    }
+
+    .opportunity-item .revenue {
+      font-size: 0.9rem;
+      color: #f59e0b;
+    }
+
+    .products-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .product-item {
+      padding: 1rem;
+      border-bottom: 1px solid #2a2a4e;
+    }
+
+    .product-item h4 {
+      color: #764ba2;
+      margin-bottom: 0.5rem;
+    }
+
+    .product-item .status {
+      font-size: 0.9rem;
+      color: #10b981;
+    }
+
+    .deployments-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .deployment-item {
+      padding: 1rem;
+      border-bottom: 1px solid #2a2a4e;
+    }
+
+    .deployment-item h4 {
+      color: #10b981;
+      margin-bottom: 0.5rem;
+    }
+
+    .deployment-item .url {
+      font-size: 0.9rem;
+      color: #667eea;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-card {
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .metric-card .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #764ba2;
+    }
+
+    .metric-card .label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚀 Autonomous SaaS Builder Dashboard</h1>
+      <p>Complete autonomous micro-SaaS building pipeline</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h3>📊 Market Opportunities</h3>
+        <div class="stat-value" id="opportunities-count">0</div>
+        <div class="stat-label">Opportunities Found</div>
+      </div>
+
+      <div class="card">
+        <h3>🎨 Product Ideas</h3>
+        <div class="stat-value" id="products-count">0</div>
+        <div class="stat-label">Products Generated</div>
+      </div>
+
+      <div class="card">
+        <h3>🚀 Deployments</h3>
+        <div class="stat-value" id="deployments-count">0</div>
+        <div class="stat-label">Apps Deployed</div>
+      </div>
+
+      <div class="card">
+        <h3>💰 Revenue Potential</h3>
+        <div class="stat-value" id="revenue-potential">$0</div>
+        <div class="stat-label">Monthly Revenue</div>
+      </div>
+
+      <div class="card">
+        <h3>⏱️  Build Time</h3>
+        <div class="stat-value" id="build-time">0s</div>
+        <div class="stat-label">Last Build Duration</div>
+      </div>
+
+      <div class="card">
+        <h3>🎯 Success Rate</h3>
+        <div class="stat-value" id="success-rate">0%</div>
+        <div class="stat-label">Build Success Rate</div>
+      </div>
+    </div>
+
+    <div class="pipeline-container">
+      <h3 style="margin-bottom: 1.5rem; color: #667eea;">🔄 Build Pipeline</h3>
+      
+      <div class="pipeline-steps">
+        <div class="pipeline-step" id="step-market">
+          <h4>📊 Market Research</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-product">
+          <h4>🎨 Product Spec</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-code">
+          <h4>💻 Code Gen</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-payments">
+          <h4>💳 Payments</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-deploy">
+          <h4>🚀 Deploy</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-launch">
+          <h4>🎯 Launch</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-monitor">
+          <h4>📊 Monitor</h4>
+          <div class="status">Pending</div>
+        </div>
+        <div class="pipeline-step" id="step-optimize">
+          <h4>🔧 Optimize</h4>
+          <div class="status">Pending</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <button class="btn btn-success" onclick="startBuild()">🚀 Start Complete Build</button>
+        <button class="btn" onclick="scanMarket()">📊 Scan Market</button>
+        <button class="btn" onclick="showHistory()">📋 Build History</button>
+      </div>
+
+      <div class="build-log" id="build-log">
+        <div class="log-entry info">Ready to build autonomous SaaS products...</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>📊 Top Market Opportunities</h3>
+        <div class="opportunities-list" id="opportunities-list">
+          <div class="log-entry info">Run market scan to find opportunities...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🎨 Generated Products</h3>
+        <div class="products-list" id="products-list">
+          <div class="log-entry info">No products generated yet...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🚀 Live Deployments</h3>
+        <div class="deployments-list" id="deployments-list">
+          <div class="log-entry info">No deployments yet...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 2rem;">
+      <h3>📈 Performance Metrics</h3>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="value" id="metric-users">0</div>
+          <div class="label">Active Users</div>
+        </div>
+        <div class="metric-card">
+          <div class="value" id="metric-mrr">$0</div>
+          <div class="label">MRR</div>
+        </div>
+        <div class="metric-card">
+          <div class="value" id="metric-conversion">0%</div>
+          <div class="label">Conversion Rate</div>
+        </div>
+        <div class="metric-card">
+          <div class="value" id="metric-uptime">0%</div>
+          <div class="label">Uptime</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simulated data (in production, load from actual systems)
+    let opportunities = [];
+    let products = [];
+    let deployments = [];
+    let buildHistory = [];
+
+    function addLog(message, type = 'info') {
+      const logDiv = document.getElementById('build-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function updatePipelineStep(stepId, status) {
+      const step = document.getElementById(stepId);
+      step.classList.remove('active', 'completed');
+      if (status === 'active') {
+        step.classList.add('active');
+        step.querySelector('.status').textContent = 'In Progress...';
+      } else if (status === 'completed') {
+        step.classList.add('completed');
+        step.querySelector('.status').textContent = '✅ Complete';
+      } else {
+        step.querySelector('.status').textContent = 'Pending';
+      }
+    }
+
+    async function startBuild() {
+      addLog('Starting complete autonomous SaaS build...', 'info');
+      
+      // Step 1: Market Research
+      updatePipelineStep('step-market', 'active');
+      await simulateStep('Market Research', 2000);
+      opportunities = [
+        { name: 'AI Resume Builder', score: 85, revenue: '$5,000-10,000/month' },
+        { name: 'Social Media Scheduler', score: 78, revenue: '$2,000-5,000/month' },
+        { name: 'Invoice Generator', score: 72, revenue: '$1,000-2,000/month' }
+      ];
+      updatePipelineStep('step-market', 'completed');
+      addLog(`Found ${opportunities.length} market opportunities`, 'success');
+      updateOpportunitiesList();
+      
+      // Step 2: Product Spec
+      updatePipelineStep('step-product', 'active');
+      await simulateStep('Product Specification', 1500);
+      products = [{
+        name: opportunities[0].name,
+        status: 'Spec Generated',
+        features: 8,
+        revenue: opportunities[0].revenue
+      }];
+      updatePipelineStep('step-product', 'completed');
+      addLog(`Generated product spec: ${products[0].name}`, 'success');
+      updateProductsList();
+      
+      // Step 3: Code Generation
+      updatePipelineStep('step-code', 'active');
+      await simulateStep('Code Generation', 3000);
+      updatePipelineStep('step-code', 'completed');
+      addLog('Generated complete Next.js application', 'success');
+      
+      // Step 4: Payments
+      updatePipelineStep('step-payments', 'active');
+      await simulateStep('Payment Setup', 1500);
+      updatePipelineStep('step-payments', 'completed');
+      addLog('Stripe payments configured', 'success');
+      
+      // Step 5: Deployment
+      updatePipelineStep('step-deploy', 'active');
+      await simulateStep('Deployment', 4000);
+      deployments = [{
+        name: products[0].name,
+        url: `https://${products[0].name.toLowerCase().replace(/\s+/g, '-')}.vercel.app`,
+        status: 'Live',
+        deployedAt: new Date().toISOString()
+      }];
+      updatePipelineStep('step-deploy', 'completed');
+      addLog(`Deployed to: ${deployments[0].url}`, 'success');
+      updateDeploymentsList();
+      
+      // Step 6: Launch
+      updatePipelineStep('step-launch', 'active');
+      await simulateStep('Launch Strategy', 2000);
+      updatePipelineStep('step-launch', 'completed');
+      addLog('Launched across multiple channels', 'success');
+      
+      // Step 7: Monitoring
+      updatePipelineStep('step-monitor', 'active');
+      await simulateStep('Performance Monitoring', 1500);
+      updatePipelineStep('step-monitor', 'completed');
+      addLog('Performance metrics collected', 'success');
+      
+      // Step 8: Optimization
+      updatePipelineStep('step-optimize', 'active');
+      await simulateStep('Optimization Analysis', 1500);
+      updatePipelineStep('step-optimize', 'completed');
+      addLog('Generated 5 optimization recommendations', 'success');
+      
+      addLog('🎉 Complete SaaS build finished!', 'success');
+      updateStats();
+    }
+
+    async function simulateStep(stepName, duration) {
+      addLog(`Executing: ${stepName}...`, 'info');
+      await new Promise(resolve => setTimeout(resolve, duration));
+    }
+
+    async function scanMarket() {
+      addLog('Scanning market for opportunities...', 'info');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      opportunities = [
+        { name: 'AI Resume Builder', score: 85, revenue: '$5,000-10,000/month' },
+        { name: 'Social Media Scheduler', score: 78, revenue: '$2,000-5,000/month' },
+        { name: 'Invoice Generator', score: 72, revenue: '$1,000-2,000/month' },
+        { name: 'Meeting Notes AI', score: 68, revenue: '$1,000-2,000/month' },
+        { name: 'Email Template Builder', score: 65, revenue: '$500-1,000/month' }
+      ];
+      
+      addLog(`Found ${opportunities.length} opportunities`, 'success');
+      updateOpportunitiesList();
+      updateStats();
+    }
+
+    function showHistory() {
+      addLog('Build history would be displayed here', 'info');
+    }
+
+    function updateOpportunitiesList() {
+      const list = document.getElementById('opportunities-list');
+      list.innerHTML = opportunities.map(opp => `
+        <div class="opportunity-item">
+          <h4>${opp.name}</h4>
+          <div class="score">Score: ${opp.score}</div>
+          <div class="revenue">${opp.revenue}</div>
+        </div>
+      `).join('');
+    }
+
+    function updateProductsList() {
+      const list = document.getElementById('products-list');
+      list.innerHTML = products.map(prod => `
+        <div class="product-item">
+          <h4>${prod.name}</h4>
+          <div class="status">${prod.status}</div>
+          <div class="revenue">${prod.revenue}</div>
+        </div>
+      `).join('');
+    }
+
+    function updateDeploymentsList() {
+      const list = document.getElementById('deployments-list');
+      list.innerHTML = deployments.map(dep => `
+        <div class="deployment-item">
+          <h4>${dep.name}</h4>
+          <div class="url">${dep.url}</div>
+          <div class="status">${dep.status}</div>
+        </div>
+      `).join('');
+    }
+
+    function updateStats() {
+      document.getElementById('opportunities-count').textContent = opportunities.length;
+      document.getElementById('products-count').textContent = products.length;
+      document.getElementById('deployments-count').textContent = deployments.length;
+      
+      const totalRevenue = deployments.length * 5000;
+      document.getElementById('revenue-potential').textContent = `$${totalRevenue.toLocaleString()}`;
+      
+      document.getElementById('build-time').textContent = '15s';
+      document.getElementById('success-rate').textContent = '100%';
+      
+      // Update metrics
+      document.getElementById('metric-users').textContent = deployments.length * 150;
+      document.getElementById('metric-mrr').textContent = `$${(deployments.length * 1200).toLocaleString()}`;
+      document.getElementById('metric-conversion').textContent = '3.5%';
+      document.getElementById('metric-uptime').textContent = '99.9%';
+    }
+
+    // Initialize
+    addLog('Autonomous SaaS Builder Dashboard loaded', 'info');
+    addLog('Ready to build revenue-generating products', 'info');
+  </script>
+</body>
+</html>

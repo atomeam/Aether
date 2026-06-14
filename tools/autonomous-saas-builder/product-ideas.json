@@ -1,0 +1,232 @@
+[
+  {
+    "id": "product-1781413630921-k0p2nsnao",
+    "name": "Simple Project Management",
+    "description": "Looking for simple project management tool",
+    "category": "productivity",
+    "score": 85,
+    "potentialRevenue": "$5,000-10,000/month",
+    "features": [
+      "User authentication and profiles",
+      "Dashboard with key metrics",
+      "Task/project management",
+      "Collaboration features",
+      "Notifications and reminders",
+      "Data export functionality",
+      "Mobile responsive design",
+      "API for integrations"
+    ],
+    "techStack": {
+      "frontend": {
+        "framework": "Next.js 14",
+        "styling": "Tailwind CSS",
+        "state": "Zustand",
+        "ui": "shadcn/ui",
+        "forms": "React Hook Form"
+      },
+      "backend": {
+        "framework": "Node.js with Express",
+        "api": "REST + GraphQL",
+        "database": "PostgreSQL",
+        "orm": "Prisma",
+        "auth": "NextAuth.js"
+      },
+      "infrastructure": {
+        "hosting": "Vercel",
+        "database": "Neon PostgreSQL",
+        "storage": "Cloudflare R2",
+        "cdn": "Cloudflare",
+        "monitoring": "Sentry"
+      },
+      "payments": {
+        "processor": "Stripe",
+        "webhooks": "Stripe Webhooks",
+        "subscriptions": "Stripe Billing"
+      },
+      "analytics": {
+        "tracking": "PostHog",
+        "error": "Sentry",
+        "performance": "Vercel Analytics"
+      }
+    },
+    "monetization": [
+      {
+        "type": "subscription",
+        "tiers": [
+          {
+            "name": "Starter",
+            "price": 9,
+            "features": [
+              "Basic features",
+              "1 user"
+            ]
+          },
+          {
+            "name": "Pro",
+            "price": 29,
+            "features": [
+              "Advanced features",
+              "5 users",
+              "Priority support"
+            ]
+          },
+          {
+            "name": "Enterprise",
+            "price": 99,
+            "features": [
+              "All features",
+              "Unlimited users",
+              "Custom integrations"
+            ]
+          }
+        ]
+      }
+    ],
+    "targetAudience": [
+      "Freelancers and solopreneurs",
+      "Small business owners",
+      "Remote teams",
+      "Project managers",
+      "Consultants"
+    ],
+    "competitiveAdvantage": {
+      "primary": "Focus on simplicity and speed over complex features",
+      "secondary": [
+        "Better user experience",
+        "Faster performance",
+        "More affordable pricing",
+        "Superior customer support",
+        "Regular feature updates"
+      ],
+      "differentiation": [
+        "AI-powered features",
+        "Simpler user interface",
+        "Better integrations",
+        "Mobile-first approach",
+        "Industry-specific templates"
+      ]
+    },
+    "roadmap": {
+      "phase1": {
+        "name": "MVP",
+        "duration": "4-6 weeks",
+        "features": [
+          "Core functionality",
+          "User authentication",
+          "Basic dashboard",
+          "Payment integration",
+          "Responsive design"
+        ]
+      },
+      "phase2": {
+        "name": "V1.0",
+        "duration": "4-6 weeks",
+        "features": [
+          "Advanced features",
+          "API integrations",
+          "Analytics dashboard",
+          "Mobile app",
+          "Customer support"
+        ]
+      },
+      "phase3": {
+        "name": "V2.0",
+        "duration": "6-8 weeks",
+        "features": [
+          "AI-powered features",
+          "Advanced analytics",
+          "Enterprise features",
+          "Marketplace",
+          "White-label options"
+        ]
+      }
+    },
+    "mvpScope": {
+      "mustHave": [
+        "User authentication and profiles",
+        "Dashboard with key metrics",
+        "Task/project management",
+        "Collaboration features"
+      ],
+      "shouldHave": [
+        "Notifications and reminders",
+        "Data export functionality"
+      ],
+      "couldHave": [
+        "Mobile responsive design",
+        "API for integrations"
+      ],
+      "wontHave": "Advanced features for future versions"
+    },
+    "successMetrics": {
+      "userMetrics": [
+        "Monthly active users (MAU)",
+        "User retention rate",
+        "User acquisition cost",
+        "Lifetime value (LTV)"
+      ],
+      "revenueMetrics": [
+        "Monthly recurring revenue (MRR)",
+        "Churn rate",
+        "Average revenue per user (ARPU)",
+        "Conversion rate"
+      ],
+      "productMetrics": [
+        "Feature usage",
+        "User satisfaction (NPS)",
+        "Support ticket volume",
+        "Time to value"
+      ],
+      "targets": {
+        "month1": {
+          "users": 100,
+          "revenue": 500
+        },
+        "month3": {
+          "users": 500,
+          "revenue": 2000
+        },
+        "month6": {
+          "users": 2000,
+          "revenue": 5000
+        },
+        "month12": {
+          "users": 10000,
+          "revenue": 20000
+        }
+      }
+    },
+    "launchStrategy": {
+      "preLaunch": [
+        "Build waitlist with landing page",
+        "Create content marketing strategy",
+        "Reach out to beta users",
+        "Set up analytics and monitoring"
+      ],
+      "launch": [
+        "Product Hunt launch",
+        "Indie Hackers announcement",
+        "Social media campaign",
+        "Email marketing to waitlist",
+        "Blog post launch announcement"
+      ],
+      "postLaunch": [
+        "Gather user feedback",
+        "Iterate on features",
+        "Content marketing",
+        "Community building",
+        "Paid advertising if needed"
+      ],
+      "channels": [
+        "Product Hunt",
+        "Indie Hackers",
+        "Hacker News",
+        "Reddit (relevant subreddits)",
+        "Twitter/X",
+        "LinkedIn",
+        "Email newsletters"
+      ]
+    },
+    "timestamp": "2026-06-14T05:07:10.922Z"
+  }
+]

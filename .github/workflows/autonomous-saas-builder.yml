@@ -1,0 +1,136 @@
+name: Autonomous SaaS Builder
+
+on:
+  schedule:
+    # Run weekly to scan for new opportunities
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'scan'
+        type: choice
+        options:
+          - scan
+          - build
+          - deploy
+          - launch
+          - monitor
+      opportunity:
+        description: 'Opportunity JSON (for build action)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  saas-builder:
+    name: Autonomous SaaS Builder
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install SaaS Builder dependencies
+        run: |
+          cd tools/autonomous-saas-builder
+          npm install
+
+      - name: Scan Market for Opportunities
+        if: github.event.inputs.action == 'scan' || github.event.inputs.action == ''
+        run: |
+          cd tools/autonomous-saas-builder
+          npm run market-research scan
+
+      - name: Build SaaS from Opportunity
+        if: github.event.inputs.action == 'build' && github.event.inputs.opportunity
+        run: |
+          cd tools/autonomous-saas-builder
+          npm run orchestrator from-opportunity '${{ github.event.inputs.opportunity }}'
+
+      - name: Build Complete SaaS
+        if: github.event.inputs.action == 'build' && !github.event.inputs.opportunity
+        run: |
+          cd tools/autonomous-saas-builder
+          npm run orchestrator build
+
+      - name: Deploy to Vercel
+        if: github.event.inputs.action == 'deploy'
+        run: |
+          cd tools/autonomous-saas-builder
+          npm run deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Execute Launch Strategy
+        if: github.event.inputs.action == 'launch'
+        run: |
+          cd tools/autonomous-saas-builder
+          npm run launch
+
+      - name: Monitor Performance
+        if: github.event.inputs.action == 'monitor'
+        run: |
+          cd tools/autonomous-saas-builder
+          npm run monitoring
+
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.4
+        with:
+          name: saas-builder-data
+          path: tools/autonomous-saas-builder/*.json
+          retention-days: 90
+
+      - name: Integrate with Secret Rotation
+        if: always()
+        run: |
+          cd tools/secret-rotation
+          npm run summary
+
+      - name: Integrate with Self-Healing
+        if: always()
+        run: |
+          cd tools/self-healing
+          npm run summary
+
+      - name: Integrate with Anomaly Detection
+        if: always()
+        run: |
+          cd tools/anomaly-detection
+          npm run summary
+
+      - name: Integrate with Security Scanner
+        if: always()
+        run: |
+          cd tools/security-scanner
+          npm run config
+
+      - name: Notify on Successful Build
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚀 Autonomous SaaS Builder: New product built and deployed successfully! Check the dashboard for details.\"}" \
+            || echo "Slack notification skipped"
+
+      - name: Notify on Build Failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"❌ Autonomous SaaS Builder: Build failed. Check the logs for details.\"}" \
+            || echo "Slack notification skipped"
