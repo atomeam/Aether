@@ -1,0 +1,17 @@
+{
+  "name": "reconciliation-saas",
+  "version": "1.0.0",
+  "description": "Reconciliation SaaS automation - scout, qualify, outreach, one-pager, reports",
+  "main": "orchestrator.js",
+  "scripts": {
+    "scout": "node scout.js",
+    "qualifier": "node qualifier.js",
+    "outreach": "node outreach.js",
+    "one-pager": "node one-pager.js",
+    "report-generator": "node report-generator.js",
+    "orchestrator": "node orchestrator.js",
+    "run": "node orchestrator.js run"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
