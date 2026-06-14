@@ -184,6 +184,26 @@ class RisksGapsRegister {
         ]
       },
       {
+        id: 'RISK-006A',
+        title: 'California ARL compliance tracking not implemented',
+        tier: 'T2_SECURITY_RISK',
+        severity: 'MEDIUM',
+        status: 'OPEN',
+        description: 'California Automatic Renewal Law (ARL) provides strong consumer protections for trial cancellations (click-to-cancel, same-medium cancellation, no obstruction). Currently not tracking which services comply vs violate ARL, missing opportunity to leverage legal advantages for California residents.',
+        impact: 'Missed legal advantages for California residents, no ARL violation tracking, cannot leverage "unconditional gift" rule for non-compliant services',
+        mitigation: 'Add California ARL compliance field to service playbooks, track ARL violations (click-to-cancel, dark patterns, same-medium cancellation), prioritize ARL-compliant services for California residents, document ARL violations for legal leverage',
+        owner: 'Devin',
+        dependencies: ['RISK-006'],
+        acceptanceCriteria: [
+          'California ARL compliance field added to service playbooks',
+          'Track ARL violations (missing click-to-cancel, obstruction, same-medium violations)',
+          'Prioritize ARL-compliant services for California residents',
+          'Document ARL violations for potential legal action',
+          'Add California residency field to trial records',
+          'Generate ARL compliance report per service'
+        ]
+      },
+      {
         id: 'RISK-007',
         title: 'PII retention and deletion policy missing',
         tier: 'T2_SECURITY_RISK',
