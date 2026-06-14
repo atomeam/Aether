@@ -1,0 +1,26 @@
+{
+  "name": "reliability-systems",
+  "version": "1.0.0",
+  "description": "Reliability and resilience systems for Aether - Dead-letter queue, Retry backoff, Circuit breaker, Distributed tracing, Metrics dashboard",
+  "main": "index.js",
+  "scripts": {
+    "test:dlq": "node dead-letter-queue.js stats",
+    "test:retry": "node retry-backoff.js test",
+    "test:circuit": "node circuit-breaker.js test test-service",
+    "test:tracing": "node distributed-tracing.js start test-operation",
+    "test:metrics": "node metrics-dashboard.js record test-service true 150",
+    "test:all": "npm run test:dlq && npm run test:retry && npm run test:circuit && npm run test:tracing && npm run test:metrics"
+  },
+  "keywords": [
+    "reliability",
+    "resilience",
+    "circuit-breaker",
+    "retry",
+    "dead-letter-queue",
+    "distributed-tracing",
+    "metrics",
+    "dashboard"
+  ],
+  "author": "Aether",
+  "license": "MIT"
+}

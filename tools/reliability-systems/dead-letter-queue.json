@@ -1,0 +1,35 @@
+{
+  "queue": [],
+  "replayQueue": [
+    {
+      "id": "dlq-1781420280255-9v1p3f6uo",
+      "originalJob": {
+        "id": "test-job-1",
+        "data": "test data"
+      },
+      "error": {
+        "message": "Test error",
+        "stack": "Error: Test error\n    at ReliabilitySystemTester.testDeadLetterQueue (C:\\Users\\adamm\\Aether\\tools\\reliability-systems\\test-all-systems.js:36:25)\n    at ReliabilitySystemTester.runAllTests (C:\\Users\\adamm\\Aether\\tools\\reliability-systems\\test-all-systems.js:382:16)\n    at main (C:\\Users\\adamm\\Aether\\tools\\reliability-systems\\test-all-systems.js:423:32)\n    at Object.<anonymous> (C:\\Users\\adamm\\Aether\\tools\\reliability-systems\\test-all-systems.js:429:3)\n    at Module._compile (node:internal/modules/cjs/loader:1856:14)\n    at Object..js (node:internal/modules/cjs/loader:1996:10)\n    at Module.load (node:internal/modules/cjs/loader:1579:32)\n    at Module._load (node:internal/modules/cjs/loader:1381:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "timestamp": "2026-06-14T06:58:00.258Z"
+      },
+      "context": {
+        "context": "test"
+      },
+      "attempts": 1,
+      "maxAttempts": 3,
+      "addedAt": "2026-06-14T06:58:00.267Z",
+      "status": "replayed_success",
+      "replayedAt": "2026-06-14T06:58:00.270Z",
+      "replayResult": {
+        "success": true,
+        "replayed": true
+      }
+    }
+  ],
+  "stats": {
+    "totalFailed": 1,
+    "totalReplayed": 1,
+    "totalReplayedSuccess": 1,
+    "totalReplayedFailed": 0
+  }
+}

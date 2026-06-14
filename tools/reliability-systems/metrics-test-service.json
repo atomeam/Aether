@@ -1,0 +1,53 @@
+{
+  "counters": {
+    "test-operation.success:context=test": 1,
+    "test-counter:tag=test": 1
+  },
+  "gauges": {
+    "test-gauge:tag=test": 42
+  },
+  "histograms": {
+    "test-operation.latency:context=test": {
+      "count": 1,
+      "min": 150,
+      "max": 150,
+      "sum": 300,
+      "values": [
+        150
+      ]
+    },
+    "test-timing:tag=test": {
+      "count": 1,
+      "min": 250,
+      "max": 250,
+      "sum": 500,
+      "values": [
+        250
+      ]
+    }
+  },
+  "timings": [
+    {
+      "name": "test-operation.latency",
+      "duration": 150,
+      "tags": {
+        "context": "test"
+      },
+      "timestamp": 1781420284402
+    },
+    {
+      "name": "test-timing",
+      "duration": 250,
+      "tags": {
+        "tag": "test"
+      },
+      "timestamp": 1781420284405
+    }
+  ],
+  "stats": {
+    "totalOperations": 1,
+    "totalSuccess": 1,
+    "totalFailure": 0,
+    "totalLatency": 150
+  }
+}
