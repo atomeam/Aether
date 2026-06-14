@@ -1,7 +1,7 @@
 {
   "name": "autonomous-saas-builder",
-  "version": "1.0.0",
-  "description": "Autonomous Micro-SaaS Builder - Generates revenue-producing products automatically",
+  "version": "2.0.0",
+  "description": "Autonomous Micro-SaaS Builder - Generates revenue-producing products automatically with AI intelligence and safety",
   "main": "index.js",
   "scripts": {
     "market-research": "node market-research.js",
@@ -13,7 +13,14 @@
     "optimization": "node optimization.js",
     "launch": "node launch.js",
     "orchestrator": "node orchestrator.js",
+    "ai-intelligence": "node ai-intelligence.js",
+    "staging": "node staging.js",
+    "rollback": "node rollback.js",
+    "rate-limiter": "node rate-limiter.js",
+    "self-validation": "node self-validation.js",
+    "ai-approval": "node ai-approval.js",
     "build": "node index.js build",
+    "build-safe": "node index.js build-safe",
     "build-simple": "node index.js build-simple",
     "init": "node index.js init",
     "dashboard": "start dashboard.html"
