@@ -31,9 +31,28 @@ binding = "BRIDGE_DB"
 database_name = "aether-bridge-db"
 database_id = "f29243db-5b7a-407b-aa38-64091c1e0676"
 
+# Reliability Systems D1 Database
+[[d1_databases]]
+binding = "RELIABILITY_TRACING"
+database_name = "reliability-tracing"
+database_id = "bd62f79d-c200-48d3-80ba-297932a8c4bf"
+
 [[kv_namespaces]]
 binding = "METRICS"
 id = "49202b2460a74d2dbd6d747d35dda5b7"
+
+# Reliability Systems KV Namespaces
+[[kv_namespaces]]
+binding = "RELIABILITY_DLQ"
+id = "c97e2b4c7fb243d4aafe47423e1c7ab2"
+
+[[kv_namespaces]]
+binding = "RELIABILITY_METRICS"
+id = "597c82ec9d6545e1900684900ec6c594"
+
+[[kv_namespaces]]
+binding = "RELIABILITY_IDEMPOTENCY"
+id = "514177a763944bc3b12292be1eccbfce"
 
 # Cloudflare Queue - Consumer (processes curator-jobs)
 [[queues.producers]]

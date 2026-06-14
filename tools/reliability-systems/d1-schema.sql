@@ -54,22 +54,3 @@ CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_trail(actor);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_trail(action);
 CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_trail(resource_type, resource_id);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_trail(timestamp);
-
--- Cleanup function for old data
-CREATE OR REPLACE FUNCTION cleanup_old_traces(max_age_seconds INTEGER)
-RETURNS INTEGER AS $$
-BEGIN
-  DELETE FROM spans WHERE start_time < (strftime('%s', 'now') - max_age_seconds);
-  DELETE FROM traces WHERE start_time < (strftime('%s', 'now') - max_age_seconds);
-  RETURN changes();
-END;
-$$;
-
--- Cleanup function for old audit records
-CREATE OR REPLACE FUNCTION cleanup_old_audit(max_age_seconds INTEGER)
-RETURNS INTEGER AS $$
-BEGIN
-  DELETE FROM audit_trail WHERE timestamp < (strftime('%s', 'now') - max_age_seconds);
-  RETURN changes();
-END;
-$$;

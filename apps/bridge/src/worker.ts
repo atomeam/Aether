@@ -19,6 +19,9 @@ import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
 import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
 import { handleAToMindRequest } from './a-to-mind-api';
 
+// Cloudflare persistence layer for reliability systems
+import { persistence } from '../../../tools/reliability-systems/cloudflare-persistence';
+
 // Shared constants
 const VERSION = '0.16.2';
 const SERVICE = 'aether-bridge';
@@ -47,6 +50,10 @@ function getBindings(env: Env) {
     STATE: !!env.STATE,
     STATE_CACHE: !!env.STATE_CACHE,
     MYBROWSER: !!env.MYBROWSER,
+    RELIABILITY_DLQ: !!env.RELIABILITY_DLQ,
+    RELIABILITY_METRICS: !!env.RELIABILITY_METRICS,
+    RELIABILITY_IDEMPOTENCY: !!env.RELIABILITY_IDEMPOTENCY,
+    RELIABILITY_TRACING: !!env.RELIABILITY_TRACING,
   };
 }
 
@@ -127,6 +134,13 @@ async function invalidateCache(key: string): Promise<void> {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Initialize Cloudflare persistence for reliability systems
+    if (env.RELIABILITY_DLQ && env.RELIABILITY_TRACING) {
+      persistence.initialize(env.RELIABILITY_DLQ, env.RELIABILITY_TRACING);
+    } else {
+      persistence.initializeFallback();
+    }
+    
     // Rate limit
     const ip = request.headers.get('cf-connecting-ip') || 'unknown';
     if (!checkRateLimit(ip)) {
@@ -167,6 +181,18 @@ export default {
           version: VERSION,
           ts: new Date().toISOString(),
           bindings: getBindings(env),
+        });
+      }
+      
+      // GET /api/reliability/health - Reliability systems health check
+      if (path === '/api/reliability/health') {
+        const health = await persistence.healthCheck();
+        return json({
+          ok: true,
+          service: 'reliability-systems',
+          version: '1.0.0',
+          ts: new Date().toISOString(),
+          health,
         });
       }
       
@@ -2848,6 +2874,11 @@ interface Env {
   GITHUB_WORKFLOW: string; // workflow filename
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
+  // Reliability Systems bindings
+  RELIABILITY_DLQ: KVNamespace;
+  RELIABILITY_METRICS: KVNamespace;
+  RELIABILITY_IDEMPOTENCY: KVNamespace;
+  RELIABILITY_TRACING: D1Database;
   NOTION_RUNS_DB_ID: string;
   // Stripe keys for payment processing
   STRIPE_PUBLISHABLE_KEY: string;

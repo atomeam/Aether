@@ -4,8 +4,6 @@
  * Critical for preventing double-firing Stripe/Wix or GitHub actions
  */
 
-const crypto = require('crypto');
-
 class IdempotencyKeys {
   constructor() {
     this.keys = new Map();
@@ -24,7 +22,7 @@ class IdempotencyKeys {
   }
 
   // Generate idempotency key
-  generateKey(operation, context = {}) {
+  async generateKey(operation, context = {}) {
     const keyData = {
       operation,
       context,
@@ -32,7 +30,15 @@ class IdempotencyKeys {
     };
     
     const keyString = JSON.stringify(keyData);
-    return crypto.createHash('sha256').update(keyString).digest('hex');
+    
+    // Use Web Crypto API for SHA-256 (Cloudflare Workers compatible)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(keyString);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return hashHex;
   }
 
   // Check if operation is duplicate
@@ -258,7 +264,7 @@ async function main() {
       
       console.log('🧪 Testing idempotency keys...');
       
-      const testKey = idempotency.generateKey('test-operation', { id: 123 });
+      const testKey = await idempotency.generateKey('test-operation', { id: 123 });
       console.log(`🔑 Generated key: ${testKey}`);
       
       // First execution
