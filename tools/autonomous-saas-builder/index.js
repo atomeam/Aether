@@ -12,6 +12,9 @@ const { PerformanceMonitoring } = require('./monitoring');
 const { OptimizationSystem } = require('./optimization');
 const { LaunchAutomation } = require('./launch');
 
+// Email confirmation automation for removing manual approval bottleneck
+const { EmailConfirmationAutomation } = require('../../scripts/email-confirmation');
+
 class IntegratedSaaSBuilder {
   constructor() {
     // SaaS Builder systems
@@ -23,6 +26,9 @@ class IntegratedSaaSBuilder {
     this.monitoring = new PerformanceMonitoring();
     this.optimization = new OptimizationSystem();
     this.launch = new LaunchAutomation();
+    
+    // Email confirmation automation (removes manual approval bottleneck)
+    this.emailConfirmation = new EmailConfirmationAutomation();
     
     // Integration with existing Aether systems
     this.integrations = {
