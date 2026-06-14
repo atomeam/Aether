@@ -1,0 +1,291 @@
+{
+  "RISK-001": {
+    "id": "RISK-001",
+    "title": "Timezone correctness in danger date calculations",
+    "tier": "T1_MONEY_CRITICAL",
+    "severity": "CRITICAL",
+    "status": "OPEN",
+    "description": "Billing happens in vendor timezone, but dangerDate/due sweep runs in fixed zone. Off-by-one means sweep fires after charge.",
+    "impact": "Direct financial loss - most expensive bug in system",
+    "mitigation": "Store vendor timezone with each trial, calculate danger dates in vendor timezone, run sweep with timezone-aware scheduling",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Each trial record includes vendor timezone field",
+      "Danger date calculated in vendor timezone",
+      "Scheduled sweep runs in vendor timezone",
+      "Timezone-aware comparison for due date checks",
+      "Test with cross-timezone trials (UTC, PST, EST, etc.)"
+    ]
+  },
+  "RISK-002": {
+    "id": "RISK-002",
+    "title": "Sweep cadence vs billing time alignment",
+    "tier": "T1_MONEY_CRITICAL",
+    "severity": "CRITICAL",
+    "status": "OPEN",
+    "description": "Once-daily sweep may be too coarse. Service bills at 00:30 their time, sweep runs at 09:00. 2-day buffer is only safety.",
+    "impact": "Missed cancellation window if sweep cadence doesn't align with billing patterns",
+    "mitigation": "Implement per-service sweep cadence based on billing time, tighten cadence for high-risk services, widen buffer for coarse cadence",
+    "owner": "Devin",
+    "dependencies": [
+      "RISK-001"
+    ],
+    "acceptanceCriteria": [
+      "Each service has billing time metadata",
+      "Sweep cadence calculated per service based on billing time",
+      "High-risk services have hourly sweeps near billing time",
+      "Buffer period configurable per service",
+      "Test with services billing at different times"
+    ]
+  },
+  "RISK-003": {
+    "id": "RISK-003",
+    "title": "Cancellation verification missing",
+    "tier": "T1_MONEY_CRITICAL",
+    "severity": "CRITICAL",
+    "status": "OPEN",
+    "description": "JobProof captured but no re-check that cancellation actually stuck (status flipped, confirmation received). \"Submitted\" ≠ \"cancelled\".",
+    "impact": "False confidence in cancellation success, potential charges despite \"successful\" job",
+    "mitigation": "Implement verification step that checks account status post-cancellation, scrape confirmation emails/numbers, retry on failure",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Verification step after each cancellation job",
+      "Check account status via API or RPA",
+      "Capture confirmation email/number",
+      "Retry mechanism if verification fails",
+      "Escalate to manual if verification fails 3 times"
+    ]
+  },
+  "RISK-004": {
+    "id": "RISK-004",
+    "title": "Escalation timing and notification channel",
+    "tier": "T1_MONEY_CRITICAL",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "description": "manual_only and failed need notification with enough lead time for manual action. No notification channel wired (email/Slack/Notion).",
+    "impact": "Silent failures lead to charges, no time to react manually",
+    "mitigation": "Wire notification channels (email/Slack/Notion), implement lead time calculation, escalate based on urgency",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Notification channel wired (email/Slack/Notion)",
+      "Lead time calculation per service urgency",
+      "Escalation rules: manual_only = 24h notice, failed = immediate",
+      "Notification includes service, action needed, deadline",
+      "Test notification delivery and timing"
+    ]
+  },
+  "RISK-005": {
+    "id": "RISK-005",
+    "title": "Credential storage for RPA cancellation",
+    "tier": "T2_SECURITY_RISK",
+    "severity": "CRITICAL",
+    "status": "OPEN",
+    "description": "RPA cancellation requires login credentials. No design for encrypted storage, scoping, or boundary between Cloudflare worker and secret store.",
+    "impact": "High-value secret exposure, security breach risk, credential management nightmare",
+    "mitigation": "Design secure credential storage (Azure Key Vault), define Cloudflare worker boundary, implement encryption at rest/transit",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Secret store architecture designed (Azure Key Vault)",
+      "Cloudflare worker boundary defined",
+      "Encryption at rest and in transit",
+      "Credential scoping per service",
+      "Access control and audit logging",
+      "Secret rotation policy"
+    ]
+  },
+  "RISK-006": {
+    "id": "RISK-006",
+    "title": "Legal review of service ToS not completed",
+    "tier": "T2_SECURITY_RISK",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "description": "Rule is \"nothing public until proven legal\" but no per-service ToS classification, no virtual-card-decline backstop check against issuer terms.",
+    "impact": "Legal liability, account bans, payment processor issues, violates own rule",
+    "mitigation": "Classify per-service ToS (automated cancellation allowed?), check virtual card decline backstop, complete legal review before production",
+    "owner": "Human",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Per-service ToS classification completed",
+      "Automated cancellation legality documented",
+      "Virtual card decline backstop checked",
+      "Legal review completed and documented",
+      "Risk assessment per service",
+      "Production deployment blocked until legal sign-off"
+    ]
+  },
+  "RISK-007": {
+    "id": "RISK-007",
+    "title": "PII retention and deletion policy missing",
+    "tier": "T2_SECURITY_RISK",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "description": "Telemetry pseudonymized but no data-retention or deletion policy for stored trials, userIds, proofs - even for personal use.",
+    "impact": "Data compliance issues, privacy concerns, data accumulation over time",
+    "mitigation": "Define retention policy per data type, implement automatic deletion, add data export functionality",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Retention policy defined (trials, userIds, proofs)",
+      "Automatic deletion after retention period",
+      "Data export functionality for GDPR compliance",
+      "Pseudonymization strategy documented",
+      "Audit trail for data access and deletion"
+    ]
+  },
+  "RISK-008": {
+    "id": "RISK-008",
+    "title": "Idempotency of cancellation jobs",
+    "tier": "T3_RELIABILITY",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "description": "If sweep double-runs or job retries, can we double-submit cancellation? KV adapter has locks but trial→job dedup not proven.",
+    "impact": "Double cancellation attempts, API rate limits, confusing status, potential account lockouts",
+    "mitigation": "Implement job deduplication at trial level, add job idempotency keys, test double-run scenarios",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Job deduplication at trial level",
+      "Idempotency keys for each cancellation attempt",
+      "Double-run scenario testing",
+      "Retry logic with idempotency",
+      "Job status tracking prevents double-submission"
+    ]
+  },
+  "RISK-009": {
+    "id": "RISK-009",
+    "title": "Quarantine review workflow not defined",
+    "tier": "T3_RELIABILITY",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "description": "QuarantineEvent exists in schema but no defined human review path for quarantined flows.",
+    "impact": "Quarantined trials stuck in limbo, no way to recover valid trials, manual intervention required",
+    "mitigation": "Define quarantine review workflow, create review queue, implement approval/rejection mechanism",
+    "owner": "Human",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Quarantine review workflow documented",
+      "Review queue interface created",
+      "Approval/rejection mechanism implemented",
+      "Automatic cleanup of resolved quarantines",
+      "Human notification for quarantine review"
+    ]
+  },
+  "RISK-010": {
+    "id": "RISK-010",
+    "title": "\"Keep this one\" workflow missing",
+    "tier": "T3_RELIABILITY",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "description": "Sometimes you want to convert a trial. No clean way to mark \"keep, don't cancel\" - everything trends toward auto-cancel.",
+    "impact": "Forced cancellation of desired trials, manual intervention required, poor user experience",
+    "mitigation": "Add \"keep\" status flag, exclude from auto-cancel, implement conversion workflow",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Add \"keep\" status to trial schema",
+      "Exclude \"keep\" trials from auto-cancel",
+      "Conversion workflow from trial to paid",
+      "Manual override for auto-cancel",
+      "User interface for \"keep\" selection"
+    ]
+  },
+  "RISK-011": {
+    "id": "RISK-011",
+    "title": "KV ↔ Notion sync not implemented",
+    "tier": "T4_CONNECTIVE_TISSUE",
+    "severity": "HIGH",
+    "status": "IN_PROGRESS",
+    "description": "Trials DB is empty mirror until sync exists. KV is source of truth, Notion is human mirror, but no sync mechanism.",
+    "impact": "Human oversight impossible, data inconsistency, no visibility into trial status",
+    "mitigation": "Implement bidirectional KV ↔ Notion sync, define conflict resolution, add sync monitoring",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Bidirectional sync implemented",
+      "Conflict resolution strategy defined",
+      "Sync monitoring and alerts",
+      "Human mirror updated in real-time",
+      "Sync failure handling and recovery"
+    ]
+  },
+  "RISK-012": {
+    "id": "RISK-012",
+    "title": "Discovery review queue not built",
+    "tier": "T4_CONNECTIVE_TISSUE",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "description": "Designed in Devin brief but not built. No human approval path for discovered trials before signup.",
+    "impact": "Automated signup violates safety rails, no human oversight of trial selection",
+    "mitigation": "Build discovery review queue, implement approval workflow, add trial signup gating",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Discovery review queue interface",
+      "Human approval workflow",
+      "Trial signup gating",
+      "Review history and audit trail",
+      "Bulk approval/rejection functionality"
+    ]
+  },
+  "RISK-013": {
+    "id": "RISK-013",
+    "title": "Canary testing on live KV not performed",
+    "tier": "T4_CONNECTIVE_TISSUE",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "description": "3 canary checks skipped, no end-to-end test against real sandbox service, no chaos/timeout testing of MYBROWSER contract.",
+    "impact": "Production bugs discovered too late, MYBROWSER contract reliability unknown, no chaos testing",
+    "mitigation": "Perform canary checks on live KV, implement end-to-end sandbox testing, add chaos/timeout testing",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Canary checks completed on live KV",
+      "End-to-end sandbox service testing",
+      "MYBROWSER contract chaos testing",
+      "Timeout and failure scenario testing",
+      "Performance baseline established"
+    ]
+  },
+  "RISK-014": {
+    "id": "RISK-014",
+    "title": "Alert receiver not wired",
+    "tier": "T4_CONNECTIVE_TISSUE",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "description": "AlertRules schema exists but points at nothing. No alert delivery mechanism configured.",
+    "impact": "Alerts generated but not delivered, no operational visibility, silent failures",
+    "mitigation": "Wire alert receiver (email/Slack/Notion), configure alert routing, test alert delivery",
+    "owner": "Devin",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Alert receiver configured",
+      "Alert routing rules defined",
+      "Alert delivery tested",
+      "Alert severity levels working",
+      "Alert aggregation and deduplication"
+    ]
+  },
+  "RISK-015": {
+    "id": "RISK-015",
+    "title": "Two-stack drift between Cloudflare and Azure",
+    "tier": "T4_CONNECTIVE_TISSUE",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "description": "Cloudflare (orchestrator) + Azure (Runbook Operator) need clear owner-of-record and schema-version alignment or they'll diverge.",
+    "impact": "Schema drift, inconsistent behavior, integration breakage, maintenance nightmare",
+    "mitigation": "Define owner-of-record per stack, implement schema version alignment, add cross-stack integration tests",
+    "owner": "Human",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "Owner-of-record defined per stack",
+      "Schema version alignment strategy",
+      "Cross-stack integration tests",
+      "Schema change notification process",
+      "Documentation of stack boundaries"
+    ]
+  }
+}
