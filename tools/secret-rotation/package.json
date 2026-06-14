@@ -1,0 +1,21 @@
+{
+  "name": "secret-rotation",
+  "version": "1.0.0",
+  "description": "Automated secret rotation for Aether services",
+  "main": "secret-rotation.js",
+  "scripts": {
+    "list-cloudflare": "node secret-rotation.js list-cloudflare",
+    "rotate-cloudflare": "node secret-rotation.js rotate-cloudflare",
+    "report": "node secret-rotation.js report",
+    "log": "node secret-rotation.js log",
+    "check": "node scheduler.js check",
+    "rotate-due": "node scheduler.js rotate-due",
+    "summary": "node scheduler.js summary",
+    "schedule": "node scheduler.js schedule",
+    "force": "node scheduler.js force"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {}
+}

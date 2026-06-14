@@ -1,0 +1,13 @@
+[
+  {
+    "service": "cloudflare",
+    "target": "CLOUDFLARE_ACCOUNT_ID",
+    "success": true,
+    "timestamp": "2026-06-14T03:47:11.528Z",
+    "result": {
+      "success": true,
+      "secretName": "CLOUDFLARE_ACCOUNT_ID",
+      "timestamp": "2026-06-14T03:47:11.527Z"
+    }
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "name": "anomaly-detection",
+  "version": "1.0.0",
+  "description": "AI-powered anomaly detection for system metrics",
+  "main": "anomaly-detection.js",
+  "scripts": {
+    "record": "node anomaly-detection.js record",
+    "simulate": "node anomaly-detection.js simulate",
+    "anomalies": "node anomaly-detection.js anomalies",
+    "summary": "node anomaly-detection.js summary",
+    "clear": "node anomaly-detection.js clear"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

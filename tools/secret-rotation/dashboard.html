@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Rotation Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #1a1a2e;
+      padding: 1.5rem;
+      border-radius: 8px;
+    }
+
+    .card h3 {
+      color: #667eea;
+      margin-bottom: 1rem;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #764ba2;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .secrets-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1a1a2e;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .secrets-table th,
+    .secrets-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #2a2a4e;
+    }
+
+    .secrets-table th {
+      background: #2a2a4e;
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .priority-high {
+      color: #ef4444;
+    }
+
+    .priority-medium {
+      color: #f59e0b;
+    }
+
+    .priority-low {
+      color: #10b981;
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .status-ok {
+      background: #10b981;
+    }
+
+    .status-warning {
+      background: #f59e0b;
+    }
+
+    .status-danger {
+      background: #ef4444;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      background: #667eea;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+
+    .btn:hover {
+      background: #764ba2;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .logs {
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+
+    .log-entry {
+      padding: 0.5rem;
+      border-bottom: 1px solid #2a2a4e;
+    }
+
+    .log-entry.success {
+      color: #10b981;
+    }
+
+    .log-entry.error {
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔐 Secret Rotation Dashboard</h1>
+      <p>Automated secret rotation for Aether services</p>
+    </header>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <h3>Total Secrets</h3>
+        <div class="stat-value" id="total-secrets">0</div>
+        <div class="stat-label">Monitored secrets</div>
+      </div>
+
+      <div class="card">
+        <h3>Due for Rotation</h3>
+        <div class="stat-value" id="due-rotation">0</div>
+        <div class="stat-label">Secrets needing rotation</div>
+      </div>
+
+      <div class="card">
+        <h3>Overdue</h3>
+        <div class="stat-value" id="overdue">0</div>
+        <div class="stat-label">Secrets past due date</div>
+      </div>
+
+      <div class="card">
+        <h3>Actions</h3>
+        <button class="btn" onclick="refreshDashboard()">Refresh</button>
+        <button class="btn btn-danger" onclick="rotateDueSecrets()">Rotate Due</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Secrets Schedule</h3>
+      <table class="secrets-table">
+        <thead>
+          <tr>
+            <th>Secret Name</th>
+            <th>Priority</th>
+            <th>Next Rotation</th>
+            <th>Days Until</th>
+th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="secrets-table-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Rotation Log</h3>
+      <div id="rotation-logs" class="logs">
+        <div class="log-entry">No rotation logs yet</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load real data from rotation schedule
+    async function loadRotationSchedule() {
+      try {
+        const response = await fetch('rotation-schedule.json');
+        const schedule = await response.json();
+        return schedule;
+      } catch (error) {
+        console.error('Failed to load rotation schedule:', error);
+        return {};
+      }
+    }
+
+    async function refreshDashboard() {
+      const schedule = await loadRotationSchedule();
+      updateStats(schedule);
+      renderSecretsTable(schedule);
+      renderLogs();
+    }
+
+    function updateStats(schedule) {
+      const now = new Date();
+      let due = 0;
+      let overdue = 0;
+
+      for (const [name, config] of Object.entries(schedule)) {
+        const nextRotation = new Date(config.nextRotation);
+        if (nextRotation <= now) {
+          overdue++;
+        } else if (nextRotation <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+          due++;
+        }
+      }
+
+      document.getElementById('total-secrets').textContent = Object.keys(schedule).length;
+      document.getElementById('due-rotation').textContent = due;
+      document.getElementById('overdue').textContent = overdue;
+    }
+
+    function renderSecretsTable(schedule) {
+      const tbody = document.getElementById('secrets-table-body');
+      tbody.innerHTML = '';
+
+      for (const [name, config] of Object.entries(schedule)) {
+        const nextRotation = new Date(config.nextRotation);
+        const now = new Date();
+        const daysUntil = Math.floor((nextRotation - now) / (1000 * 60 * 60 * 24));
+        
+        let status = 'ok';
+        let statusText = 'OK';
+        if (nextRotation <= now) {
+          status = 'danger';
+          statusText = 'OVERDUE';
+        } else if (daysUntil <= 7) {
+          status = 'warning';
+          statusText = 'DUE SOON';
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${name}</td>
+          <td class="priority-${config.priority}">${config.priority.toUpperCase()}</td>
+          <td>${nextRotation.toLocaleDateString()}</td>
+          <td>${daysUntil}</td>
+          <td><span class="status-badge status-${status}">${statusText}</span></td>
+          <td>
+            <button class="btn" onclick="forceRotation('${name}')">Force</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    function renderLogs() {
+      const logsDiv = document.getElementById('rotation-logs');
+      
+      if (rotationLogs.length === 0) {
+        logsDiv.innerHTML = '<div class="log-entry">No rotation logs yet</div>';
+        return;
+      }
+
+      logsDiv.innerHTML = rotationLogs.map(log => `
+        <div class="log-entry ${log.success ? 'success' : 'error'}">
+          [${log.timestamp}] ${log.secretName}: ${log.success ? '✅' : '❌'} ${log.message}
+        </div>
+      `).join('');
+    }
+
+    function rotateDueSecrets() {
+      // This would call the scheduler API in production
+      alert('Rotation requires running the scheduler CLI: npm run rotate-due');
+    }
+
+    function forceRotation(secretName) {
+      if (confirm(`Force rotation of ${secretName}? This requires running the scheduler CLI.`)) {
+        alert(`Run: node scheduler.js force ${secretName}`);
+      }
+    }
+
+    // Initialize dashboard
+    refreshDashboard();
+  </script>
+</body>
+</html>

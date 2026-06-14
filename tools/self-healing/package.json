@@ -1,0 +1,14 @@
+{
+  "name": "self-healing",
+  "version": "1.0.0",
+  "description": "Self-healing infrastructure monitor for Aether services",
+  "main": "self-healing.js",
+  "scripts": {
+    "check": "node self-healing.js check",
+    "heal": "node self-healing.js heal",
+    "log": "node self-healing.js log",
+    "summary": "node self-healing.js summary"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
