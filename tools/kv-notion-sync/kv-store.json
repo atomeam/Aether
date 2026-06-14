@@ -1,0 +1,86 @@
+{
+  "trial_1781430714423": {
+    "id": "trial_1781430714423",
+    "service": "Datadog",
+    "status": "active",
+    "startDate": "2026-06-14T09:51:54.411Z",
+    "dangerDate": "2026-06-28T09:51:54.000Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "failed",
+    "verificationAttempts": 1,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [
+        "unlimited minutes",
+        "parallel jobs"
+      ],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T09:52:35.332Z",
+      "syncSource": "put"
+    },
+    "lastVerification": "2026-06-14T09:52:35.331Z"
+  },
+  "trial_1781430717364": {
+    "id": "trial_1781430717364",
+    "service": "MongoDB Atlas",
+    "status": "active",
+    "startDate": "2026-06-14T09:51:57.351Z",
+    "dangerDate": "2026-06-28T13:51:57.000Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "UTC",
+    "billingTime": "00:00",
+    "billingTimezone": "UTC",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [
+        "unlimited minutes",
+        "parallel jobs"
+      ],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T09:51:57.365Z",
+      "syncSource": "put"
+    }
+  },
+  "trial_1781430759724": {
+    "id": "trial_1781430759724",
+    "service": "CircleCI",
+    "status": "active",
+    "startDate": "2026-06-14T09:52:39.712Z",
+    "dangerDate": "2026-06-28T06:52:39.000Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "verified",
+    "verificationAttempts": 1,
+    "cancellationMethod": "api",
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [
+        "unlimited minutes",
+        "parallel jobs"
+      ],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T09:52:52.886Z",
+      "syncSource": "put"
+    },
+    "lastVerification": "2026-06-14T09:52:52.885Z"
+  }
+}
