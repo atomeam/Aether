@@ -1,0 +1,25 @@
+{
+  "name": "chess-substrate",
+  "version": "1.0.0",
+  "description": "Game Matrix Substrate - Chess Reference Implementation",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "demo": "node --loader ts-node/esm src/demo/simple-demo.ts"
+  },
+  "keywords": [
+    "chess",
+    "game",
+    "substrate",
+    "agent",
+    "council"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
