@@ -1,0 +1,653 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Aether Bridge - a-to-mind API",
+    "version": "1.0.0",
+    "description": "Comprehensive automation and productivity API for a-to-mind.com edge worker"
+  },
+  "servers": [
+    {
+      "url": "https://aether-bridge.atomeam.workers.dev",
+      "description": "Production Cloudflare Worker"
+    },
+    {
+      "url": "http://localhost:8787",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/api/a-to-mind/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "description": "Returns the health status of the a-to-mind API",
+        "operationId": "getHealth",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/analyze": {
+      "post": {
+        "summary": "Analyze text/data",
+        "description": "Analyzes text with various analysis types (general, sentiment, keywords)",
+        "operationId": "analyzeText",
+        "tags": ["Analysis"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/generate": {
+      "post": {
+        "summary": "Generate content",
+        "description": "Generates content based on prompt and type (summary, title, hashtags)",
+        "operationId": "generateContent",
+        "tags": ["Generation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/transform": {
+      "post": {
+        "summary": "Transform data",
+        "description": "Transforms data using various operations (uppercase, lowercase, reverse, base64, json)",
+        "operationId": "transformData",
+        "tags": ["Transformation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransformRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transformed data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransformResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/validate": {
+      "post": {
+        "summary": "Validate data",
+        "description": "Validates data against various types (email, url, phone, json)",
+        "operationId": "validateData",
+        "tags": ["Validation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/extract": {
+      "post": {
+        "summary": "Extract data",
+        "description": "Extracts specific data types from text (emails, urls, phone numbers, hashtags, mentions)",
+        "operationId": "extractData",
+        "tags": ["Extraction"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/compare": {
+      "post": {
+        "summary": "Compare data",
+        "description": "Compares two data sets (text similarity, json comparison)",
+        "operationId": "compareData",
+        "tags": ["Comparison"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comparison result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "healthy"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "uptime": {
+            "type": "number",
+            "example": 12345
+          }
+        }
+      },
+      "AnalyzeRequest": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to analyze"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["general", "sentiment", "keywords"],
+            "default": "general",
+            "description": "Type of analysis to perform"
+          }
+        }
+      },
+      "AnalyzeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "analysis": {
+            "type": "object",
+            "properties": {
+              "wordCount": {
+                "type": "integer"
+              },
+              "characterCount": {
+                "type": "integer"
+              },
+              "characterCountNoSpaces": {
+                "type": "integer"
+              },
+              "sentenceCount": {
+                "type": "integer"
+              },
+              "paragraphCount": {
+                "type": "integer"
+              },
+              "averageWordLength": {
+                "type": "number"
+              },
+              "readingTime": {
+                "type": "integer"
+              },
+              "sentiment": {
+                "type": "string",
+                "enum": ["positive", "negative", "neutral"]
+              },
+              "positiveCount": {
+                "type": "integer"
+              },
+              "negativeCount": {
+                "type": "integer"
+              },
+              "confidence": {
+                "type": "number"
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "word": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "GenerateRequest": {
+        "type": "object",
+        "required": ["prompt"],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Prompt for generation"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["summary", "title", "hashtags"],
+            "default": "summary",
+            "description": "Type of content to generate"
+          },
+          "length": {
+            "type": "string",
+            "enum": ["short", "medium"],
+            "default": "medium",
+            "description": "Length of generated content"
+          }
+        }
+      },
+      "GenerateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "TransformRequest": {
+        "type": "object",
+        "required": ["data", "operation"],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Data to transform"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["uppercase", "lowercase", "reverse", "base64_encode", "base64_decode", "json_prettify", "json_minify"],
+            "description": "Operation to perform"
+          }
+        }
+      },
+      "TransformResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidateRequest": {
+        "type": "object",
+        "required": ["data", "type"],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Data to validate"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["email", "url", "phone", "json"],
+            "description": "Type of validation to perform"
+          }
+        }
+      },
+      "ValidateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "type": "boolean"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ExtractRequest": {
+        "type": "object",
+        "required": ["text", "type"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to extract from"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["emails", "urls", "phone_numbers", "hashtags", "mentions"],
+            "description": "Type of data to extract"
+          }
+        }
+      },
+      "ExtractResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "extracted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "CompareRequest": {
+        "type": "object",
+        "required": ["data1", "data2"],
+        "properties": {
+          "data1": {
+            "type": "string",
+            "description": "First data set"
+          },
+          "data2": {
+            "type": "string",
+            "description": "Second data set"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["text", "json"],
+            "default": "text",
+            "description": "Type of comparison"
+          }
+        }
+      },
+      "CompareResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "comparison": {
+            "type": "object",
+            "properties": {
+              "similarity": {
+                "type": "number"
+              },
+              "commonWords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "difference": {
+                "type": "object",
+                "properties": {
+                  "inText1": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "inText2": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "equal": {
+                "type": "boolean"
+              },
+              "keys1": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "keys2": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "addedKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "removedKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tags": [
+      {
+        "name": "Health",
+        "description": "Health check endpoints"
+      },
+      {
+        "name": "Analysis",
+        "description": "Text and data analysis endpoints"
+      },
+      {
+        "name": "Generation",
+        "description": "Content generation endpoints"
+      },
+      {
+        "name": "Transformation",
+        "description": "Data transformation endpoints"
+      },
+      {
+        "name": "Validation",
+        "description": "Data validation endpoints"
+      },
+      {
+        "name": "Extraction",
+        "description": "Data extraction endpoints"
+      },
+      {
+        "name": "Comparison",
+        "description": "Data comparison endpoints"
+      }
+    ]
+  }
+}
