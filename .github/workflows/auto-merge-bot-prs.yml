@@ -10,7 +10,7 @@ jobs:
     if: github.actor == 'devin-ai-integration[bot]'
     steps:
       - name: Wait for checks
-        uses: lewagon/wait-on-check-action@6f274b3b65b5e9e6743347f0e8fbd3226163e9d1
+        uses: lewagon/wait-on-check-action@v1.3.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -18,7 +18,7 @@ jobs:
           wait-interval: 10
       
       - name: Auto-merge PR
-        uses: actions/github-script@60a0d8d3930b4d6f81725959077b0e7ed797c71c
+        uses: actions/github-script@v7.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

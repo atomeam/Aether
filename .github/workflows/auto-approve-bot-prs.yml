@@ -10,7 +10,7 @@ jobs:
     if: github.actor == 'devin-ai-integration[bot]'
     steps:
       - name: Auto-approve PR
-        uses: actions/github-script@60a0d8d3930b4d6f81725959077b0e7ed797c71c
+        uses: actions/github-script@v7.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
