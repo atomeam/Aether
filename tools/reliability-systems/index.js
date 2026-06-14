@@ -11,8 +11,14 @@ const { MetricsCollector, MetricsRegistry } = require('./metrics-dashboard');
 const { IdempotencyKeys, IdempotencyKeysRegistry } = require('./idempotency-keys');
 const { ReliabilitySystemTester } = require('./test-all-systems');
 
+// Cloudflare-native systems (for production serverless deployment)
+const { CloudflareDeadLetterQueue } = require('./cloudflare-dead-letter-queue');
+const { CloudflareMetricsCollector } = require('./cloudflare-metrics-dashboard');
+const { CloudflareDistributedTracing } = require('./cloudflare-distributed-tracing');
+const { persistence } = require('./cloudflare-persistence');
+
 module.exports = {
-  // Individual systems
+  // JSON-based systems (for local development)
   DeadLetterQueue,
   RetryBackoffHandler,
   CircuitBreaker,
@@ -23,10 +29,16 @@ module.exports = {
   IdempotencyKeys,
   IdempotencyKeysRegistry,
   
+  // Cloudflare-native systems (for production serverless deployment)
+  CloudflareDeadLetterQueue,
+  CloudflareMetricsCollector,
+  CloudflareDistributedTracing,
+  persistence,
+  
   // Testing
   ReliabilitySystemTester,
   
-  // Convenience factory for creating all systems
+  // Convenience factory for creating all systems (JSON-based)
   createReliabilityStack: (serviceName = 'default') => {
     return {
       deadLetterQueue: new DeadLetterQueue(),
@@ -36,6 +48,20 @@ module.exports = {
       metricsRegistry: new MetricsRegistry(),
       metricsCollector: new MetricsRegistry().getMetricsCollector(serviceName),
       idempotencyRegistry: new IdempotencyKeysRegistry()
+    };
+  },
+  
+  // Convenience factory for creating Cloudflare-native systems
+  createCloudflareReliabilityStack: (serviceName = 'default') => {
+    return {
+      deadLetterQueue: new CloudflareDeadLetterQueue(),
+      retryHandler: new RetryBackoffHandler(),
+      circuitRegistry: new CircuitBreakerRegistry(),
+      tracing: new CloudflareDistributedTracing(),
+      metricsRegistry: new MetricsRegistry(),
+      metricsCollector: new CloudflareMetricsCollector(serviceName),
+      idempotencyRegistry: new IdempotencyKeysRegistry(),
+      persistence
     };
   }
 };
