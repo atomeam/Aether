@@ -1,6 +1,6 @@
 /**
- * Fullscreen Image Viewer - Improved Mode
- * Uses learned data for optimal performance
+ * Fullscreen Image Viewer - Improved with Visibility Check
+ * Only clicks visible images
  */
 
 const { chromium } = require('playwright');
@@ -18,40 +18,6 @@ async function viewFullscreenImagesImproved(galleryUrl) {
     }
   }
   
-  // Load learning data
-  const learningFile = 'fullscreen-learning-data.json';
-  let learnedData = {
-    selector: 'a img',
-    scrollMethod: 'scrollBy 500',
-    navMethod: 'ArrowRight'
-  };
-  
-  if (fs.existsSync(learningFile)) {
-    const allData = JSON.parse(fs.readFileSync(learningFile, 'utf-8'));
-    const latestData = allData[allData.length - 1];
-    
-    if (latestData.successfulMethods.includes('scrollBy 500')) {
-      learnedData.scrollMethod = 'scrollBy 500';
-    }
-    
-    // Find working selector
-    for (const [selector, data] of Object.entries(latestData.selectors)) {
-      if (data.works && data.found > 0) {
-        learnedData.selector = selector;
-        break;
-      }
-    }
-    
-    if (latestData.successfulMethods.includes('nav-ArrowRight')) {
-      learnedData.navMethod = 'ArrowRight';
-    }
-    
-    console.log('📚 Using learned data:');
-    console.log('   Selector: ' + learnedData.selector);
-    console.log('   Scroll: ' + learnedData.scrollMethod);
-    console.log('   Navigation: ' + learnedData.navMethod);
-  }
-  
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({
     viewport: { width: 1280, height: 720 },
@@ -65,26 +31,39 @@ async function viewFullscreenImagesImproved(galleryUrl) {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
     
-    // Use learned scroll method
-    console.log('Scrolling (learned method)...');
-    await page.evaluate(() => window.scrollBy(0, 500));
-    await page.waitForTimeout(2000);
+    // Scroll more to load all images
+    console.log('Scrolling to load all images...');
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(() => window.scrollBy(0, 500));
+      await page.waitForTimeout(500);
+    }
     
-    // Use learned selector
-    console.log('Finding images (learned selector)...');
-    const imageElements = await page.$$(learnedData.selector);
-    console.log('Found ' + imageElements.length + ' images');
+    // Find only visible images
+    console.log('Finding visible images...');
+    const visibleImages = await page.$$eval('a img', imgs => 
+      imgs
+        .filter(img => {
+          const rect = img.getBoundingClientRect();
+          return rect.top > 0 && rect.top < window.innerHeight;
+        })
+        .map(img => img.src)
+    );
+    
+    console.log('Found ' + visibleImages.length + ' visible images');
+    
+    if (visibleImages.length === 0) {
+      console.log('No visible images found, trying all images...');
+      const allImages = await page.$$eval('a img', imgs => imgs.map(img => img.src));
+      visibleImages.push(...allImages.slice(0, 10));
+    }
     
     // View each image
-    for (let i = 0; i < Math.min(imageElements.length, 15); i++) {
-      console.log('\n=== Image ' + (i + 1) + '/' + Math.min(imageElements.length, 15) + ' ===');
+    for (let i = 0; i < Math.min(visibleImages.length, 10); i++) {
+      console.log('\n=== Image ' + (i + 1) + '/' + Math.min(visibleImages.length, 10) + ' ===');
+      console.log('URL: ' + visibleImages[i]);
       
-      // Scroll to image
-      await imageElements[i].scrollIntoViewIfNeeded();
-      await page.waitForTimeout(500);
-      
-      // Click image
-      await imageElements[i].click();
+      // Navigate directly to image URL
+      await page.goto(visibleImages[i]);
       await page.waitForTimeout(3000);
       
       // Take screenshot
@@ -95,12 +74,9 @@ async function viewFullscreenImagesImproved(galleryUrl) {
       console.log('Viewing (15 seconds)...');
       await page.waitForTimeout(15000);
       
-      // Use learned navigation method
-      if (i < Math.min(imageElements.length, 15) - 1) {
-        console.log('Navigating to next image (learned method)...');
-        await page.keyboard.press('ArrowRight');
-        await page.waitForTimeout(3000);
-      }
+      // Go back to gallery
+      await page.goBack();
+      await page.waitForTimeout(2000);
     }
     
     console.log('\n✅ Completed viewing all images');

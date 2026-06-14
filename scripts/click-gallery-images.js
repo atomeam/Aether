@@ -30,20 +30,26 @@ async function clickGalleryImages() {
     await page.goto(galleryUrl);
     await page.waitForTimeout(3000);
     
-    // Find all image elements
-    console.log('Finding images...');
-    const images = await page.$$('a img');
-    console.log('Found ' + images.length + ' images');
+    // Find all link elements that contain images
+    console.log('Finding image links...');
+    const imageLinks = await page.$$('a');
+    console.log('Found ' + imageLinks.length + ' links');
     
-    // Click each image
-    for (let i = 0; i < Math.min(images.length, 20); i++) {
-      console.log('Clicking image ' + (i + 1) + '/' + Math.min(images.length, 20));
-      
-      await images[i].click();
-      await page.waitForTimeout(15000); // 15 seconds viewing
-      
-      await page.goBack();
-      await page.waitForTimeout(2000);
+    // Click each link that has an image
+    let clickedCount = 0;
+    for (let i = 0; i < imageLinks.length && clickedCount < 20; i++) {
+      const hasImage = await imageLinks[i].$('img');
+      if (hasImage) {
+        console.log('Clicking image link ' + (clickedCount + 1));
+        
+        await imageLinks[i].click();
+        await page.waitForTimeout(15000); // 15 seconds viewing
+        
+        await page.goBack();
+        await page.waitForTimeout(2000);
+        
+        clickedCount++;
+      }
     }
     
     console.log('Done');

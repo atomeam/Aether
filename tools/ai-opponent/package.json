@@ -8,7 +8,8 @@
     "difficulty": "node ai-opponent.js difficulty",
     "result": "node ai-opponent.js result",
     "performance": "node ai-opponent.js performance",
-    "reset": "node ai-opponent.js reset"
+    "reset": "node ai-opponent.js reset",
+    "unified": "node unified-ai-opponent.js"
   },
   "dependencies": {},
   "devDependencies": {}

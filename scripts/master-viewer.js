@@ -71,6 +71,10 @@ class MasterViewer {
       }
     });
     
+    // Current gallery analysis (for feedback)
+    this.currentImageScores = [];
+    this.currentImageUrls = [];
+    
     // Start keyboard input
     this.startKeyboardInput();
   }
@@ -106,8 +110,7 @@ class MasterViewer {
     console.log('   "T" - Increase contrast');
     console.log('   "→" - Next image (manual)');
     console.log('   "←" - Previous image (manual)');
-    console.log('   "y" - Tell me what you liked about this gallery');
-    console.log('   "n" - Tell me what you didn\'t like\n');
+    console.log('   Any text - Tell me what you thought (I\'m learning!)\n');
     
     rl.on('line', (input) => {
       const cmd = input.toLowerCase().trim();
@@ -194,18 +197,9 @@ class MasterViewer {
         console.log('➡️  Next image (manual)');
       } else if (input === '←') {
         console.log('⬅️  Previous image (manual)');
-      } else if (cmd === 'y') {
-        console.log('📝 What did you like about this gallery? (type your feedback)');
-        console.log('Examples: "her boobs", "the lighting", "her smile", "the outfit", "her body", "the pose"');
-        this.collectingFeedback = 'like';
-      } else if (cmd === 'n') {
-        console.log('📝 What didn\'t you like about this gallery? (type your feedback)');
-        console.log('Examples: "too much makeup", "bad lighting", "not my type", "boring pose", "fake boobs"');
-        this.collectingFeedback = 'dislike';
-      } else if (this.collectingFeedback) {
-        // Collect user feedback
-        this.recordFeedback(input, this.collectingFeedback);
-        this.collectingFeedback = null;
+      } else if (input.length > 0) {
+        // Natural language feedback - Masturbuddy learns from anything you type
+        this.processNaturalFeedback(input);
       }
     });
   }
@@ -300,19 +294,9 @@ class MasterViewer {
   }
   
   async getImageCount(page) {
-    await page.evaluate(() => window.scrollBy(0, 500));
-    await page.waitForTimeout(500);
-    
-    const imageUrls = new Set();
-    for (let i = 0; i < 10; i++) {
-      await page.evaluate(() => window.scrollBy(0, 500));
-      await page.waitForTimeout(500);
-      
-      const currentImages = await page.$$eval('img[src*="cdni"]', imgs => imgs.map(img => img.src));
-      currentImages.forEach(url => imageUrls.add(url));
-    }
-    
-    return imageUrls.size;
+    // Use the same logic as getAllImageUrls for consistency
+    const imageUrls = await this.getAllImageUrls(page);
+    return imageUrls.length;
   }
   
   async analyzeImageQuality(page, imageUrl) {
@@ -366,19 +350,22 @@ class MasterViewer {
   }
   
   async getAllImageUrls(page) {
-    await page.evaluate(() => window.scrollBy(0, 500));
-    await page.waitForTimeout(500);
+    // Get images from the current gallery page
+    // Scroll to load all images in the gallery
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(2000);
     
     const imageUrls = new Set();
-    for (let i = 0; i < 10; i++) {
-      await page.evaluate(() => window.scrollBy(0, 500));
-      await page.waitForTimeout(500);
-      
-      const currentImages = await page.$$eval('img[src*="cdni"]', imgs => imgs.map(img => img.src));
-      currentImages.forEach(url => imageUrls.add(url));
-    }
     
-    return Array.from(imageUrls);
+    // Get all cdni images (these are the actual gallery images)
+    const allImages = await page.$$eval('img[src*="cdni"]', imgs => imgs.map(img => img.src));
+    
+    // Filter to unique URLs
+    allImages.forEach(url => imageUrls.add(url));
+    
+    // Limit to reasonable gallery size (15-20 is typical)
+    const urls = Array.from(imageUrls);
+    return urls.slice(0, 20);
   }
   
   calculateTiming(qualityScore) {
@@ -494,56 +481,81 @@ class MasterViewer {
     this.saveJson(this.preferencesFile, this.preferences);
   }
   
-  recordFeedback(feedback, type) {
+
+  
+  processNaturalFeedback(input) {
     if (!this.currentGallery) return;
     
-    const words = feedback.toLowerCase().split(/\s+/);
+    const feedback = input.toLowerCase();
     const galleryTitle = this.currentGallery.text.toLowerCase();
     const category = this.currentGallery.category;
     
-    if (type === 'like') {
+    // Detect sentiment (simple keyword-based)
+    const positiveWords = ['liked', 'loved', 'hot', 'good', 'great', 'amazing', 'beautiful', 'sexy', 'nice', 'perfect', 'love', 'like', 'enjoyed', 'awesome'];
+    const negativeWords = ['disliked', 'hated', 'bad', 'ugly', 'boring', 'not', 'didn\'t', 'hate', 'dislike', 'awful', 'terrible', 'worst'];
+    
+    let isPositive = false;
+    let isNegative = false;
+    
+    positiveWords.forEach(word => {
+      if (feedback.includes(word)) isPositive = true;
+    });
+    
+    negativeWords.forEach(word => {
+      if (feedback.includes(word)) isNegative = true;
+    });
+    
+    // If no clear sentiment, assume positive (user is sharing what they liked)
+    if (!isPositive && !isNegative) {
+      isPositive = true;
+    }
+    
+    // Extract keywords from feedback
+    const words = feedback.split(/\s+/).filter(w => w.length > 2);
+    
+    if (isPositive) {
       // Track liked keywords
       words.forEach(word => {
-        if (word.length > 2) {
-          this.userPreferences.likedKeywords[word] = (this.userPreferences.likedKeywords[word] || 0) + 1;
-        }
+        this.userPreferences.likedKeywords[word] = (this.userPreferences.likedKeywords[word] || 0) + 1;
       });
       
       // Track liked category
       this.userPreferences.likedCategories[category] = (this.userPreferences.likedCategories[category] || 0) + 1;
       
       // Extract keywords from gallery title and boost them
-      const titleWords = galleryTitle.split(/\s+/);
-      titleWords.forEach(word => {
+      const processTitleWords = galleryTitle.split(/\s+/);
+      processTitleWords.forEach(word => {
         if (word.length > 2) {
           this.userPreferences.likedKeywords[word] = (this.userPreferences.likedKeywords[word] || 0) + 0.5;
         }
       });
       
-      console.log('✅ Feedback recorded: ' + feedback);
-      console.log('Updated preferences for: ' + words.join(', '));
+      console.log('💕 I learned: ' + input);
+      console.log('   I\'ll look for more like this!');
       
-    } else if (type === 'dislike') {
+    } else if (isNegative) {
       // Track disliked keywords
       words.forEach(word => {
-        if (word.length > 2) {
-          this.userPreferences.dislikedKeywords[word] = (this.userPreferences.dislikedKeywords[word] || 0) + 1;
-        }
+        this.userPreferences.dislikedKeywords[word] = (this.userPreferences.dislikedKeywords[word] || 0) + 1;
       });
       
       // Extract keywords from gallery title and penalize them
-      const titleWords = galleryTitle.split(/\s+/);
-      titleWords.forEach(word => {
+      const processTitleWordsNegative = galleryTitle.split(/\s+/);
+      processTitleWordsNegative.forEach(word => {
         if (word.length > 2) {
           this.userPreferences.dislikedKeywords[word] = (this.userPreferences.dislikedKeywords[word] || 0) + 0.5;
         }
       });
       
-      console.log('✅ Feedback recorded: ' + feedback);
-      console.log('Will avoid: ' + words.join(', '));
+      console.log('💔 I learned: ' + input);
+      console.log('   I\'ll avoid this in the future!');
     }
     
     this.saveJson('user-preferences.json', this.userPreferences);
+    
+    // Move to next gallery
+    this.shouldSkip = true;
+    console.log('👉 Moving to next gallery...\n');
   }
   
   async exploreCategory(page, category) {
@@ -635,6 +647,9 @@ class MasterViewer {
     const imageUrls = await this.getAllImageUrls(page);
     console.log('Found ' + imageUrls.length + ' images');
     
+    // Store for feedback
+    this.currentImageUrls = imageUrls;
+    
     // Analyze quality for each image
     const imageScores = [];
     for (let i = 0; i < imageUrls.length; i++) {
@@ -643,6 +658,9 @@ class MasterViewer {
       const quality = await this.analyzeImageQuality(page, url);
       imageScores.push({ url, score: quality.score, metrics: quality.metrics });
     }
+    
+    // Store for feedback
+    this.currentImageScores = imageScores;
     
     // Sort by quality score (highest first)
     imageScores.sort((a, b) => b.score - a.score);
@@ -659,15 +677,15 @@ class MasterViewer {
     console.log('   Quality: ' + imageScores[0].score.toFixed(1) + '/100 (best image)');
     
     // Extract keywords from title
-    const titleKeywords = gallery.text.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    const likedKeywords = titleKeywords.filter(k => this.userPreferences.likedKeywords[k]);
-    if (likedKeywords.length > 0) {
-      console.log('   Matches your likes: ' + likedKeywords.join(', '));
+    const galleryKeywords = gallery.text.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const likedMatches = galleryKeywords.filter(k => this.userPreferences.likedKeywords[k]);
+    if (likedMatches.length > 0) {
+      console.log('   Matches your likes: ' + likedMatches.join(', '));
     }
     
-    const dislikedKeywords = titleKeywords.filter(k => this.userPreferences.dislikedKeywords[k]);
-    if (dislikedKeywords.length > 0) {
-      console.log('   ⚠️  Contains your dislikes: ' + dislikedKeywords.join(', '));
+    const dislikedMatches = galleryKeywords.filter(k => this.userPreferences.dislikedKeywords[k]);
+    if (dislikedMatches.length > 0) {
+      console.log('   ⚠️  Contains your dislikes: ' + dislikedMatches.join(', '));
     }
     
     // Filter out low-quality images (score < 30)
@@ -787,12 +805,21 @@ class MasterViewer {
     
     console.log('✅ Gallery complete');
     
-    // Ask for feedback
-    console.log('\n🤔 What did you think of this gallery?');
-    console.log('Gallery: ' + gallery.text);
-    console.log('Press "y" to tell me what you liked');
-    console.log('Press "n" to tell me what you didn\'t like');
-    console.log('Or press "s" to skip to next gallery');
+    // Masturbuddy shares what it thought
+    console.log('\n💭 Masturbuddy\'s thoughts:');
+    console.log('   I liked: ' + gallery.text);
+    console.log('   The quality was good (' + this.currentImageScores[0].score.toFixed(1) + '/100)');
+    console.log('   ' + this.currentImageUrls.length + ' images in this gallery');
+    
+    // Check for user preferences
+    const galleryTitleKeywords = gallery.text.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const likedMatchesThoughts = galleryTitleKeywords.filter(k => this.userPreferences.likedKeywords[k]);
+    if (likedMatchesThoughts.length > 0) {
+      console.log('   This matches what you like: ' + likedMatchesThoughts.join(', '));
+    }
+    
+    console.log('\n💬 Tell me what you thought (or press "s" to skip):');
+    console.log('   Type anything - I\'m learning from you!');
     
     return true;
   }

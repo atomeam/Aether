@@ -158,6 +158,17 @@ export default {
           bindings: getBindings(env),
         });
       }
+
+      // GET /api/health - API health endpoint (PR #142)
+      if (path === '/api/health') {
+        return json({
+          ok: true,
+          worker: SERVICE,
+          version: VERSION,
+          ts: new Date().toISOString(),
+          bindings: getBindings(env),
+        });
+      }
       
       // GET /pay - quick payment redirect (workaround for Vercel routing)
       if (path === '/pay' && method === 'GET') {
@@ -880,8 +891,8 @@ export default {
         return handleAToMindRequest(request, path);
       }
 
-      // GET /a-to-mind - a-to-mind landing page
-      if (path === '/a-to-mind') {
+      // GET / - a-to-mind.com landing page
+      if (path === '/' && url.hostname === 'a-to-mind.com') {
         const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
