@@ -8,6 +8,7 @@ const { RetryBackoffHandler } = require('./retry-backoff');
 const { CircuitBreaker, CircuitBreakerRegistry } = require('./circuit-breaker');
 const { DistributedTracing } = require('./distributed-tracing');
 const { MetricsCollector, MetricsRegistry } = require('./metrics-dashboard');
+const { IdempotencyKeys, IdempotencyKeysRegistry } = require('./idempotency-keys');
 const { ReliabilitySystemTester } = require('./test-all-systems');
 
 module.exports = {
@@ -19,6 +20,8 @@ module.exports = {
   DistributedTracing,
   MetricsCollector,
   MetricsRegistry,
+  IdempotencyKeys,
+  IdempotencyKeysRegistry,
   
   // Testing
   ReliabilitySystemTester,
@@ -31,7 +34,8 @@ module.exports = {
       circuitRegistry: new CircuitBreakerRegistry(),
       tracing: new DistributedTracing(),
       metricsRegistry: new MetricsRegistry(),
-      metricsCollector: new MetricsRegistry().getMetricsCollector(serviceName)
+      metricsCollector: new MetricsRegistry().getMetricsCollector(serviceName),
+      idempotencyRegistry: new IdempotencyKeysRegistry()
     };
   }
 };
