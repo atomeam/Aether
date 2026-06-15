@@ -3316,6 +3316,47 @@ interface XPTPPaymentResponse {
         }
       }
 
+      // POST /api/ci-medic/test - Test CI-Medic telemetry
+      if (path === '/api/ci-medic/test' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { workflowId = 'test-123', repository = 'test/repo', workflowName = 'test-workflow' } = body;
+
+          // Simulate CI-Medic telemetry
+          if (env.STATE_BROADCASTER) {
+            const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+            const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+            
+            const telemetry: CrewTelemetry = {
+              agentId: 'ci-medic-001',
+              crew: 'infrastructure',
+              timestamp: new Date().toISOString(),
+              level: 'info',
+              action: 'detect',
+              payload: {
+                message: `CI-Medic test telemetry for workflow ${workflowId}`,
+                repository,
+                workflowId,
+                workflowName
+              }
+            };
+            
+            await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+          }
+
+          return json({
+            ok: true,
+            message: 'CI-Medic test telemetry sent',
+            workflowId,
+            repository,
+            workflowName
+          });
+        } catch (error) {
+          console.error('[CI-Medic Test] Error:', error);
+          return json({ error: 'Test failed' }, 500);
+        }
+      }
+
       // GET /ws/connect - WebSocket connection endpoint for Multi-Crew Controller
       if (path === '/ws/connect' && method === 'GET') {
         const roomId = url.searchParams.get('room') || 'default-room';
