@@ -1683,6 +1683,16 @@ export default {
 
       // POST /api/ai/heartbeat - update AI presence
       if (path === '/api/ai/heartbeat' && method === 'POST') {
+        const authResult = requireAuth(request, env, ['proposals', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/api/ai/heartbeat', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         if (!env.STATE_CACHE) return json({ error: 'STATE_CACHE not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, name, status = 'active', role } = body as { ai_id?: string; name?: string; status?: string; role?: string };
