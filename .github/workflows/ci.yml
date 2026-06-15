@@ -12,6 +12,7 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
+  BRIDGE_URL: "https://bridge.a-to-mind.com"
 
 jobs:
   test:
@@ -30,6 +31,22 @@ jobs:
         
       - run: npx turbo run test --parallel
         working-directory: .
+        
+      - name: Report deploy event to audit trail
+        if: always()
+        run: |
+          curl -X POST "${{ env.BRIDGE_URL }}/ops/deploy-event" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "workflow": "CI",
+              "run_id": "${{ github.run_id }}",
+              "status": "${{ job.status }}",
+              "commit": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "actor": "${{ github.actor }}",
+              "repository": "${{ github.repository }}",
+              "job_name": "test"
+            }'
 
   typecheck:
     name: TypeCheck
@@ -47,6 +64,22 @@ jobs:
         
       - run: npx turbo run typecheck --parallel
         working-directory: .
+        
+      - name: Report deploy event to audit trail
+        if: always()
+        run: |
+          curl -X POST "${{ env.BRIDGE_URL }}/ops/deploy-event" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "workflow": "CI",
+              "run_id": "${{ github.run_id }}",
+              "status": "${{ job.status }}",
+              "commit": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "actor": "${{ github.actor }}",
+              "repository": "${{ github.repository }}",
+              "job_name": "typecheck"
+            }'
 
   build:
     name: Build
@@ -65,3 +98,19 @@ jobs:
         
       - run: npx turbo run build
         working-directory: .
+        
+      - name: Report deploy event to audit trail
+        if: always()
+        run: |
+          curl -X POST "${{ env.BRIDGE_URL }}/ops/deploy-event" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "workflow": "CI",
+              "run_id": "${{ github.run_id }}",
+              "status": "${{ job.status }}",
+              "commit": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "actor": "${{ github.actor }}",
+              "repository": "${{ github.repository }}",
+              "job_name": "build"
+            }'

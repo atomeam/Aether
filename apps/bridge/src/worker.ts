@@ -2059,6 +2059,67 @@ interface XPTPPaymentResponse {
         return json({ ok: true, task_id, ai_id, title, timestamp });
       }
 
+      // POST /ops/deploy-event - CI deployment audit endpoint
+      if (path === '/ops/deploy-event' && method === 'POST') {
+        if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
+        const body = await request.json() as Record<string, unknown>;
+        const { 
+          workflow, 
+          run_id, 
+          status, 
+          commit, 
+          branch, 
+          actor, 
+          repository,
+          job_name,
+          duration_ms
+        } = body as { 
+          workflow?: string; 
+          run_id?: string; 
+          status?: string; 
+          commit?: string; 
+          branch?: string; 
+          actor?: string; 
+          repository?: string;
+          job_name?: string;
+          duration_ms?: number;
+        };
+        
+        if (!workflow) return json({ error: 'workflow required' }, 400);
+        if (!run_id) return json({ error: 'run_id required' }, 400);
+        if (!status) return json({ error: 'status required' }, 400);
+
+        const event_id = `deploy-${run_id}-${Date.now()}`;
+        const timestamp = new Date().toISOString();
+        const level = status === 'success' ? 'info' : status === 'failure' ? 'error' : 'warning';
+
+        // Write audit event to BRIDGE_DB
+        await env.BRIDGE_DB.prepare(
+          "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(
+          event_id, 
+          'ci', 
+          'DEPLOY', 
+          level, 
+          JSON.stringify({ 
+            workflow, 
+            run_id, 
+            status, 
+            commit, 
+            branch, 
+            actor, 
+            repository,
+            job_name,
+            duration_ms,
+            timestamp 
+          }), 
+          timestamp
+        ).run();
+
+        if (env.STATE) trackUsage(env, ip, 'd1_query');
+        return json({ ok: true, event_id, workflow, run_id, status, timestamp });
+      }
+
       // POST /atomind/poll - Agent mission polling endpoint
       if (path === '/atomind/poll' && method === 'POST') {
         try {
