@@ -18,6 +18,9 @@ import { handleURLShortener } from './rapidapi-apis/url-shortener';
 import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
 import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
 import { handleAToMindRequest } from './a-to-mind-api';
+
+// Deliberate TypeScript error for CI-Medic chaos test
+const chaosTestVariable: string = 123;
 import { validateMutation } from './middleware/validator';
 
 // Cloudflare persistence layer for reliability systems
@@ -1357,78 +1360,77 @@ export default {
 
       // POST /webhooks/notion - Notion webhook receiver with HMAC verification
       if (path === '/webhooks/notion' && method === 'POST') {
-        const signature = request.headers.get('x-notion-signature') || request.headers.get('x-hub-signature');
-        const rawBody = await request.clone().text();
-        
-        // Parse body early for verification challenge detection
-        let parsed: any;
         try {
-          parsed = JSON.parse(rawBody);
-        } catch (e) {
-          console.log('[Webhook] Invalid JSON');
-          return json({ ok: false, error: 'Invalid JSON' }, 400);
-        }
-        
-        // Notion verification handshake: bare { verification_token }, NO type field, NO signature.
-        // The token is the future signing secret, so this request is unsigned by design.
-        if (parsed?.verification_token && !parsed?.type && !parsed?.event) {
-          console.log('[Webhook] WHK_HANDSHAKE token=', parsed.verification_token);
-          return json({ ok: true }, 200);
-        }
-        
-        // Check signature for all non-handshake requests
-        if (signature && env.NOTION_WEBHOOK_SECRET) {
-          // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
-          const enc = new TextEncoder();
-          const key = await crypto.subtle.importKey(
-            'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-          );
-          const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
-          const expectedHex = Array.from(new Uint8Array(sigBuf))
-            .map(b => b.toString(16).padStart(2, '0')).join('');
-          const providedHex = signature.replace(/^sha256=/, '');
+          const signature = request.headers.get('x-notion-signature') || request.headers.get('x-hub-signature');
+          const rawBody = await request.clone().text();
           
-          // Constant-time comparison via double-HMAC
-          if (expectedHex.length !== providedHex.length) {
-            console.log('[Webhook] HMAC verification FAILED');
-            return json({ ok: false, error: 'Invalid signature' }, 401);
+          // Parse body early for verification challenge detection
+          let parsed: any;
+          try {
+            parsed = JSON.parse(rawBody);
+          } catch (e) {
+            console.log('[Webhook] Invalid JSON');
+            return json({ ok: false, error: 'Invalid JSON' }, 400);
           }
-          const cmpKey = await crypto.subtle.importKey(
-            'raw', enc.encode('hmac-cmp'),
-            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-          );
-          const mac1 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex)));
-          const mac2 = new Uint8Array(await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex)));
-          let eq = true;
-          for (let i = 0; i < mac1.length; i++) eq = eq && (mac1[i] === mac2[i]);
-          if (!eq) {
-            console.log('[Webhook] HMAC verification FAILED');
-            return json({ ok: false, error: 'Invalid signature' }, 401);
+          
+          // Notion verification handshake: bare { verification_token }, NO type field, NO signature.
+          // The token is the future signing secret, so this request is unsigned by design.
+          if (parsed?.verification_token && !parsed?.type && !parsed?.event) {
+            console.log('[Webhook] WHK_HANDSHAKE token=', parsed.verification_token);
+            return json({ ok: true }, 200);
           }
-          console.log('[Webhook] HMAC verification PASSED');
-        } else if (!env.NOTION_WEBHOOK_SECRET) {
-          console.log('[Webhook] WARNING: NOTION_WEBHOOK_SECRET not configured');
-        } else {
-          console.log('[Webhook] WARNING: No signature header');
-        }
-        
-        try {
+          
+          // Check signature for all non-handshake requests
+          if (signature && env.NOTION_WEBHOOK_SECRET) {
+            // HMAC verification using Web Crypto API (B3 fix — no Node.js dependency)
+            const enc = new TextEncoder();
+            const key = await crypto.subtle.importKey(
+              'raw', enc.encode(env.NOTION_WEBHOOK_SECRET),
+              { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+            );
+            const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+            const expectedHex = Array.from(new Uint8Array(sigBuf))
+              .map(b => b.toString(16).padStart(2, '0')).join('');
+            const providedHex = signature.replace(/^sha256=/, '');
+            
+            // Constant-time comparison via double-HMAC
+            if (expectedHex.length !== providedHex.length) {
+              console.log('[Webhook] HMAC verification FAILED');
+              return json({ ok: false, error: 'Invalid signature' }, 401);
+            }
+            const cmpKey = await crypto.subtle.importKey(
+              'raw', enc.encode('hmac-cmp'),
+              { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+            );
+            const cmp1 = await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex));
+            const cmp2 = await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex));
+            const hex1 = Array.from(new Uint8Array(cmp1)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const hex2 = Array.from(new Uint8Array(cmp2)).map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            if (hex1 !== hex2) {
+              console.log('[Webhook] HMAC verification FAILED');
+              return json({ ok: false, error: 'Invalid signature' }, 401);
+            }
+          }
+          
+          console.log('[Webhook] Signature verified, processing event');
+          
+          // Process the webhook event
           const event = parsed;
           console.log('[Webhook] Received Notion event');
           const timestamp = new Date().toISOString();
           const eventId = event.data?.id || event.id || `notion-${Date.now()}`;
 
           // Deduplication check
-        const existingEvent = await env.DB.prepare(
-          "SELECT event_id FROM events WHERE event_id = ? LIMIT 1"
-        ).bind(eventId).first();
-        if (existingEvent) {
-          console.log('[Webhook] Duplicate event skipped: ' + eventId);
-          return json({ ok: true, duplicate: true });
-        }
+          const existingEvent = await env.DB.prepare(
+            "SELECT event_id FROM events WHERE event_id = ? LIMIT 1"
+          ).bind(eventId).first();
+          if (existingEvent) {
+            console.log('[Webhook] Duplicate event skipped: ' + eventId);
+            return json({ ok: true, duplicate: true });
+          }
 
-        // Log to D1 events table for audit trail (idempotent)
+          // Log to D1 events table for audit trail (idempotent)
           if (env.DB) {
             const pageId = event.data?.id || '';
             const databaseId = event.data?.parent?.database_id || event.data?.parent?.page_id || '';
@@ -1454,7 +1456,7 @@ export default {
 
           // Use STATE_CACHE (lessons KV) for proposals as fallback since STATE has issues
           if (env.STATE_CACHE) {
-                        const existing = await env.STATE_CACHE.get('proposals:snapshot');
+            const existing = await env.STATE_CACHE.get('proposals:snapshot');
             let items: any[] = [];
             if (existing) {
               try { items = JSON.parse(existing).proposals || []; } catch {}
@@ -1476,7 +1478,7 @@ export default {
               source: 'notion-webhook',
               updatedAt: timestamp,
             }));
-                      }
+          }
           
           if (env.STATE_CACHE) {
             const existingCache = await env.STATE_CACHE.get('lessons:index');
@@ -1503,10 +1505,122 @@ export default {
             }));
           }
           
-          return json({ ok: true, received: true, timestamp });
+          return json({ ok: true, received: true, eventId });
         } catch (e) {
           return json({ ok: false, error: 'Invalid JSON' }, 400);
         }
+      }
+
+      // POST /webhooks/github - GitHub webhook receiver for CI-Medic Agent
+      if (path === '/webhooks/github' && method === 'POST') {
+        const signature = request.headers.get('x-hub-signature-256');
+        const eventType = request.headers.get('x-github-event');
+        const rawBody = await request.clone().text();
+        
+        // Parse JSON payload
+        let payload: any;
+        try {
+          payload = JSON.parse(rawBody);
+        } catch (e) {
+          console.log('[GitHub Webhook] Invalid JSON');
+          return json({ ok: false, error: 'Invalid JSON' }, 400);
+        }
+        
+        // Verify GitHub signature using Web Crypto API
+        if (signature && env.GITHUB_WEBHOOK_SECRET) {
+          const enc = new TextEncoder();
+          const key = await crypto.subtle.importKey(
+            'raw', enc.encode(env.GITHUB_WEBHOOK_SECRET),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          );
+          const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+          const expectedHex = Array.from(new Uint8Array(sigBuf))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+          const providedHex = signature.replace(/^sha256=/, '');
+          
+          // Constant-time comparison via double-HMAC
+          if (expectedHex.length !== providedHex.length) {
+            console.log('[GitHub Webhook] Signature verification FAILED - length mismatch');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
+          }
+          
+          const cmpKey = await crypto.subtle.importKey(
+            'raw', enc.encode('hmac-cmp'),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          );
+          const cmp1 = await crypto.subtle.sign('HMAC', cmpKey, enc.encode(expectedHex));
+          const cmp2 = await crypto.subtle.sign('HMAC', cmpKey, enc.encode(providedHex));
+          const hex1 = Array.from(new Uint8Array(cmp1)).map(b => b.toString(16).padStart(2, '0')).join('');
+          const hex2 = Array.from(new Uint8Array(cmp2)).map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          if (hex1 !== hex2) {
+            console.log('[GitHub Webhook] Signature verification FAILED - HMAC mismatch');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
+          }
+        }
+        
+        console.log('[GitHub Webhook] Signature verified, event:', eventType);
+        
+        // Event filtering: only process workflow_run events
+        if (eventType !== 'workflow_run') {
+          console.log('[GitHub Webhook] Ignoring non-workflow_run event:', eventType);
+          return json({ ok: true, ignored: true, reason: 'event_type' });
+        }
+        
+        // Process workflow_run events
+        const action = payload?.action;
+        const conclusion = payload?.workflow_run?.conclusion;
+        
+        // Only process failed workflow runs
+        if (action !== 'completed' || conclusion !== 'failure') {
+          console.log('[GitHub Webhook] Ignoring non-failure workflow:', action, conclusion);
+          return json({ ok: true, ignored: true, reason: 'not_failure' });
+        }
+        
+        // Extract workflow details
+        const workflowId = payload?.workflow_run?.id;
+        const repository = payload?.repository?.full_name;
+        const workflowName = payload?.workflow_run?.name;
+        
+        console.log('[GitHub Webhook] Failed workflow detected:', {
+          workflowId,
+          repository,
+          workflowName,
+          action,
+          conclusion
+        });
+        
+        // Log failure detection to RELIABILITY_TRACING database
+        if (env.RELIABILITY_TRACING) {
+          try {
+            await env.RELIABILITY_TRACING.prepare(
+              'INSERT INTO ci_failures (workflow_id, repository, workflow_name, action, conclusion, detected_at) VALUES (?, ?, ?, ?, ?, ?)'
+            ).bind(
+              workflowId?.toString() || 'unknown',
+              repository || 'unknown',
+              workflowName || 'unknown',
+              action || 'unknown',
+              conclusion || 'unknown',
+              new Date().toISOString()
+            ).run();
+            
+            console.log('[GitHub Webhook] Failure logged to RELIABILITY_TRACING');
+          } catch (dbError) {
+            console.error('[GitHub Webhook] Failed to log to database:', dbError);
+          }
+        }
+        
+        // Stub: Call LogAnalyzer and Remediator (to be implemented)
+        console.log('[GitHub Webhook] CI-Medic Agent handoff would occur here');
+        
+        return json({ 
+          ok: true, 
+          received: true,
+          workflowId,
+          repository,
+          workflowName,
+          message: 'CI-Medic Agent notified of workflow failure'
+        });
       }
 
       // Legacy API: /api/stack
@@ -3105,9 +3219,9 @@ interface XPTPPaymentResponse {
         return json({ error: 'Unknown admin endpoint' }, 404);
       }
 
-      // 404
+      // 404 fallback
       return json({ error: 'Not found' }, 404);
-      
+
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
     }
