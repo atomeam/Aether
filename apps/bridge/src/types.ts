@@ -13,6 +13,39 @@ export interface CrewTelemetry {
   payload: any;
 }
 
+// Trade-Monitor specific telemetry schema
+export interface TradeTelemetry extends CrewTelemetry {
+  crew: 'trading';
+  payload: {
+    ticker?: string;           // BTC, TERM, WAR, PONKE
+    price?: number;           // Current market price
+    orderId?: string;         // Kraken order ID
+    side?: 'buy' | 'sell';    // Order direction
+    quantity?: number;        // Order quantity
+    pnl?: number;            // Profit/Loss in USD
+    exposure?: number;       // Current exposure percentage
+    volatility?: number;     // Market volatility metric
+    signal?: string;         // Trading signal type
+    status?: string;         // Order status (pending, filled, cancelled)
+    lawViolation?: string;   // Which trading law was violated (if any)
+  };
+}
+
+// Trading Law Guardrails
+export interface TradingLaws {
+  maxExposurePercent: number;    // Law 1: Maximum exposure percentage
+  hardStopDrawdownPercent: number; // Law 2: Hard stop drawdown percentage
+  atomicTransactions: boolean;   // Law 3: Must log before order execution
+}
+
+// Circuit Breaker Configuration
+export interface CircuitBreakerConfig {
+  enabled: boolean;
+  volatilityThreshold: number;  // Volatility level that triggers circuit breaker
+  maxErrorsPerMinute: number;    // Error rate that triggers automatic pause
+  autoPauseOnViolation: boolean; // Auto-pause on trading law violation
+}
+
 // Cloudflare bindings - using unknown for external types
 export interface BridgeBindings {
   DB: D1Database;

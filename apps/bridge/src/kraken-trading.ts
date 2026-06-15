@@ -1,7 +1,32 @@
 import { KrakenBridgeEnv } from './types';
+import { TradeTelemetry, TradingLaws, CircuitBreakerConfig } from './types';
 
 // Kraken Trading Bot for Cloudflare Workers
 // CONSERVATIVE STRATEGY - Small positions, tight stops, managed risk
+// INTEGRATED WITH MULTI-CREW CONTROLLER
+
+// Trading Laws Configuration
+const TRADING_LAWS: TradingLaws = {
+  maxExposurePercent: 10,      // Law 1: Max 10% exposure per trade
+  hardStopDrawdownPercent: 5,   // Law 2: 5% drawdown triggers liquidation
+  atomicTransactions: true      // Law 3: Must log before order execution
+};
+
+// Circuit Breaker Configuration
+const CIRCUIT_BREAKER: CircuitBreakerConfig = {
+  enabled: true,
+  volatilityThreshold: 0.15,  // 15% volatility triggers circuit breaker
+  maxErrorsPerMinute: 5,      // 5 errors per minute triggers pause
+  autoPauseOnViolation: true   // Auto-pause on law violation
+};
+
+// Trade-Monitor Configuration
+const TRADE_MONITOR_CONFIG = {
+  agentId: 'trade-monitor-001',
+  crew: 'trading',
+  roomId: 'trading-telemetry',
+  paperTrading: true  // Start in paper-trading mode
+};
 
 export async function getKrakenBalance(apiKey: string, apiSecret: string): Promise<{ asset: string; balance: string }[]> {
   // First, test with a public endpoint to verify connection
@@ -311,6 +336,193 @@ async function createKrakenSignature(apiSecret: string, path: string, body: stri
   const signatureArray = new Uint8Array(signature);
   const signatureBase64 = btoa(String.fromCharCode(...signatureArray));
   return signatureBase64;
+}
+
+// Multi-Crew Controller Integration Functions
+
+/**
+ * Register Trade-Monitor with Multi-Crew Controller
+ */
+export async function registerTradeMonitor(env: any): Promise<boolean> {
+  try {
+    const response = await fetch(`${env.DISPATCHER}/internal/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agentId: TRADE_MONITOR_CONFIG.agentId,
+        crew: TRADE_MONITOR_CONFIG.crew,
+        status: 'idle',
+        roomId: TRADE_MONITOR_CONFIG.roomId
+      })
+    });
+
+    const result = await response.json();
+    console.log('[Trade-Monitor] Registration result:', result);
+    return result.ok;
+  } catch (error) {
+    console.error('[Trade-Monitor] Registration failed:', error);
+    return false;
+  }
+}
+
+/**
+ * Send trading telemetry to Multi-Crew Controller
+ */
+export async function sendTradeTelemetry(env: any, telemetry: TradeTelemetry): Promise<void> {
+  try {
+    if (!env.STATE_BROADCASTER) {
+      console.warn('[Trade-Monitor] STATE_BROADCASTER not available');
+      return;
+    }
+
+    const broadcasterId = env.STATE_BROADCASTER.idFromName(TRADE_MONITOR_CONFIG.roomId);
+    const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+    await broadcaster.broadcast(telemetry, TRADE_MONITOR_CONFIG.roomId);
+  } catch (error) {
+    console.error('[Trade-Monitor] Failed to send telemetry:', error);
+  }
+}
+
+/**
+ * Validate trading against trading laws
+ */
+export function validateTradingLaws(trade: any, currentExposure: number): { valid: boolean; violation?: string } {
+  // Law 1: Maximum Exposure
+  if (trade.exposurePercent > TRADING_LAWS.maxExposurePercent) {
+    return { valid: false, violation: 'max_exposure' };
+  }
+
+  // Law 2: Hard Stop (would be checked on position updates)
+  if (trade.drawdownPercent > TRADING_LAWS.hardStopDrawdownPercent) {
+    return { valid: false, violation: 'hard_stop' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Log trading law violation
+ */
+export async function logLawViolation(env: any, violation: string, details: string, action: string): Promise<void> {
+  try {
+    if (!env.RELIABILITY_TRACING) return;
+
+    await env.RELIABILITY_TRACING.prepare(
+      'INSERT INTO trading_law_violations (agent_id, law, violation_type, details, action_taken) VALUES (?, ?, ?, ?, ?)'
+    ).bind(
+      TRADE_MONITOR_CONFIG.agentId,
+      violation,
+      'exceeded',
+      details,
+      action
+    ).run();
+
+    console.log(`[Trade-Monitor] Law violation logged: ${violation}`);
+  } catch (error) {
+    console.error('[Trade-Monitor] Failed to log law violation:', error);
+  }
+}
+
+/**
+ * Check circuit breaker conditions
+ */
+export async function checkCircuitBreaker(env: any, volatility: number, errorCount: number): { triggered: boolean; reason?: string } {
+  if (!CIRCUIT_BREAKER.enabled) return { triggered: false };
+
+  // Check volatility threshold
+  if (volatility > CIRCUIT_BREAKER.volatilityThreshold) {
+    return { triggered: true, reason: 'volatility' };
+  }
+
+  // Check error rate
+  if (errorCount > CIRCUIT_BREAKER.maxErrorsPerMinute) {
+    return { triggered: true, reason: 'error_rate' };
+  }
+
+  return { triggered: false };
+}
+
+/**
+ * Trigger circuit breaker (pause trading)
+ */
+export async function triggerCircuitBreaker(env: any, reason: string): Promise<void> {
+  try {
+    // Log circuit breaker event
+    if (env.RELIABILITY_TRACING) {
+      await env.RELIABILITY_TRACING.prepare(
+        'INSERT INTO circuit_breaker_events (agent_id, trigger_type, trigger_value, action) VALUES (?, ?, ?, ?)'
+      ).bind(
+        TRADE_MONITOR_CONFIG.agentId,
+        reason,
+        0,
+        'paused'
+      ).run();
+    }
+
+    // Send pause command via Multi-Crew Controller
+    if (env.DISPATCHER) {
+      await fetch(`${env.DISPATCHER}/internal/control`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: TRADE_MONITOR_CONFIG.agentId,
+          command: 'PAUSE_CREW',
+          roomId: TRADE_MONITOR_CONFIG.roomId
+        })
+      });
+    }
+
+    // Send telemetry notification
+    await sendTradeTelemetry(env, {
+      agentId: TRADE_MONITOR_CONFIG.agentId,
+      crew: TRADE_MONITOR_CONFIG.crew,
+      timestamp: new Date().toISOString(),
+      level: 'critical',
+      action: 'command',
+      payload: {
+        message: `Circuit breaker triggered: ${reason}`,
+        signal: 'circuit_breaker',
+        status: 'paused'
+      }
+    });
+
+    console.log(`[Trade-Monitor] Circuit breaker triggered: ${reason}`);
+  } catch (error) {
+    console.error('[Trade-Monitor] Failed to trigger circuit breaker:', error);
+  }
+}
+
+/**
+ * Send heartbeat to Multi-Crew Controller
+ */
+export async function sendTradeHeartbeat(env: any): Promise<void> {
+  try {
+    if (!env.RELIABILITY_TRACING) return;
+
+    await env.RELIABILITY_TRACING.prepare(
+      'UPDATE crew_registry SET last_heartbeat = ?, status = ? WHERE agent_id = ?'
+    ).bind(
+      new Date().toISOString(),
+      'running',
+      TRADE_MONITOR_CONFIG.agentId
+    ).run();
+
+    // Also send heartbeat via WebSocket
+    await sendTradeTelemetry(env, {
+      agentId: TRADE_MONITOR_CONFIG.agentId,
+      crew: TRADE_MONITOR_CONFIG.crew,
+      timestamp: new Date().toISOString(),
+      level: 'info',
+      action: 'broadcast',
+      payload: {
+        message: 'Trade-Monitor heartbeat',
+        signal: 'heartbeat',
+        status: 'running'
+      }
+    });
+  } catch (error) {
+    console.error('[Trade-Monitor] Failed to send heartbeat:', error);
+  }
 }
 
 async function convertToUSD(apiKey: string, apiSecret: string, asset: string, amount: string): Promise<{ success: boolean; error?: string }> {

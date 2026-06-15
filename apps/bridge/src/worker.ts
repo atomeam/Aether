@@ -22,7 +22,7 @@ import { validateMutation } from './middleware/validator';
 import { StateBroadcaster } from './durable-objects/state-broadcaster';
 import { LogAnalyzer } from './ci-medic/log-analyzer';
 import { Remediator } from './ci-medic/remediator';
-import { CrewTelemetry } from './types';
+import { CrewTelemetry, TradeTelemetry } from './types';
 
 // Re-export Durable Object class for Cloudflare Workers
 export { StateBroadcaster };
@@ -3272,6 +3272,50 @@ interface XPTPPaymentResponse {
         return json({ ok: true, ignored: true, reason: 'not_failure' });
       }
 
+      // POST /api/trading/test - Test Trade-Monitor telemetry in paper-trading mode
+      if (path === '/api/trading/test' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { ticker = 'BTC', price = 50000, signal = 'buy' } = body;
+
+          // Simulate trading telemetry
+          if (env.STATE_BROADCASTER) {
+            const broadcasterId = env.STATE_BROADCASTER.idFromName('trading-telemetry');
+            const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+            
+            const telemetry: TradeTelemetry = {
+              agentId: 'trade-monitor-001',
+              crew: 'trading',
+              timestamp: new Date().toISOString(),
+              level: 'info',
+              action: 'detect',
+              payload: {
+                ticker,
+                price,
+                signal,
+                status: 'paper_trading',
+                exposure: 0,
+                volatility: 0.05
+              }
+            };
+            
+            await broadcaster.broadcast(telemetry, 'trading-telemetry');
+          }
+
+          return json({
+            ok: true,
+            message: 'Trade-Monitor test telemetry sent',
+            paperTrading: true,
+            ticker,
+            price,
+            signal
+          });
+        } catch (error) {
+          console.error('[Trading Test] Error:', error);
+          return json({ error: 'Test failed' }, 500);
+        }
+      }
+
       // GET /ws/connect - WebSocket connection endpoint for Multi-Crew Controller
       if (path === '/ws/connect' && method === 'GET') {
         const roomId = url.searchParams.get('room') || 'default-room';
@@ -3351,6 +3395,52 @@ interface XPTPPaymentResponse {
         } catch (error) {
           console.error('[Internal Control] Error:', error);
           return json({ error: 'Command execution failed' }, 500);
+        }
+      }
+
+      // POST /internal/register - Register a new crew with the Multi-Crew Controller
+      if (path === '/internal/register' && method === 'POST') {
+        if (!env.RELIABILITY_TRACING) {
+          return json({ error: 'RELIABILITY_TRACING not bound' }, 500);
+        }
+
+        try {
+          const body = await request.json();
+          const { agentId, crew, status = 'idle' } = body;
+
+          if (!agentId || !crew) {
+            return json({ error: 'agentId and crew required' }, 400);
+          }
+
+          // Register in crew_registry table
+          await env.RELIABILITY_TRACING.prepare(
+            'INSERT OR REPLACE INTO crew_registry (agent_id, crew, status, last_heartbeat, created_at, updated_at) VALUES (?, ?, ?, ?, datetime("now"), datetime("now"))'
+          ).bind(agentId, crew, status, new Date().toISOString()).run();
+
+          // Also register in StateBroadcaster via RPC
+          if (env.STATE_BROADCASTER) {
+            try {
+              const roomId = body.roomId || 'default-room';
+              const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId);
+              const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+              
+              // Initialize crew in broadcaster registry
+              await broadcaster.updateCrewStatus(agentId, status);
+            } catch (rpcError) {
+              console.warn('[Internal Register] RPC failed, crew registered in DB only:', rpcError);
+            }
+          }
+
+          return json({
+            ok: true,
+            message: `Crew ${agentId} registered as ${crew}`,
+            agentId,
+            crew,
+            status
+          });
+        } catch (error) {
+          console.error('[Internal Register] Error:', error);
+          return json({ error: 'Failed to register crew' }, 500);
         }
       }
 
