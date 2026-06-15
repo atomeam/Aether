@@ -106,22 +106,24 @@ service = "aether"
 [vars]
 WORKER_ROLE = "executor"
 
-[[routes]]
-pattern = "bridge.a-to-mind.com"
-custom_domain = true
-
-[[routes]]
-pattern = "crypto-payment-link-generator.a-to-mind.com"
-custom_domain = true
-
-[[routes]]
-pattern = "ai-image-generator.a-to-mind.com"
-custom_domain = true
-
-[[routes]]
-pattern = "network-as-code.a-to-mind.com"
-custom_domain = true
-
-[[routes]]
-pattern = "a-to-mind.com"
-custom_domain = true
+# Custom domains - temporarily disabled due to Cloudflare API routes error
+# Uncomment and redeploy after Cloudflare API issue is resolved
+# [[routes]]
+# pattern = "bridge.a-to-mind.com"
+# custom_domain = true
+#
+# [[routes]]
+# pattern = "crypto-payment-link-generator.a-to-mind.com"
+# custom_domain = true
+#
+# [[routes]]
+# pattern = "ai-image-generator.a-to-mind.com"
+# custom_domain = true
+#
+# [[routes]]
+# pattern = "network-as-code.a-to-mind.com"
+# custom_domain = true
+#
+# [[routes]]
+# pattern = "a-to-mind.com"
+# custom_domain = true
