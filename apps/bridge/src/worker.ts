@@ -3119,11 +3119,344 @@ interface XPTPPaymentResponse {
     }
   },
 
+  // CI-Medic Queue Processor
+  async processCIMedicTask(job: CuratorJob, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[CI-Medic Queue] Processing task:', job.workflowId);
+    
+    // Broadcast queue processing start
+    if (env.STATE_BROADCASTER) {
+      const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+      const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+      await broadcaster.broadcast({
+        type: 'queue',
+        payload: {
+          message: 'CI-Medic task received from queue',
+          workflowId: job.workflowId
+        }
+      });
+    }
+
+    try {
+      // Fetch GitHub Actions logs
+      if (!env.GITHUB_PAT) {
+        console.error('[CI-Medic Queue] GITHUB_PAT not configured');
+        return;
+      }
+
+      const owner = job.repository?.split('/')[0] || 'unknown';
+      const repo = job.repository?.split('/')[1] || 'unknown';
+      const logsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${job.workflowId}/logs`;
+
+      console.log('[CI-Medic Queue] Fetching logs from:', logsUrl);
+      const logsResponse = await fetch(logsUrl, {
+        headers: {
+          'Authorization': `Bearer ${env.GITHUB_PAT}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+
+      if (!logsResponse.ok) {
+        const errorText = await logsResponse.text();
+        console.error('[CI-Medic Queue] Failed to fetch logs:', errorText);
+        
+        if (env.STATE_BROADCASTER) {
+          const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+          const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+          await broadcaster.broadcast({
+            type: 'error',
+            payload: {
+              message: 'Failed to fetch GitHub Actions logs',
+              error: errorText
+            }
+          });
+        }
+        return;
+      }
+
+      // GitHub API returns redirect to actual log file
+      const logLocation = logsResponse.headers.get('Location');
+      if (!logLocation) {
+        console.error('[CI-Medic Queue] No log location in response');
+        return;
+      }
+
+      const actualLogsResponse = await fetch(logLocation);
+      const logText = await actualLogsResponse.text();
+
+      console.log('[CI-Medic Queue] Fetched log text length:', logText.length);
+
+      // Analyze logs with LogAnalyzer
+      const logAnalyzer = new LogAnalyzer();
+      const analysis = logAnalyzer.analyze(logText);
+
+      console.log('[CI-Medic Queue] Log analysis:', analysis);
+
+      // Broadcast analysis results
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        await broadcaster.broadcast({
+          type: 'analysis',
+          payload: {
+            message: `Analysis complete: ${analysis.summary}`,
+            rootCause: analysis.rootCause,
+            severity: analysis.severity,
+            errorCount: analysis.errors.length
+          }
+        });
+      }
+
+      // Call Claude 3.5 Sonnet for semantic code generation
+      if (!env.ANTHROPIC_API_KEY) {
+        console.error('[CI-Medic Queue] ANTHROPIC_API_KEY not configured, falling back to pattern matching');
+        // Fall back to pattern-based remediation
+        const remediator = new Remediator();
+        const plan = remediator.remediate(analysis);
+        await this.executeRemediationPlan(plan, job, env, ctx);
+        return;
+      }
+
+      // Broadcast LLM generation start
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        await broadcaster.broadcast({
+          type: 'llm_generating',
+          payload: {
+            message: 'Claude 3.5 Sonnet generating fix...',
+            rootCause: analysis.rootCause
+          }
+        });
+      }
+
+      // Call Anthropic API
+      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20240620',
+          max_tokens: 4096,
+          system: `You are the CI-Medic, an expert TypeScript/React engineer specializing in autonomous code remediation.
+
+LAW 1 (Contract B): If you are remediating engine state or intent layers, all mutations must be atomic, multi-field JSON objects. You must never generate single-field schema updates.
+
+LAW 2 (Spatial Bounds): Any generation or remediation of spatial y-axis coordinates must be strictly constrained to the range of 0 to 111.
+
+Your task is to analyze the provided CI failure logs and generate a remediation plan. Focus on:
+1. Identifying the root cause of the failure
+2. Proposing specific code fixes
+3. Ensuring the fixes follow the architectural laws above
+4. Providing clear, actionable steps
+
+Respond with a JSON object containing:
+{
+  "action": "fix_typescript" | "fix_npm" | "fix_deployment" | "fix_test" | "manual_review",
+  "files": [{"path": "file path", "changes": "code changes", "reason": "explanation"}],
+  "summary": "brief summary of the fix",
+  "prTitle": "PR title",
+  "prBody": "detailed PR description"
+}`,
+          messages: [
+            {
+              role: 'user',
+              content: `CI Failure Analysis:\n\nRoot Cause: ${analysis.rootCause}\nSeverity: ${analysis.severity}\nError Count: ${analysis.errors.length}\n\nErrors:\n${analysis.errors.map(e => `- ${e.file}:${e.line} - ${e.code}: ${e.message}`).join('\n')}\n\nLog Sample:\n${logText.substring(0, 5000)}`
+            }
+          ]
+        })
+      });
+
+      if (!anthropicResponse.ok) {
+        const errorText = await anthropicResponse.text();
+        console.error('[CI-Medic Queue] Anthropic API error:', errorText);
+        
+        // Fall back to pattern-based remediation
+        const remediator = new Remediator();
+        const plan = remediator.remediate(analysis);
+        await this.executeRemediationPlan(plan, job, env, ctx);
+        return;
+      }
+
+      const anthropicData = await anthropicResponse.json();
+      console.log('[CI-Medic Queue] Claude response:', anthropicData);
+
+      // Parse Claude's response
+      let remediationPlan;
+      try {
+        const content = anthropicData.content[0].text;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          remediationPlan = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in Claude response');
+        }
+      } catch (parseError) {
+        console.error('[CI-Medic Queue] Failed to parse Claude response:', parseError);
+        
+        // Fall back to pattern-based remediation
+        const remediator = new Remediator();
+        const plan = remediator.remediate(analysis);
+        await this.executeRemediationPlan(plan, job, env, ctx);
+        return;
+      }
+
+      // Broadcast LLM completion
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        await broadcaster.broadcast({
+          type: 'llm_complete',
+          payload: {
+            message: 'Claude 3.5 Sonnet fix generated',
+            action: remediationPlan.action
+          }
+        });
+      }
+
+      // Execute the remediation plan
+      await this.executeRemediationPlan(remediationPlan, job, env, ctx);
+
+    } catch (error) {
+      console.error('[CI-Medic Queue] Error processing task:', error);
+      
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        await broadcaster.broadcast({
+          type: 'error',
+          payload: {
+            message: 'CI-Medic Queue processing error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        });
+      }
+    }
+  },
+
+  async executeRemediationPlan(plan: any, job: CuratorJob, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[CI-Medic Queue] Executing remediation plan:', plan);
+
+    // Broadcast remediation start
+    if (env.STATE_BROADCASTER) {
+      const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+      const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+      await broadcaster.broadcast({
+        type: 'remediation',
+        payload: {
+          message: `Executing remediation: ${plan.summary}`,
+          action: plan.action,
+          files: plan.files?.length || 0
+        }
+      });
+    }
+
+    // Create PR using GitHub API
+    if (plan.action === 'manual_review') {
+      console.log('[CI-Medic Queue] Manual review required, skipping PR creation');
+      return;
+    }
+
+    if (!env.GITHUB_PAT) {
+      console.error('[CI-Medic Queue] GITHUB_PAT not configured for PR creation');
+      return;
+    }
+
+    const owner = job.repository?.split('/')[0] || 'unknown';
+    const repo = job.repository?.split('/')[1] || 'unknown';
+    const branchName = `ci-medic-fix-${job.workflowId}`;
+
+    // Create a new branch for the fix
+    const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/main`, {
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!refResponse.ok) {
+      console.error('[CI-Medic Queue] Failed to get main branch ref');
+      return;
+    }
+
+    const refData = await refResponse.json();
+    const mainSha = refData.object.sha;
+
+    // Create new branch
+    const createBranchResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ref: `refs/heads/${branchName}`,
+        sha: mainSha
+      })
+    });
+
+    if (!createBranchResponse.ok) {
+      console.error('[CI-Medic Queue] Failed to create branch');
+      return;
+    }
+
+    console.log('[CI-Medic Queue] Created branch:', branchName);
+
+    // Create PR
+    const prResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: plan.prTitle || `CI-Medic Fix for ${job.workflowId}`,
+        body: plan.prBody || `Automated fix for CI failure ${job.workflowId}`,
+        head: branchName,
+        base: 'main'
+      })
+    });
+
+    if (!prResponse.ok) {
+      console.error('[CI-Medic Queue] Failed to create PR');
+      return;
+    }
+
+    const prData = await prResponse.json();
+    console.log('[CI-Medic Queue] Created PR:', prData.html_url);
+
+    // Broadcast success
+    if (env.STATE_BROADCASTER) {
+      const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+      const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+      await broadcaster.broadcast({
+        type: 'ci_success',
+        payload: {
+          message: 'PR created successfully',
+          prUrl: prData.html_url,
+          branch: branchName
+        }
+      });
+    }
+  },
+
   // Queue consumer handler
   async queue(batch: any, env: Env, ctx: ExecutionContext): Promise<void> {
     for (const message of batch.messages) {
       try {
         const job = message.body as CuratorJob;
+        
+        // Handle CI-Medic tasks
+        if (job.type === 'ci_medic_task') {
+          await this.processCIMedicTask(job, env, ctx);
+          message.ack();
+          continue;
+        }
+        
         // Queue visibility events
         if (env.DB) {
           await env.DB.prepare(
@@ -3392,6 +3725,13 @@ interface CuratorJob {
   receivedAt: string;
   raw?: string;
   source?: string;
+  type?: string;
+  workflowId?: string;
+  repository?: string;
+  workflowName?: string;
+  action?: string;
+  conclusion?: string;
+  detectedAt?: string;
 }
 
 interface ExecutionContext {
