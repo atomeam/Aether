@@ -22,6 +22,7 @@ import { validateMutation } from './middleware/validator';
 import { StateBroadcaster } from './durable-objects/state-broadcaster';
 import { LogAnalyzer } from './ci-medic/log-analyzer';
 import { Remediator } from './ci-medic/remediator';
+import { CrewTelemetry } from './types';
 
 // Re-export Durable Object class for Cloudflare Workers
 export { StateBroadcaster };
@@ -3111,6 +3112,317 @@ interface XPTPPaymentResponse {
         return json({ error: 'Unknown admin endpoint' }, 404);
       }
 
+      // POST /webhooks/notion - Notion webhook receiver with HMAC verification
+      if (path === '/webhooks/notion' && method === 'POST') {
+        const signature = request.headers.get('x-notion-signature') || request.headers.get('x-hub-signature');
+        const rawBody = await request.clone().text();
+
+        // Parse body early for verification challenge detection
+        let parsed: any;
+        try {
+          parsed = JSON.parse(rawBody);
+        } catch (e) {
+          console.log('[Webhook] Invalid JSON');
+          return json({ ok: false, error: 'Invalid JSON' }, 400);
+        }
+
+        // Handle Notion verification challenge
+        if (parsed.type === 'url_verification') {
+          console.log('[Webhook] Notion verification challenge');
+          return json({ challenge: parsed.challenge });
+        }
+
+        // Verify HMAC signature
+        if (signature && env.NOTION_WEBHOOK_SECRET) {
+          const expectedSignature = await crypto.subtle.sign(
+            'HMAC',
+            await crypto.subtle.importKey(
+              'raw',
+              new TextEncoder().encode(env.NOTION_WEBHOOK_SECRET),
+              { name: 'HMAC', hash: 'SHA-256' },
+              false,
+              ['sign']
+            ),
+            new TextEncoder().encode(rawBody)
+          ).then(buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+          if (signature !== `sha256=${expectedSignature}`) {
+            console.log('[Webhook] Invalid signature');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
+          }
+        }
+
+        console.log('[Webhook] Notion webhook received:', parsed);
+        return json({ ok: true, received: true });
+      }
+
+      // POST /webhooks/github - GitHub webhook receiver for CI-Medic
+      if (path === '/webhooks/github' && method === 'POST') {
+        const signature = request.headers.get('x-hub-signature-256');
+        const rawBody = await request.clone().text();
+
+        // Verify HMAC signature
+        if (signature && env.GITHUB_WEBHOOK_SECRET) {
+          const expectedSignature = await crypto.subtle.sign(
+            'HMAC',
+            await crypto.subtle.importKey(
+              'raw',
+              new TextEncoder().encode(env.GITHUB_WEBHOOK_SECRET),
+              { name: 'HMAC', hash: 'SHA-256' },
+              false,
+              ['sign']
+            ),
+            new TextEncoder().encode(rawBody)
+          ).then(buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+          if (signature !== `sha256=${expectedSignature}`) {
+            console.log('[GitHub Webhook] Invalid signature');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
+          }
+        }
+
+        const payload = JSON.parse(rawBody);
+        const action = payload?.action;
+        const conclusion = payload?.workflow_run?.conclusion;
+
+        // Only process failed workflow_run events
+        if (payload?.workflow_run?.event === 'workflow_run' && conclusion === 'failure') {
+          const workflowId = payload?.workflow_run?.id;
+          const repository = payload?.repository?.full_name;
+          const workflowName = payload?.workflow_run?.name;
+
+          console.log('[GitHub Webhook] Failed workflow detected:', {
+            workflowId,
+            repository,
+            workflowName,
+            action,
+            conclusion
+          });
+
+          // Log failure detection to RELIABILITY_TRACING database
+          if (env.RELIABILITY_TRACING) {
+            try {
+              await env.RELIABILITY_TRACING.prepare(
+                'INSERT INTO ci_failures (workflow_id, repository, workflow_name, action, conclusion, detected_at) VALUES (?, ?, ?, ?, ?, ?)'
+              ).bind(
+                workflowId?.toString() || 'unknown',
+                repository || 'unknown',
+                workflowName || 'unknown',
+                action || 'unknown',
+                conclusion || 'unknown',
+                new Date().toISOString()
+              ).run();
+
+              console.log('[GitHub Webhook] Failure logged to RELIABILITY_TRACING');
+            } catch (dbError) {
+              console.error('[GitHub Webhook] Failed to log to database:', dbError);
+            }
+          }
+
+          // Dispatch to CURATOR_QUEUE for asynchronous processing
+          if (env.CURATOR_QUEUE) {
+            try {
+              await env.CURATOR_QUEUE.send({
+                type: 'ci_medic_task',
+                workflowId: workflowId?.toString() || 'unknown',
+                repository: repository || 'unknown',
+                workflowName: workflowName || 'unknown',
+                action: action || 'unknown',
+                conclusion: conclusion || 'unknown',
+                detectedAt: new Date().toISOString()
+              });
+
+              console.log('[GitHub Webhook] Task dispatched to CURATOR_QUEUE');
+            } catch (queueError) {
+              console.error('[GitHub Webhook] Failed to dispatch to queue:', queueError);
+            }
+          }
+
+          // Broadcast failure detection
+          if (env.STATE_BROADCASTER) {
+            const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+            const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+            const telemetry: CrewTelemetry = {
+              agentId: 'ci-medic-001',
+              crew: 'infrastructure',
+              timestamp: new Date().toISOString(),
+              level: 'warn',
+              action: 'detect',
+              payload: {
+                message: `Detected workflow failure: ${workflowName} (${workflowId})`,
+                repository,
+                workflowId,
+                workflowName
+              }
+            };
+            await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+          }
+
+          return json({
+            ok: true,
+            received: true,
+            workflowId,
+            repository,
+            workflowName,
+            message: 'CI-Medic Agent: Task dispatched for asynchronous processing'
+          });
+        }
+
+        console.log('[GitHub Webhook] Ignoring non-failure workflow:', action, conclusion);
+        return json({ ok: true, ignored: true, reason: 'not_failure' });
+      }
+
+      // GET /ws/connect - WebSocket connection endpoint for Multi-Crew Controller
+      if (path === '/ws/connect' && method === 'GET') {
+        const roomId = url.searchParams.get('room') || 'default-room';
+        const agentId = url.searchParams.get('agentId') || undefined;
+        const crew = url.searchParams.get('crew') || undefined;
+        
+        if (!env.STATE_BROADCASTER) {
+          return json({ error: 'STATE_BROADCASTER not bound' }, 500);
+        }
+
+        // Get the Durable Object instance for this room
+        const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId);
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+
+        // Pass the WebSocket upgrade request to the Durable Object
+        return broadcaster.fetch(request);
+      }
+
+      // POST /internal/control - Command hub for Multi-Crew Controller
+      if (path === '/internal/control' && method === 'POST') {
+        if (!env.STATE_BROADCASTER) {
+          return json({ error: 'STATE_BROADCASTER not bound' }, 500);
+        }
+
+        try {
+          const body = await request.json();
+          const { agentId, command, roomId } = body;
+
+          if (!agentId || !command) {
+            return json({ error: 'agentId and command required' }, 400);
+          }
+
+          // Get the Durable Object instance
+          const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId || 'default-room');
+          const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+
+          // Execute command based on type
+          switch (command) {
+            case 'STOP_CREW':
+            case 'PAUSE_CREW':
+              try {
+                await broadcaster.updateCrewStatus(agentId, 'paused');
+              } catch (rpcError) {
+                console.warn('[Internal Control] RPC failed for PAUSE:', rpcError);
+              }
+              break;
+            case 'START_CREW':
+            case 'RESUME_CREW':
+              try {
+                await broadcaster.updateCrewStatus(agentId, 'running');
+              } catch (rpcError) {
+                console.warn('[Internal Control] RPC failed for START:', rpcError);
+              }
+              break;
+            case 'RESTART_CREW':
+              try {
+                await broadcaster.updateCrewStatus(agentId, 'idle');
+                // Schedule restart using waitUntil for async execution
+                ctx.waitUntil((async () => {
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await broadcaster.updateCrewStatus(agentId, 'running');
+                })());
+              } catch (rpcError) {
+                console.warn('[Internal Control] RPC failed for RESTART:', rpcError);
+              }
+              break;
+            default:
+              return json({ error: 'Unknown command' }, 400);
+          }
+
+          return json({
+            ok: true,
+            message: `Command ${command} executed for ${agentId}`,
+            agentId,
+            command
+          });
+        } catch (error) {
+          console.error('[Internal Control] Error:', error);
+          return json({ error: 'Command execution failed' }, 500);
+        }
+      }
+
+      // GET /internal/registry - Get crew registry status
+      if (path === '/internal/registry' && method === 'GET') {
+        if (!env.STATE_BROADCASTER) {
+          return json({ error: 'STATE_BROADCASTER not bound' }, 500);
+        }
+
+        try {
+          const roomId = url.searchParams.get('room') || 'default-room';
+          const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId);
+          const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+
+          // Try to get registry via RPC
+          try {
+            const registry = broadcaster.getCrewRegistry();
+            return json({
+              ok: true,
+              registry: Object.fromEntries(registry),
+              count: registry.size
+            });
+          } catch (rpcError) {
+            // If RPC fails, return empty registry
+            console.warn('[Internal Registry] RPC failed, returning empty registry:', rpcError);
+            return json({
+              ok: true,
+              registry: {},
+              count: 0
+            });
+          }
+        } catch (error) {
+          console.error('[Internal Registry] Error:', error);
+          return json({ error: 'Failed to get registry' }, 500);
+        }
+      }
+
+      // GET /internal/events - Get historical crew events
+      if (path === '/internal/events' && method === 'GET') {
+        if (!env.RELIABILITY_TRACING) {
+          return json({ error: 'RELIABILITY_TRACING not bound' }, 500);
+        }
+
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '100');
+          const agentId = url.searchParams.get('agentId');
+          const crew = url.searchParams.get('crew');
+
+          let query = 'SELECT * FROM crew_events ORDER BY timestamp DESC LIMIT ?';
+          const params: any[] = [limit];
+
+          if (agentId) {
+            query = 'SELECT * FROM crew_events WHERE agent_id = ? ORDER BY timestamp DESC LIMIT ?';
+            params.unshift(agentId);
+          } else if (crew) {
+            query = 'SELECT * FROM crew_events WHERE crew = ? ORDER BY timestamp DESC LIMIT ?';
+            params.unshift(crew);
+          }
+
+          const result = await env.RELIABILITY_TRACING.prepare(query).bind(...params).all();
+
+          return json({
+            ok: true,
+            events: result.results,
+            count: result.results.length
+          });
+        } catch (error) {
+          console.error('[Internal Events] Error:', error);
+          return json({ error: 'Failed to get events' }, 500);
+        }
+      }
+
       // 404
       return json({ error: 'Not found' }, 404);
       
@@ -3127,13 +3439,18 @@ interface XPTPPaymentResponse {
     if (env.STATE_BROADCASTER) {
       const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
       const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-      await broadcaster.broadcast({
-        type: 'queue',
+      const telemetry: CrewTelemetry = {
+        agentId: 'ci-medic-001',
+        crew: 'infrastructure',
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        action: 'detect',
         payload: {
           message: 'CI-Medic task received from queue',
           workflowId: job.workflowId
         }
-      });
+      };
+      await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
     }
 
     try {
@@ -3162,13 +3479,18 @@ interface XPTPPaymentResponse {
         if (env.STATE_BROADCASTER) {
           const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
           const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-          await broadcaster.broadcast({
-            type: 'error',
+          const telemetry: CrewTelemetry = {
+            agentId: 'ci-medic-001',
+            crew: 'infrastructure',
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            action: 'detect',
             payload: {
               message: 'Failed to fetch GitHub Actions logs',
               error: errorText
             }
-          });
+          };
+          await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
         }
         return;
       }
@@ -3195,15 +3517,20 @@ interface XPTPPaymentResponse {
       if (env.STATE_BROADCASTER) {
         const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
         const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-        await broadcaster.broadcast({
-          type: 'analysis',
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'remediate',
           payload: {
             message: `Analysis complete: ${analysis.summary}`,
             rootCause: analysis.rootCause,
             severity: analysis.severity,
             errorCount: analysis.errors.length
           }
-        });
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
       }
 
       // Call Claude 3.5 Sonnet for semantic code generation
@@ -3220,13 +3547,18 @@ interface XPTPPaymentResponse {
       if (env.STATE_BROADCASTER) {
         const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
         const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-        await broadcaster.broadcast({
-          type: 'llm_generating',
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'remediate',
           payload: {
             message: 'Claude 3.5 Sonnet generating fix...',
             rootCause: analysis.rootCause
           }
-        });
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
       }
 
       // Call Anthropic API
@@ -3307,13 +3639,18 @@ Respond with a JSON object containing:
       if (env.STATE_BROADCASTER) {
         const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
         const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-        await broadcaster.broadcast({
-          type: 'llm_complete',
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'remediate',
           payload: {
             message: 'Claude 3.5 Sonnet fix generated',
             action: remediationPlan.action
           }
-        });
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
       }
 
       // Execute the remediation plan
@@ -3325,13 +3662,18 @@ Respond with a JSON object containing:
       if (env.STATE_BROADCASTER) {
         const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
         const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-        await broadcaster.broadcast({
-          type: 'error',
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'error',
+          action: 'detect',
           payload: {
             message: 'CI-Medic Queue processing error',
             error: error instanceof Error ? error.message : 'Unknown error'
           }
-        });
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
       }
     }
   },
@@ -3343,14 +3685,19 @@ Respond with a JSON object containing:
     if (env.STATE_BROADCASTER) {
       const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
       const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-      await broadcaster.broadcast({
-        type: 'remediation',
+      const telemetry: CrewTelemetry = {
+        agentId: 'ci-medic-001',
+        crew: 'infrastructure',
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        action: 'remediate',
         payload: {
           message: `Executing remediation: ${plan.summary}`,
           action: plan.action,
           files: plan.files?.length || 0
         }
-      });
+      };
+      await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
     }
 
     // Create PR using GitHub API
@@ -3433,14 +3780,19 @@ Respond with a JSON object containing:
     if (env.STATE_BROADCASTER) {
       const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
       const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
-      await broadcaster.broadcast({
-        type: 'ci_success',
+      const telemetry: CrewTelemetry = {
+        agentId: 'ci-medic-001',
+        crew: 'infrastructure',
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        action: 'broadcast',
         payload: {
           message: 'PR created successfully',
           prUrl: prData.html_url,
           branch: branchName
         }
-      });
+      };
+      await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
     }
   },
 

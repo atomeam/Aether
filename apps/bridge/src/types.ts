@@ -3,6 +3,16 @@
 
 import type { DurableObjectNamespace } from '@cloudflare/workers-types';
 
+// Unified Telemetry Schema for Multi-Crew Controller
+export interface CrewTelemetry {
+  agentId: string;
+  crew: string;
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'critical';
+  action: 'detect' | 'remediate' | 'broadcast' | 'command';
+  payload: any;
+}
+
 // Cloudflare bindings - using unknown for external types
 export interface BridgeBindings {
   DB: D1Database;
