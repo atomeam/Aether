@@ -5,9 +5,13 @@
 export interface BridgeBindings {
   DB: D1Database;
   BRIDGE_DB: D1Database;
+  RELIABILITY_TRACING: D1Database;
   STATE: KVNamespace;
   STATE_CACHE: KVNamespace;
   METRICS: KVNamespace;
+  RELIABILITY_DLQ: KVNamespace;
+  RELIABILITY_METRICS: KVNamespace;
+  RELIABILITY_IDEMPOTENCY: KVNamespace;
   _LOGS: R2Bucket;
   MYBROWSER: unknown; // Browser from @cloudflare/workers-types
   CURATOR_QUEUE: Queue;

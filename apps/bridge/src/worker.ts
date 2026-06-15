@@ -18,6 +18,7 @@ import { handleURLShortener } from './rapidapi-apis/url-shortener';
 import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
 import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
 import { handleAToMindRequest } from './a-to-mind-api';
+import { validateMutation } from './middleware/validator';
 
 // Cloudflare persistence layer for reliability systems
 import { persistence } from '../../../tools/reliability-systems/cloudflare-persistence';
@@ -2147,25 +2148,39 @@ interface XPTPPaymentResponse {
         
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
-        const { ai_id, title, description } = body as { ai_id?: string; title?: string; description?: string };
-        if (!ai_id) return json({ error: 'ai_id required' }, 400);
-        if (!title) return json({ error: 'title required' }, 400);
+        
+        // Validate payload using MutationValidator middleware
+        try {
+          const validatedPayload = await validateMutation(body, env);
+          const { ai_id, title, description } = validatedPayload as { ai_id?: string; title?: string; description?: string };
+          
+          if (!ai_id) return json({ error: 'ai_id required' }, 400);
+          if (!title) return json({ error: 'title required' }, 400);
 
-        const task_id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const timestamp = new Date().toISOString();
+          const task_id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const timestamp = new Date().toISOString();
 
-        // Write task to tasks table (adapted to existing schema)
-        await env.BRIDGE_DB.prepare(
-          "INSERT INTO tasks (id, title, lane, status, priority, blocking, created_at, updated_at, ai_id, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(task_id, title, 'Council', 'Not started', 'P1', 0, timestamp, timestamp, ai_id, (description || '').substring(0, 5000)).run();
+          // Write task to tasks table (adapted to existing schema)
+          await env.BRIDGE_DB.prepare(
+            "INSERT INTO tasks (id, title, lane, status, priority, blocking, created_at, updated_at, ai_id, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          ).bind(task_id, title, 'Council', 'Not started', 'P1', 0, timestamp, timestamp, ai_id, (description || '').substring(0, 5000)).run();
 
-        // Write audit event to BRIDGE_DB
-        await env.BRIDGE_DB.prepare(
-          "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-        ).bind(task_id, 'api', 'TASK_CREATED', 'info', JSON.stringify({ ai_id, title, description: (description || '').substring(0, 1000) }), timestamp).run();
+          // Write audit event to BRIDGE_DB
+          await env.BRIDGE_DB.prepare(
+            "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+          ).bind(task_id, 'api', 'TASK_CREATED', 'info', JSON.stringify({ ai_id, title, description: (description || '').substring(0, 1000) }), timestamp).run();
 
-        if (env.STATE) trackUsage(env, ip, 'd1_query');
-        return json({ ok: true, task_id, ai_id, title, status: 'pending', timestamp });
+          if (env.STATE) trackUsage(env, ip, 'd1_query');
+          return json({ ok: true, task_id, ai_id, title, status: 'pending', timestamp });
+          
+        } catch (validationError) {
+          // Return validation error to caller
+          return json({ 
+            error: 'Validation failed', 
+            details: validationError.message,
+            type: validationError.constructor.name 
+          }, 400);
+        }
       }
 
       // GET /tasks - retrieve tasks with optional filtering
