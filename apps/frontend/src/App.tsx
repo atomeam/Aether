@@ -35,6 +35,9 @@ import { PrimitiveRenderer, ComponentSpec } from './components/Primitives';
 import NotionGitHubSyncView from './components/NotionGitHubSyncView';
 import ProfitLoopMetrics from './components/ProfitLoopMetrics';
 import InfrastructureStatus from './components/InfrastructureStatus';
+import AgentTelemetry from './components/AgentTelemetry';
+import CrewRegistry from './components/CrewRegistry';
+import { CrewProvider } from './contexts/CrewContext';
 import { cn } from './lib/utils';
 
 interface ThemeState {
@@ -997,19 +1000,20 @@ export default function App() {
   };
 
   return (
-    <motion.div 
-      animate={screenShake ? {
-        x: [0, -10, 10, -10, 10, 0],
-        y: [0, 5, -5, 5, -5, 0]
-      } : {}}
-      transition={{ duration: 0.4 }}
-      className={cn(
-        "min-h-screen bg-[#020202] text-[#e0e0e0] font-sans flex overflow-hidden relative selection:bg-gold/30 selection:text-white",
-        theme.border === 'sharp' ? 'rounded-none' : 'rounded-3xl m-4',
-        isGlitching && "animate-pulse"
-      )}
-      style={isGlitching ? { filter: 'contrast(1.5) brightness(1.2) hue-rotate(90deg)' } : {}}
-    >
+    <CrewProvider>
+      <motion.div 
+        animate={screenShake ? {
+          x: [0, -10, 10, -10, 10, 0],
+          y: [0, 5, -5, 5, -5, 0]
+        } : {}}
+        transition={{ duration: 0.4 }}
+        className={cn(
+          "min-h-screen bg-[#020202] text-[#e0e0e0] font-sans flex overflow-hidden relative selection:bg-gold/30 selection:text-white",
+          theme.border === 'sharp' ? 'rounded-none' : 'rounded-3xl m-4',
+          isGlitching && "animate-pulse"
+        )}
+        style={isGlitching ? { filter: 'contrast(1.5) brightness(1.2) hue-rotate(90deg)' } : {}}
+      >
       {/* Neural Resonance: 3D Heartbeat Mesh */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <motion.div 
@@ -1503,9 +1507,21 @@ export default function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="max-w-5xl mx-auto"
+              className="max-w-5xl mx-auto space-y-6"
             >
-              <InfrastructureStatus />
+              <CrewRegistry />
+              <div className="grid grid-cols-2 gap-6">
+                <AgentTelemetry 
+                  crew="infrastructure" 
+                  roomId="ci-medic-telemetry" 
+                  agentId="ci-medic-001" 
+                />
+                <AgentTelemetry 
+                  crew="trading" 
+                  roomId="trading-telemetry" 
+                  agentId="trade-monitor-001" 
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1919,6 +1935,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-    </motion.div>
+      </motion.div>
+    </CrewProvider>
   );
 }
