@@ -1,6 +1,8 @@
 // Extended env types for bridge
 // Extends @aether/env with bridge-specific bindings
 
+import type { DurableObjectNamespace } from '@cloudflare/workers-types';
+
 // Cloudflare bindings - using unknown for external types
 export interface BridgeBindings {
   DB: D1Database;
@@ -18,7 +20,10 @@ export interface BridgeBindings {
   DISPATCHER: Fetcher;
   AETHER: Fetcher;
   GITHUB_WEBHOOK_SECRET?: string;
+  GITHUB_PAT?: string;
   NOTION_WEBHOOK_SECRET?: string;
+  STATE_BROADCASTER: DurableObjectNamespace;
+  ANTHROPIC_API_KEY?: string;
 }
 
 // Kraken-specific env extension

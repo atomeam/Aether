@@ -19,6 +19,12 @@ import { handleQRCodeGenerator } from './rapidapi-apis/qr-code-generator';
 import { handleCurrencyConverter } from './rapidapi-apis/currency-converter';
 import { handleAToMindRequest } from './a-to-mind-api';
 import { validateMutation } from './middleware/validator';
+import { StateBroadcaster } from './durable-objects/state-broadcaster';
+import { LogAnalyzer } from './ci-medic/log-analyzer';
+import { Remediator } from './ci-medic/remediator';
+
+// Re-export Durable Object class for Cloudflare Workers
+export { StateBroadcaster };
 
 // Cloudflare persistence layer for reliability systems
 import { persistence } from '../../../tools/reliability-systems/cloudflare-persistence';
