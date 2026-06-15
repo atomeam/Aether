@@ -17,6 +17,8 @@ export interface BridgeBindings {
   CURATOR_QUEUE: Queue;
   DISPATCHER: Fetcher;
   AETHER: Fetcher;
+  GITHUB_WEBHOOK_SECRET?: string;
+  NOTION_WEBHOOK_SECRET?: string;
 }
 
 // Kraken-specific env extension
