@@ -10,6 +10,9 @@ name = "homebase"
 main = "src/worker.ts"
 compatibility_date = "2026-05-19"
 
+[observability]
+enabled = true
+
 # KV Namespace for workspace status (read-only)
 [[kv_namespaces]]
 binding = "STATE"
