@@ -234,6 +234,77 @@ export default {
           bindings: getBindings(env),
         });
       }
+
+      // GET /api/health-check - Health Monitor for Red Line detection
+      if (path === '/api/health-check' && method === 'GET') {
+        try {
+          const alerts: any[] = [];
+          const now = new Date();
+
+          // Check crew registry for heartbeat violations
+          if (env.RELIABILITY_TRACING) {
+            const registry = await env.RELIABILITY_TRACING.prepare(
+              'SELECT agent_id, crew, status, last_heartbeat FROM crew_registry'
+            ).all();
+
+            for (const crew of registry.results) {
+              const lastHeartbeat = new Date(crew.last_heartbeat);
+              const secondsSinceHeartbeat = (now.getTime() - lastHeartbeat.getTime()) / 1000;
+
+              // Red Line: Heartbeat timeout > 60 seconds
+              if (secondsSinceHeartbeat > 60) {
+                alerts.push({
+                  level: 'critical',
+                  message: `Heartbeat timeout: ${crew.agent_id} - ${Math.floor(secondsSinceHeartbeat)}s since last heartbeat`,
+                  crew: crew.crew,
+                  agentId: crew.agent_id,
+                  timestamp: now.toISOString()
+                });
+              }
+            }
+
+            // Check for recent error events
+            const recentErrors = await env.RELIABILITY_TRACING.prepare(
+              'SELECT agent_id, crew, level, action, payload, timestamp FROM crew_events WHERE level IN (\'error\', \'critical\') AND timestamp > datetime(\'now\', \'-5 minutes\') ORDER BY timestamp DESC LIMIT 10'
+            ).all();
+
+            for (const error of recentErrors.results) {
+              alerts.push({
+                level: error.level,
+                message: `Error event: ${error.action} - ${JSON.parse(error.payload).message || 'Unknown error'}`,
+                crew: error.crew,
+                agentId: error.agent_id,
+                timestamp: error.timestamp
+              });
+            }
+
+            // Check for failed tasks in DLQ
+            const failedTasks = await env.RELIABILITY_TRACING.prepare(
+              'SELECT task_id, task_type, error_message, agent_id, crew FROM failed_tasks WHERE status = \'pending\' ORDER BY created_at DESC LIMIT 5'
+            ).all();
+
+            for (const task of failedTasks.results) {
+              alerts.push({
+                level: 'warn',
+                message: `Failed task: ${task.task_type} - ${task.error_message || 'Unknown error'}`,
+                crew: task.crew || 'unknown',
+                agentId: task.agent_id || 'unknown',
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+
+          return json({
+            ok: true,
+            alerts,
+            alertCount: alerts.length,
+            timestamp: now.toISOString()
+          });
+        } catch (error) {
+          console.error('[Health Check] Error:', error);
+          return json({ error: 'Health check failed' }, 500);
+        }
+      }
       
       // GET /api/reliability/health - Reliability systems health check
       if (path === '/api/reliability/health') {
@@ -3316,6 +3387,31 @@ interface XPTPPaymentResponse {
         }
       }
 
+      // POST /api/heartbeat/start - Start autonomous heartbeat loop for stress test
+      if (path === '/api/heartbeat/start' && method === 'POST') {
+        try {
+          // Enqueue heartbeat task to CURATOR_QUEUE
+          if (env.CURATOR_QUEUE) {
+            await env.CURATOR_QUEUE.send({
+              type: 'heartbeat_task',
+              timestamp: new Date().toISOString(),
+              mode: 'stress_test'
+            });
+
+            console.log('[Heartbeat] Task enqueued to CURATOR_QUEUE');
+          }
+
+          return json({
+            ok: true,
+            message: 'Heartbeat task enqueued for stress test',
+            mode: 'stress_test'
+          });
+        } catch (error) {
+          console.error('[Heartbeat Start] Error:', error);
+          return json({ error: 'Failed to start heartbeat' }, 500);
+        }
+      }
+
       // POST /api/ci-medic/test - Test CI-Medic telemetry
       if (path === '/api/ci-medic/test' && method === 'POST') {
         try {
@@ -3559,6 +3655,80 @@ interface XPTPPaymentResponse {
       
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+    }
+  },
+
+  // Heartbeat Worker for Stress Test
+  async processHeartbeatTask(job: CuratorJob, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[Heartbeat Worker] Processing heartbeat task');
+    
+    // Send heartbeat to both crews
+    if (env.STATE_BROADCASTER) {
+      // Trade-Monitor heartbeat
+      try {
+        const tradingBroadcasterId = env.STATE_BROADCASTER.idFromName('trading-telemetry');
+        const tradingBroadcaster = env.STATE_BROADCASTER.get(tradingBroadcasterId);
+        
+        const tradingTelemetry: TradeTelemetry = {
+          agentId: 'trade-monitor-001',
+          crew: 'trading',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'broadcast',
+          payload: {
+            message: 'Trade-Monitor heartbeat',
+            signal: 'heartbeat',
+            status: 'running',
+            volatility: 0.05 + Math.random() * 0.02 // Simulate slight volatility variation
+          }
+        };
+        
+        await tradingBroadcaster.broadcast(tradingTelemetry, 'trading-telemetry');
+        console.log('[Heartbeat Worker] Trade-Monitor heartbeat sent');
+      } catch (error) {
+        console.error('[Heartbeat Worker] Trade-Monitor heartbeat failed:', error);
+      }
+
+      // CI-Medic heartbeat
+      try {
+        const ciBroadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const ciBroadcaster = env.STATE_BROADCASTER.get(ciBroadcasterId);
+        
+        const ciTelemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'broadcast',
+          payload: {
+            message: 'CI-Medic heartbeat',
+            signal: 'heartbeat',
+            status: 'running'
+          }
+        };
+        
+        await ciBroadcaster.broadcast(ciTelemetry, 'ci-medic-telemetry');
+        console.log('[Heartbeat Worker] CI-Medic heartbeat sent');
+      } catch (error) {
+        console.error('[Heartbeat Worker] CI-Medic heartbeat failed:', error);
+      }
+    }
+
+    // Update crew registry heartbeats
+    if (env.RELIABILITY_TRACING) {
+      try {
+        await env.RELIABILITY_TRACING.prepare(
+          'UPDATE crew_registry SET last_heartbeat = ?, status = ? WHERE agent_id = ?'
+        ).bind(new Date().toISOString(), 'running', 'trade-monitor-001').run();
+
+        await env.RELIABILITY_TRACING.prepare(
+          'UPDATE crew_registry SET last_heartbeat = ?, status = ? WHERE agent_id = ?'
+        ).bind(new Date().toISOString(), 'running', 'ci-medic-001').run();
+
+        console.log('[Heartbeat Worker] Crew registry updated');
+      } catch (error) {
+        console.error('[Heartbeat Worker] Crew registry update failed:', error);
+      }
     }
   },
 
@@ -3933,6 +4103,13 @@ Respond with a JSON object containing:
       try {
         const job = message.body as CuratorJob;
         
+        // Handle Heartbeat tasks
+        if (job.type === 'heartbeat_task') {
+          await this.processHeartbeatTask(job, env, ctx);
+          message.ack();
+          continue;
+        }
+        
         // Handle CI-Medic tasks
         if (job.type === 'ci_medic_task') {
           await this.processCIMedicTask(job, env, ctx);
@@ -4215,6 +4392,8 @@ interface CuratorJob {
   action?: string;
   conclusion?: string;
   detectedAt?: string;
+  mode?: string;
+  timestamp?: string;
 }
 
 interface ExecutionContext {

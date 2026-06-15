@@ -37,6 +37,7 @@ import ProfitLoopMetrics from './components/ProfitLoopMetrics';
 import InfrastructureStatus from './components/InfrastructureStatus';
 import AgentTelemetry from './components/AgentTelemetry';
 import CrewRegistry from './components/CrewRegistry';
+import AlertMonitor from './components/AlertMonitor';
 import { CrewProvider } from './contexts/CrewContext';
 import { cn } from './lib/utils';
 
@@ -1509,6 +1510,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="max-w-5xl mx-auto space-y-6"
             >
+              <AlertMonitor />
               <CrewRegistry />
               <div className="grid grid-cols-2 gap-6">
                 <AgentTelemetry 
