@@ -57,6 +57,49 @@ function getBindings(env: Env) {
   };
 }
 
+// Constant-time HMAC comparison for auth
+function constantTimeHmacCompare(expected: string, actual: string): boolean {
+  if (expected.length !== actual.length) return false;
+  
+  let result = 0;
+  for (let i = 0; i < expected.length; i++) {
+    result |= expected.charCodeAt(i) ^ actual.charCodeAt(i);
+  }
+  
+  return result === 0;
+}
+
+// HMAC-based authentication
+function requireAuth(request: Request, env: Env, allowedServices: string[] = ['all']): { authenticated: boolean; service?: string; error?: string } {
+  const authHeader = request.headers.get('Authorization') || request.headers.get('x-api-key');
+  
+  if (!authHeader) {
+    return { authenticated: false, error: 'Missing authentication header' };
+  }
+  
+  // Check if it's a Bearer token
+  const token = authHeader.replace('Bearer ', '').replace('API-Key ', '');
+  
+  // For now, implement a simple check - in production this would use proper secrets
+  // This is a placeholder that will be replaced with proper secret-based auth
+  const validTokens = {
+    'tasks': env.BRIDGE_NUCLEUS_KEY || '',
+    'proposals': env.BRIDGE_SERVICE_KEY || '',
+    'ci': env.CI_DEPLOY_KEY || '',
+  };
+  
+  // Check if token matches any allowed service
+  for (const [service, key] of Object.entries(validTokens)) {
+    if (key && constantTimeHmacCompare(key, token)) {
+      if (allowedServices.includes('all') || allowedServices.includes(service)) {
+        return { authenticated: true, service };
+      }
+    }
+  }
+  
+  return { authenticated: false, error: 'Invalid authentication token' };
+}
+
 // Cloudflare Workers export
 // ─── Rate Limiter ────────────────────────────────────────────────────
 const rateLimiter = new Map<string, { count: number; resetAt: number }>();
@@ -1252,6 +1295,16 @@ export default {
       
       // POST /proposals/write - write proposals snapshot (workflow writer)
       if (path === '/proposals/write' && method === 'POST' && env.STATE) {
+        const authResult = requireAuth(request, env, ['proposals', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/proposals/write', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -1272,6 +1325,16 @@ export default {
       
       // POST /lessons/write - write lessons index (workflow writer)
       if (path === '/lessons/write' && method === 'POST' && env.STATE_CACHE) {
+        const authResult = requireAuth(request, env, ['proposals', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/lessons/write', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         try {
           const body = await request.json() as { items?: unknown[]; source?: string };
           const items = body.items || [];
@@ -1643,6 +1706,16 @@ export default {
 
       // POST /api/council/log - log a conversation message
       if (path === '/api/council/log' && method === 'POST') {
+        const authResult = requireAuth(request, env, ['proposals', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/api/council/log', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         const body = await request.json() as { session_id: string; agent_id: string; role: string; content: string };
         const { session_id, agent_id, role, content } = body;
         if (!session_id || !agent_id || !role || !content) {
@@ -1824,6 +1897,16 @@ interface XPTPPaymentResponse {
 
       // POST /api/leads — lead capture from landing page
       if (path === '/api/leads' && method === 'POST') {
+        const authResult = requireAuth(request, env, ['proposals', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/api/leads', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         const body = await request.json().catch(() => null) as { email?: string; name?: string; message?: string } | null;
         const email = body && typeof body.email === 'string' ? body.email.trim().slice(0, 200) : '';
         if (!email || !email.includes('@')) return json({ error: 'valid email required' }, 400);
@@ -2041,6 +2124,17 @@ interface XPTPPaymentResponse {
 
       // POST /tasks - create a task and log to BRIDGE_DB audit trail
       if (path === '/tasks' && method === 'POST') {
+        const authResult = requireAuth(request, env, ['tasks', 'all']);
+        if (!authResult.authenticated) {
+          // Log auth failure to audit_events
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/tasks', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { ai_id, title, description } = body as { ai_id?: string; title?: string; description?: string };
@@ -2116,6 +2210,16 @@ interface XPTPPaymentResponse {
 
       // PUT /tasks/:id - update task
       if (path.match(/^\/tasks\/[^/]+$/) && method === 'PUT') {
+        const authResult = requireAuth(request, env, ['tasks', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/tasks/:id', method: 'PUT', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         
         const task_id = path.split('/')[2];
@@ -2161,6 +2265,16 @@ interface XPTPPaymentResponse {
 
       // DELETE /tasks/:id - delete task
       if (path.match(/^\/tasks\/[^/]+$/) && method === 'DELETE') {
+        const authResult = requireAuth(request, env, ['tasks', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/tasks/:id', method: 'DELETE', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         
         const task_id = path.split('/')[2];
@@ -2179,6 +2293,16 @@ interface XPTPPaymentResponse {
 
       // POST /ops/deploy-event - CI deployment audit endpoint
       if (path === '/ops/deploy-event' && method === 'POST') {
+        const authResult = requireAuth(request, env, ['ci', 'all']);
+        if (!authResult.authenticated) {
+          if (env.BRIDGE_DB) {
+            await env.BRIDGE_DB.prepare(
+              "INSERT INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+            ).bind(`auth-fail-${Date.now()}`, 'api', 'AUTH_DENIED', 'warning', JSON.stringify({ endpoint: '/ops/deploy-event', error: authResult.error, ip }), new Date().toISOString()).run();
+          }
+          return json({ error: authResult.error }, 401);
+        }
+        
         if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
         const body = await request.json() as Record<string, unknown>;
         const { 
@@ -3053,6 +3177,10 @@ interface Env {
   GITHUB_WORKFLOW: string; // workflow filename
   CLOUDFLARE_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
+  // Auth secrets for endpoint lockdown
+  BRIDGE_NUCLEUS_KEY: string;
+  BRIDGE_SERVICE_KEY: string;
+  CI_DEPLOY_KEY: string;
   // Reliability Systems bindings
   RELIABILITY_DLQ: KVNamespace;
   RELIABILITY_METRICS: KVNamespace;
