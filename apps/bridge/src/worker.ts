@@ -2050,13 +2050,131 @@ interface XPTPPaymentResponse {
         const task_id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const timestamp = new Date().toISOString();
 
+        // Write task to tasks table (adapted to existing schema)
+        await env.BRIDGE_DB.prepare(
+          "INSERT INTO tasks (id, title, lane, status, priority, blocking, created_at, updated_at, ai_id, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(task_id, title, 'Council', 'Not started', 'P1', 0, timestamp, timestamp, ai_id, (description || '').substring(0, 5000)).run();
+
         // Write audit event to BRIDGE_DB
         await env.BRIDGE_DB.prepare(
           "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
         ).bind(task_id, 'api', 'TASK_CREATED', 'info', JSON.stringify({ ai_id, title, description: (description || '').substring(0, 1000) }), timestamp).run();
 
         if (env.STATE) trackUsage(env, ip, 'd1_query');
-        return json({ ok: true, task_id, ai_id, title, timestamp });
+        return json({ ok: true, task_id, ai_id, title, status: 'pending', timestamp });
+      }
+
+      // GET /tasks - retrieve tasks with optional filtering
+      if (path === '/tasks' && method === 'GET') {
+        if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
+        
+        const ai_id = url.searchParams.get('ai_id');
+        const status = url.searchParams.get('status');
+        const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+        
+        let query = 'SELECT * FROM tasks';
+        const params: string[] = [];
+        const conditions: string[] = [];
+        
+        if (ai_id) {
+          conditions.push('ai_id = ?');
+          params.push(ai_id);
+        }
+        
+        if (status) {
+          conditions.push('status = ?');
+          params.push(status);
+        }
+        
+        if (conditions.length > 0) {
+          query += ' WHERE ' + conditions.join(' AND ');
+        }
+        
+        query += ' ORDER BY created_at DESC LIMIT ?';
+        params.push(limit.toString());
+        
+        const result = await env.BRIDGE_DB.prepare(query).bind(...params).all();
+        
+        if (env.STATE) trackUsage(env, ip, 'd1_query');
+        return json({ ok: true, tasks: result.results, count: result.results.length });
+      }
+
+      // GET /tasks/:id - retrieve specific task
+      if (path.match(/^\/tasks\/[^/]+$/) && method === 'GET') {
+        if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
+        
+        const task_id = path.split('/')[2];
+        const result = await env.BRIDGE_DB.prepare('SELECT * FROM tasks WHERE id = ?').bind(task_id).first();
+        
+        if (!result) {
+          return json({ error: 'Task not found' }, 404);
+        }
+        
+        if (env.STATE) trackUsage(env, ip, 'd1_query');
+        return json({ ok: true, task: result });
+      }
+
+      // PUT /tasks/:id - update task
+      if (path.match(/^\/tasks\/[^/]+$/) && method === 'PUT') {
+        if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
+        
+        const task_id = path.split('/')[2];
+        const body = await request.json() as Record<string, unknown>;
+        const { title, description, status } = body as { title?: string; description?: string; status?: string };
+        
+        const updates: string[] = [];
+        const params: string[] = [];
+        const timestamp = new Date().toISOString();
+        
+        if (title) {
+          updates.push('title = ?');
+          params.push(title);
+        }
+        
+        if (description !== undefined) {
+          updates.push('description = ?');
+          params.push(description.substring(0, 5000));
+        }
+        
+        if (status) {
+          updates.push('status = ?');
+          params.push(status);
+        }
+        
+        updates.push('updated_at = ?');
+        params.push(timestamp);
+        
+        params.push(task_id);
+        
+        await env.BRIDGE_DB.prepare(
+          `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`
+        ).bind(...params).run();
+        
+        // Write audit event
+        await env.BRIDGE_DB.prepare(
+          "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(`task-update-${task_id}-${Date.now()}`, 'api', 'TASK_UPDATED', 'info', JSON.stringify({ task_id, updates }), timestamp).run();
+        
+        if (env.STATE) trackUsage(env, ip, 'd1_query');
+        return json({ ok: true, task_id, updated_at: timestamp });
+      }
+
+      // DELETE /tasks/:id - delete task
+      if (path.match(/^\/tasks\/[^/]+$/) && method === 'DELETE') {
+        if (!env.BRIDGE_DB) return json({ error: 'BRIDGE_DB not bound' }, 500);
+        
+        const task_id = path.split('/')[2];
+        const timestamp = new Date().toISOString();
+        
+        await env.BRIDGE_DB.prepare('DELETE FROM tasks WHERE id = ?').bind(task_id).run();
+        
+        // Write audit event
+        await env.BRIDGE_DB.prepare(
+          "INSERT OR IGNORE INTO events (event_id, source, kind, level, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(`task-delete-${task_id}-${Date.now()}`, 'api', 'TASK_DELETED', 'info', JSON.stringify({ task_id }), timestamp).run();
+        
+        if (env.STATE) trackUsage(env, ip, 'd1_query');
+        return json({ ok: true, task_id, deleted_at: timestamp });
       }
 
       // POST /ops/deploy-event - CI deployment audit endpoint
