@@ -94,6 +94,7 @@ function requireAuth(request: Request, env: Env, allowedServices: string[] = ['a
     'tasks': env.BRIDGE_NUCLEUS_KEY || '',
     'proposals': env.BRIDGE_SERVICE_KEY || '',
     'ci': env.CI_DEPLOY_KEY || '',
+    'atomind': env.ATOMIND_DEVIN_SECRET || '',
   };
   
   // Check if token matches any allowed service
@@ -1036,6 +1037,10 @@ export default {
 
       // a-to-mind API - Comprehensive automation API
       if (path.startsWith('/api/a-to-mind/')) {
+        const authCheck = requireAuth(request, env, ['atomind']);
+        if (!authCheck.authenticated) {
+          return json({ error: authCheck.error }, 401);
+        }
         return handleAToMindRequest(request, path);
       }
 

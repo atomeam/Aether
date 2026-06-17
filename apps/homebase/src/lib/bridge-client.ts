@@ -123,8 +123,8 @@ export function createBridgeClient(env: AppEnv, options: BridgeClientOptions = {
       headers.set('Authorization', `Bearer ${env.BRIDGE_API_TOKEN}`);
     }
 
-    if (env.ATOMIND_API_TOKEN && base === env.ATOMIND_BASE_URL) {
-      headers.set('Authorization', `Bearer ${env.ATOMIND_API_TOKEN}`);
+    if (env.ATOMIND_DEVIN_SECRET && base === env.ATOMIND_BASE_URL) {
+      headers.set('Authorization', `Bearer ${env.ATOMIND_DEVIN_SECRET}`);
     }
 
     const response = await fetch(endpoint, {

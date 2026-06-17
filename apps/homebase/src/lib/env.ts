@@ -10,7 +10,7 @@ const envSchema = z.object({
   BRIDGE_TASKS_PATH: z.string().default('/tasks'),
   BRIDGE_AUDIT_EVENTS_PATH: z.string().default('/ops/deploy-event'),
   ATOMIND_BASE_URL: z.string().url().default('https://aether-bridge.atomicmoonbeam88.workers.dev'),
-  ATOMIND_API_TOKEN: z.string().min(1).optional(),
+  ATOMIND_DEVIN_SECRET: z.string().min(1).optional(),
   NOTION_WORKSPACE_INDEX_URL: z.string().url().default('https://www.notion.so'),
   NOTION_ROSTER_URL: z.string().url().default('https://www.notion.so'),
   NOTION_ROLE_CARDS_URL: z.string().url().default('https://www.notion.so'),
