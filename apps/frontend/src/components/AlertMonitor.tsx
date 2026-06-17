@@ -74,9 +74,70 @@ export default function AlertMonitor() {
       }
     };
 
+    // Check a-to-mind API health
+    const checkAtomindHealth = async () => {
+      try {
+        const response = await fetch('https://aether-bridge.atomicmoonbeam88.workers.dev/api/a-to-mind/health', {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_ATOMIND_DEVIN_SECRET || ''}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Health check failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status !== 'healthy') {
+          const alert: Alert = {
+            id: `atomind-health-${Date.now()}-${Math.random()}`,
+            level: 'critical',
+            message: `a-to-mind API unhealthy: ${data.status}`,
+            timestamp: data.timestamp,
+            crew: 'a-to-mind',
+            acknowledged: false
+          };
+          
+          setAlerts(prev => {
+            const existingAlertIds = new Set(prev.map(a => a.message));
+            if (!existingAlertIds.has(alert.message)) {
+              triggerBrowserNotification(alert);
+              return [alert, ...prev].slice(0, 10);
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.error('[AlertMonitor] Failed to check a-to-mind health:', error);
+        const alert: Alert = {
+          id: `atomind-health-${Date.now()}-${Math.random()}`,
+          level: 'critical',
+          message: 'a-to-mind API health check failed',
+          timestamp: new Date().toISOString(),
+          crew: 'a-to-mind',
+          acknowledged: false
+        };
+        
+        setAlerts(prev => {
+          const existingAlertIds = new Set(prev.map(a => a.message));
+          if (!existingAlertIds.has(alert.message)) {
+            triggerBrowserNotification(alert);
+            return [alert, ...prev].slice(0, 10);
+          }
+          return prev;
+        });
+      }
+    };
+
     // Check every 30 seconds
-    const interval = setInterval(checkRedLines, 30000);
+    const interval = setInterval(() => {
+      checkRedLines();
+      checkAtomindHealth();
+    }, 30000);
+    
     checkRedLines();
+    checkAtomindHealth();
 
     return () => clearInterval(interval);
   }, [notificationPermission]);
