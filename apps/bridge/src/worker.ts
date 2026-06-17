@@ -23,6 +23,7 @@ import { StateBroadcaster } from './durable-objects/state-broadcaster';
 import { LogAnalyzer } from './ci-medic/log-analyzer';
 import { Remediator } from './ci-medic/remediator';
 import { CrewTelemetry, TradeTelemetry } from './types';
+import { logRequest, logRateLimitHit } from './analytics';
 
 // Re-export Durable Object class for Cloudflare Workers
 export { StateBroadcaster };
@@ -1037,9 +1038,14 @@ export default {
 
       // a-to-mind API - Comprehensive automation API
       if (path.startsWith('/api/a-to-mind/')) {
+        const startTime = Date.now();
+        const userAgent = request.headers.get('user-agent') || undefined;
+        
         // Allow unauthenticated requests for free tier with IP-based rate limiting
         // Authenticated requests bypass rate limits and get higher quotas
         const authCheck = requireAuth(request, env, ['atomind']);
+        const tier = authCheck.authenticated ? 'pro' : 'free';
+        const apiKeyHash = authCheck.authenticated ? authCheck.service : undefined;
         
         if (!authCheck.authenticated) {
           // Check IP-based rate limit for free tier (500 requests/day)
@@ -1059,6 +1065,16 @@ export default {
           }
           
           if (dailyCount >= 500) {
+            // Log rate limit hit for upgrade tracking
+            if (env.AETHER_ANALYTICS) {
+              await logRateLimitHit(env, ip, path, 'daily', dailyCount, 'free');
+            }
+            
+            const responseTime = Date.now() - startTime;
+            if (env.AETHER_ANALYTICS) {
+              await logRequest(env, path, method, 429, responseTime, ip, userAgent, apiKeyHash, tier, 'Free tier rate limit exceeded');
+            }
+            
             return json({ 
               error: 'Free tier rate limit exceeded',
               message: 'Upgrade to Pro tier for 10,000 requests/month',
@@ -1071,7 +1087,38 @@ export default {
           await env.STATE.put(freeTierKey, `${dayStart}:${dailyCount + 1}`);
         }
         
-        return handleAToMindRequest(request, path);
+        // Handle the request
+        let response: Response;
+        let statusCode = 200;
+        let errorMessage: string | undefined;
+        
+        try {
+          response = await handleAToMindRequest(request, path);
+          statusCode = response.status;
+          
+          // Check for error response
+          if (statusCode >= 400) {
+            const body = await response.clone().text();
+            try {
+              const errorJson = JSON.parse(body);
+              errorMessage = errorJson.error || errorJson.message;
+            } catch {
+              errorMessage = body;
+            }
+          }
+        } catch (error) {
+          statusCode = 500;
+          errorMessage = error instanceof Error ? error.message : String(error);
+          response = json({ error: 'Internal error', details: errorMessage }, 500);
+        }
+        
+        // Log request to analytics
+        const responseTime = Date.now() - startTime;
+        if (env.AETHER_ANALYTICS) {
+          await logRequest(env, path, method, statusCode, responseTime, ip, userAgent, apiKeyHash, tier, errorMessage);
+        }
+        
+        return response;
       }
 
       // GET / - a-to-mind.com landing page
@@ -4213,9 +4260,11 @@ Respond with a JSON object containing:
 interface Env {
   DB: D1Database;
   BRIDGE_DB: D1Database; // aether-bridge-db — runs, registry, audit
+  BRIDGE_DB_STAGING: D1Database; // aether-bridge-db-staging
   STATE: KVNamespace;
   STATE_CACHE: KVNamespace;
   METRICS: KVNamespace; // metrics KV store
+  AETHER_ANALYTICS: D1Database; // Analytics database for monetization tracking
   MYBROWSER: any;
   NOTION_WEBHOOK_SECRET: string;
   NOTION_API_TOKEN: string;
