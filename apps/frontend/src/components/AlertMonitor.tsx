@@ -74,14 +74,11 @@ export default function AlertMonitor() {
       }
     };
 
-    // Check a-to-mind API health
+    // Check a-to-mind API health (via backend proxy to avoid exposing secret)
     const checkAtomindHealth = async () => {
       try {
-        const response = await fetch('https://aether-bridge.atomicmoonbeam88.workers.dev/api/a-to-mind/health', {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_ATOMIND_DEVIN_SECRET || ''}`
-          }
-        });
+        // Call backend proxy endpoint instead of direct Worker access
+        const response = await fetch('/api/atomind-health');
         
         if (!response.ok) {
           throw new Error(`Health check failed: ${response.status}`);

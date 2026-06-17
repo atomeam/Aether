@@ -13,6 +13,8 @@ export const BackendEnvSchema = BaseEnv.extend({
     .string()
     .optional()
     .transform((s) => (s ? s.split(",").map((x) => x.trim()) : undefined)),
+  ATOMIND_BASE_URL: z.string().url().default('https://aether-bridge.atomicmoonbeam88.workers.dev'),
+  ATOMIND_DEVIN_SECRET: z.string().min(1).optional(),
 })
 export type BackendEnv = z.infer<typeof BackendEnvSchema>
 
