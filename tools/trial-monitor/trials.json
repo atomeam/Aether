@@ -1,0 +1,1237 @@
+[
+  {
+    "id": "trial_circleci_1781435652852",
+    "service": "CircleCI",
+    "status": "active",
+    "startDate": "2026-06-07T11:14:12.852Z",
+    "dangerDate": "2026-06-21",
+    "dangerDateTime": "2026-06-21T11:14:12.852Z",
+    "estimatedSavings": 99,
+    "source": "auto_discovery",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [
+        "unlimited minutes",
+        "parallel jobs"
+      ],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:14:12.852Z",
+      "syncSource": "auto"
+    }
+  },
+  {
+    "id": "trial_datadog_1781435652852",
+    "service": "Datadog",
+    "status": "active",
+    "startDate": "2026-06-04T11:14:12.852Z",
+    "dangerDate": "2026-06-18",
+    "dangerDateTime": "2026-06-18T11:14:12.852Z",
+    "estimatedSavings": 199,
+    "source": "auto_discovery",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [
+        "monitoring",
+        "logs",
+        "APM"
+      ],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:14:12.852Z",
+      "syncSource": "auto"
+    }
+  },
+  {
+    "id": "trial_vercel_1781435652852",
+    "service": "Vercel",
+    "status": "active",
+    "startDate": "2026-06-14T11:14:12.852Z",
+    "dangerDate": "2026-06-28",
+    "dangerDateTime": "2026-06-28T11:14:12.852Z",
+    "estimatedSavings": 0,
+    "source": "auto_discovery",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": false,
+      "autoCancelRequired": false,
+      "features": [
+        "hosting",
+        "edge functions"
+      ],
+      "limitations": [
+        "hobby plan"
+      ],
+      "lastSync": "2026-06-14T11:14:12.852Z",
+      "syncSource": "auto"
+    }
+  },
+  {
+    "id": "trial_linear_1781435634745",
+    "service": "Linear",
+    "status": "active",
+    "startDate": "2026-06-14T11:13:54.745Z",
+    "dangerDate": "2026-06-28",
+    "dangerDateTime": "2026-06-28T11:13:54.745Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:13:54.745Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_aws_1781435635562",
+    "service": "Aws",
+    "status": "active",
+    "startDate": "2026-06-14T11:13:55.562Z",
+    "dangerDate": "2026-06-28",
+    "dangerDateTime": "2026-06-28T11:13:55.562Z",
+    "estimatedSavings": 2,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:13:55.562Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_github_1781435635563",
+    "service": "Github",
+    "status": "active",
+    "startDate": "2026-06-14T11:13:55.563Z",
+    "dangerDate": "2026-09-12",
+    "dangerDateTime": "2026-09-12T11:13:55.563Z",
+    "estimatedSavings": 500,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "90 days"
+      ],
+      "lastSync": "2026-06-14T11:13:55.564Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_github_1781435635564",
+    "service": "Github",
+    "status": "active",
+    "startDate": "2026-06-14T11:13:55.564Z",
+    "dangerDate": "2026-09-12",
+    "dangerDateTime": "2026-09-12T11:13:55.564Z",
+    "estimatedSavings": 500,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "90 days"
+      ],
+      "lastSync": "2026-06-14T11:13:55.564Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_aws_1781435646880",
+    "service": "Aws",
+    "status": "active",
+    "startDate": "2026-06-14T11:14:06.880Z",
+    "dangerDate": "2026-06-28",
+    "dangerDateTime": "2026-06-28T11:14:06.880Z",
+    "estimatedSavings": 1,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:14:06.880Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_redis_1781435649456",
+    "service": "Redis",
+    "status": "active",
+    "startDate": "2026-06-14T11:14:09.456Z",
+    "dangerDate": "2026-08-28",
+    "dangerDateTime": "2026-08-28T11:14:09.456Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "75 days"
+      ],
+      "lastSync": "2026-06-14T11:14:09.456Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_notion_1781435649855",
+    "service": "Notion",
+    "status": "active",
+    "startDate": "2026-06-14T11:14:09.855Z",
+    "dangerDate": "2026-06-28",
+    "dangerDateTime": "2026-06-28T11:14:09.855Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:14:09.855Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_aws_1781435654509",
+    "service": "Aws",
+    "status": "active",
+    "startDate": "2026-06-14T11:14:14.509Z",
+    "dangerDate": "2026-06-28",
+    "dangerDateTime": "2026-06-28T11:14:14.509Z",
+    "estimatedSavings": 6,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T11:14:14.509Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_linear_1781435660462",
+    "service": "Linear",
+    "status": "active",
+    "startDate": "2026-06-14T11:14:20.462Z",
+    "dangerDate": "2027-03-11",
+    "dangerDateTime": "2027-03-11T11:14:20.462Z",
+    "estimatedSavings": 99,
+    "source": "manual_entry",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "270 days"
+      ],
+      "lastSync": "2026-06-14T11:14:20.462Z",
+      "syncSource": "discovery"
+    }
+  },
+  {
+    "id": "trial_kintone_1781440233961_0",
+    "service": "Kintone",
+    "status": "active",
+    "startDate": "2026-05-20T00:00:00.000Z",
+    "dangerDate": "2026-06-19",
+    "dangerDateTime": "2026-06-19T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.961Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_kraken+_1781440233963_1",
+    "service": "Kraken+",
+    "status": "active",
+    "startDate": "2026-05-21T00:00:00.000Z",
+    "dangerDate": "2026-06-20",
+    "dangerDateTime": "2026-06-20T00:00:00.000Z",
+    "estimatedSavings": 79,
+    "source": "email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.963Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_gohighlevel_1781440233964_2",
+    "service": "GoHighLevel",
+    "status": "active",
+    "startDate": "2026-06-06T00:00:00.000Z",
+    "dangerDate": "2026-06-20",
+    "dangerDateTime": "2026-06-20T00:00:00.000Z",
+    "estimatedSavings": 97,
+    "source": "email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.964Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_pipedrive_1781440233965_3",
+    "service": "Pipedrive",
+    "status": "active",
+    "startDate": "2026-06-06T00:00:00.000Z",
+    "dangerDate": "2026-06-20",
+    "dangerDateTime": "2026-06-20T00:00:00.000Z",
+    "estimatedSavings": 69,
+    "source": "email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.965Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_monday.com_1781440233965_4",
+    "service": "monday.com",
+    "status": "expired",
+    "startDate": "2026-05-13T00:00:00.000Z",
+    "dangerDate": "2026-06-12",
+    "dangerDateTime": "2026-06-12T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.965Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_canva_business_1781440233966_5",
+    "service": "Canva Business",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-06-10",
+    "dangerDateTime": "2026-06-10T00:00:00.000Z",
+    "estimatedSavings": 119,
+    "source": "email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.966Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_atlassian_service_collection_premium_1781440233966_6",
+    "service": "Atlassian Service Collection Premium",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-06-10",
+    "dangerDateTime": "2026-06-10T00:00:00.000Z",
+    "estimatedSavings": 149,
+    "source": "email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.966Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_atlassian_jira_premium_1781440233967_7",
+    "service": "Atlassian Jira Premium",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-06-10",
+    "dangerDateTime": "2026-06-10T00:00:00.000Z",
+    "estimatedSavings": 99,
+    "source": "email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.967Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_slack_pro_1781440233968_8",
+    "service": "Slack Pro",
+    "status": "expired",
+    "startDate": "2026-05-15T00:00:00.000Z",
+    "dangerDate": "2026-05-29",
+    "dangerDateTime": "2026-05-29T00:00:00.000Z",
+    "estimatedSavings": 79,
+    "source": "email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.968Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_notion_business_1781440233968_9",
+    "service": "Notion Business",
+    "status": "expired",
+    "startDate": "2026-04-18T00:00:00.000Z",
+    "dangerDate": "2026-05-18",
+    "dangerDateTime": "2026-05-18T00:00:00.000Z",
+    "estimatedSavings": 89,
+    "source": "email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:30:33.968Z",
+      "syncSource": "email_scan"
+    }
+  },
+  {
+    "id": "trial_kintone_1781440307187_0",
+    "service": "Kintone",
+    "status": "active",
+    "startDate": "2026-05-20T00:00:00.000Z",
+    "dangerDate": "2026-06-19",
+    "dangerDateTime": "2026-06-19T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_krakenplus_1781440307187_1",
+    "service": "Kraken+",
+    "status": "active",
+    "startDate": "2026-05-21T00:00:00.000Z",
+    "dangerDate": "2026-06-20",
+    "dangerDateTime": "2026-06-20T00:00:00.000Z",
+    "estimatedSavings": 79,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": true,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_gohighlevel_1781440307187_2",
+    "service": "GoHighLevel",
+    "status": "pending_setup",
+    "startDate": "2026-06-10T00:00:00.000Z",
+    "dangerDate": "2026-06-24",
+    "dangerDateTime": "2026-06-24T00:00:00.000Z",
+    "estimatedSavings": 97,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_pipedrive_1781440307187_3",
+    "service": "Pipedrive",
+    "status": "pending_setup",
+    "startDate": "2026-05-10T00:00:00.000Z",
+    "dangerDate": "2026-05-24",
+    "dangerDateTime": "2026-05-24T00:00:00.000Z",
+    "estimatedSavings": 69,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_monday.com_1781440307187_4",
+    "service": "monday.com",
+    "status": "expired",
+    "startDate": "2026-05-13T00:00:00.000Z",
+    "dangerDate": "2026-06-12",
+    "dangerDateTime": "2026-06-12T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_canva_business_1781440307187_5",
+    "service": "Canva Business",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-06-10",
+    "dangerDateTime": "2026-06-10T00:00:00.000Z",
+    "estimatedSavings": 119,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_atlassian_service_collection_premium_1781440307187_6",
+    "service": "Atlassian Service Collection Premium",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-06-10",
+    "dangerDateTime": "2026-06-10T00:00:00.000Z",
+    "estimatedSavings": 149,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_atlassian_jira_premium_1781440307187_7",
+    "service": "Atlassian Jira Premium",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-06-10",
+    "dangerDateTime": "2026-06-10T00:00:00.000Z",
+    "estimatedSavings": 99,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_yapp_1781440307187_8",
+    "service": "Yapp",
+    "status": "expired",
+    "startDate": "2026-05-03T00:00:00.000Z",
+    "dangerDate": "2026-06-02",
+    "dangerDateTime": "2026-06-02T00:00:00.000Z",
+    "estimatedSavings": 29,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_github_enterprise_1781440307187_9",
+    "service": "GitHub Enterprise",
+    "status": "expired",
+    "startDate": "2026-05-15T00:00:00.000Z",
+    "dangerDate": "2026-05-29",
+    "dangerDateTime": "2026-05-29T00:00:00.000Z",
+    "estimatedSavings": 299,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.187Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_slack_pro_1781440307188_10",
+    "service": "Slack Pro",
+    "status": "expired",
+    "startDate": "2026-05-14T00:00:00.000Z",
+    "dangerDate": "2026-05-28",
+    "dangerDateTime": "2026-05-28T00:00:00.000Z",
+    "estimatedSavings": 79,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_lindy.ai_1781440307188_11",
+    "service": "Lindy.ai",
+    "status": "expired",
+    "startDate": "2026-05-13T00:00:00.000Z",
+    "dangerDate": "2026-05-27",
+    "dangerDateTime": "2026-05-27T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_loom_business_plus_ai_1781440307188_12",
+    "service": "Loom Business + AI",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-05-25",
+    "dangerDateTime": "2026-05-25T00:00:00.000Z",
+    "estimatedSavings": 149,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_intercom_advanced_1781440307188_13",
+    "service": "Intercom Advanced",
+    "status": "expired",
+    "startDate": "2026-05-11T00:00:00.000Z",
+    "dangerDate": "2026-05-25",
+    "dangerDateTime": "2026-05-25T00:00:00.000Z",
+    "estimatedSavings": 199,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_sentry_business_1781440307188_14",
+    "service": "Sentry Business",
+    "status": "expired",
+    "startDate": "2026-05-10T00:00:00.000Z",
+    "dangerDate": "2026-05-24",
+    "dangerDateTime": "2026-05-24T00:00:00.000Z",
+    "estimatedSavings": 89,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_meta_horizonplus_1781440307188_15",
+    "service": "Meta Horizon+",
+    "status": "expired",
+    "startDate": "2026-02-21T00:00:00.000Z",
+    "dangerDate": "2026-05-22",
+    "dangerDateTime": "2026-05-22T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "90 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_coderabbit_pro_plus_1781440307188_16",
+    "service": "CodeRabbit Pro Plus",
+    "status": "expired",
+    "startDate": "2026-05-06T00:00:00.000Z",
+    "dangerDate": "2026-05-20",
+    "dangerDateTime": "2026-05-20T00:00:00.000Z",
+    "estimatedSavings": 39,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_notion_business_1781440307188_17",
+    "service": "Notion Business",
+    "status": "expired",
+    "startDate": "2026-04-18T00:00:00.000Z",
+    "dangerDate": "2026-05-18",
+    "dangerDateTime": "2026-05-18T00:00:00.000Z",
+    "estimatedSavings": 89,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_calendly_1781440307188_18",
+    "service": "Calendly",
+    "status": "expired",
+    "startDate": "2026-04-29T00:00:00.000Z",
+    "dangerDate": "2026-05-13",
+    "dangerDateTime": "2026-05-13T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "14 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_gigahash_1781440307188_19",
+    "service": "GigaHash",
+    "status": "expired",
+    "startDate": "2025-02-14T00:00:00.000Z",
+    "dangerDate": "2025-02-17",
+    "dangerDateTime": "2025-02-17T00:00:00.000Z",
+    "estimatedSavings": 9,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "3 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_thegamerzstore.com_1781440307188_20",
+    "service": "TheGamerzStore.com",
+    "status": "expired",
+    "startDate": "2021-07-01T00:00:00.000Z",
+    "dangerDate": "2021-07-04",
+    "dangerDateTime": "2021-07-04T00:00:00.000Z",
+    "estimatedSavings": 5,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "3 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_walmart_grocery_1781440307188_21",
+    "service": "Walmart Grocery",
+    "status": "expired",
+    "startDate": "2020-05-01T00:00:00.000Z",
+    "dangerDate": "2020-05-16",
+    "dangerDateTime": "2020-05-16T00:00:00.000Z",
+    "estimatedSavings": 25,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Chicago",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Chicago",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": true,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "15 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_spotify_premium_1781440307188_22",
+    "service": "Spotify Premium",
+    "status": "promotional",
+    "startDate": "2026-06-14T00:00:00.000Z",
+    "dangerDate": "2026-08-13",
+    "dangerDateTime": "2026-08-13T00:00:00.000Z",
+    "estimatedSavings": 20,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": false,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "60 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_sap.com_1781440307188_23",
+    "service": "SAP.com",
+    "status": "promotional",
+    "startDate": "2026-06-14T00:00:00.000Z",
+    "dangerDate": "2026-07-14",
+    "dangerDateTime": "2026-07-14T00:00:00.000Z",
+    "estimatedSavings": 199,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": false,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_gitlab_1781440307188_24",
+    "service": "GitLab",
+    "status": "promotional",
+    "startDate": "2026-06-14T00:00:00.000Z",
+    "dangerDate": "2026-07-14",
+    "dangerDateTime": "2026-07-14T00:00:00.000Z",
+    "estimatedSavings": 149,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/Los_Angeles",
+    "billingTime": "00:00",
+    "billingTimezone": "America/Los_Angeles",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": false,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "30 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_seeking_alpha_1781440307188_25",
+    "service": "Seeking Alpha",
+    "status": "promotional",
+    "startDate": "2026-06-14T00:00:00.000Z",
+    "dangerDate": "2026-06-21",
+    "dangerDateTime": "2026-06-21T00:00:00.000Z",
+    "estimatedSavings": 0,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": false,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "7 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  },
+  {
+    "id": "trial_taskade_1781440307188_26",
+    "service": "Taskade",
+    "status": "free_plan",
+    "startDate": "2026-06-14T00:00:00.000Z",
+    "dangerDate": "2026-06-14",
+    "dangerDateTime": "2026-06-14T00:00:00.000Z",
+    "estimatedSavings": 49,
+    "source": "comprehensive_email_scan",
+    "vendorTimezone": "America/New_York",
+    "billingTime": "00:00",
+    "billingTimezone": "America/New_York",
+    "verificationStatus": "unverified",
+    "verificationAttempts": 0,
+    "metadata": {
+      "requiresCreditCard": false,
+      "autoCancelRequired": false,
+      "features": [],
+      "limitations": [
+        "0 days"
+      ],
+      "lastSync": "2026-06-14T12:31:47.188Z",
+      "syncSource": "comprehensive_scan"
+    }
+  }
+]
