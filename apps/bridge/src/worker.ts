@@ -1037,10 +1037,40 @@ export default {
 
       // a-to-mind API - Comprehensive automation API
       if (path.startsWith('/api/a-to-mind/')) {
+        // Allow unauthenticated requests for free tier with IP-based rate limiting
+        // Authenticated requests bypass rate limits and get higher quotas
         const authCheck = requireAuth(request, env, ['atomind']);
+        
         if (!authCheck.authenticated) {
-          return json({ error: authCheck.error }, 401);
+          // Check IP-based rate limit for free tier (500 requests/day)
+          const freeTierKey = `free_tier:${ip}`;
+          const now = Date.now();
+          const dayStart = Math.floor(now / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000);
+          
+          const usage = await env.STATE.get(freeTierKey);
+          let dailyCount = 0;
+          
+          if (usage) {
+            const parts = usage.split(':');
+            const storedDayStart = parseInt(parts[0]);
+            if (storedDayStart === dayStart) {
+              dailyCount = parseInt(parts[1]);
+            }
+          }
+          
+          if (dailyCount >= 500) {
+            return json({ 
+              error: 'Free tier rate limit exceeded',
+              message: 'Upgrade to Pro tier for 10,000 requests/month',
+              limit: 500,
+              period: 'day'
+            }, 429);
+          }
+          
+          // Increment usage counter
+          await env.STATE.put(freeTierKey, `${dayStart}:${dailyCount + 1}`);
         }
+        
         return handleAToMindRequest(request, path);
       }
 
