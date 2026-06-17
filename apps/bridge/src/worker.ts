@@ -319,6 +319,126 @@ export default {
           health,
         });
       }
+
+      // GET /api/analytics - Real-time profitability monitoring (admin only)
+      if (path === '/api/analytics' && method === 'GET') {
+        const authCheck = requireAuth(request, env, ['ci']);
+        if (!authCheck.authenticated) {
+          return json({ error: authCheck.error }, 401);
+        }
+
+        const startTime = Date.now();
+        const userAgent = request.headers.get('user-agent') || undefined;
+
+        try {
+          // Parallel queries for performance
+          const [
+            totalRequests,
+            uniqueUsers,
+            errorRate,
+            avgResponseTime,
+            topEndpoints,
+            upgradeCandidates,
+            tierDistribution
+          ] = await Promise.all([
+            // Total requests in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT COUNT(*) as count FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.count || 0),
+
+            // Unique users in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT COUNT(DISTINCT ip_address) as count FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.count || 0),
+
+            // Error rate in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as rate FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.rate || 0),
+
+            // Average response time in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT AVG(response_time_ms) as avg FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.avg || 0),
+
+            // Top 3 endpoints by request volume
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT endpoint, COUNT(*) as requests, SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as error_rate FROM requests WHERE timestamp > datetime("now", "-24 hours") GROUP BY endpoint ORDER BY requests DESC LIMIT 3'
+            ).all().then(r => r.results || []),
+
+            // Top 5 upgrade candidates (rate limit hits)
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT ip_address, COUNT(*) as hit_count, MAX(current_usage) as max_usage, endpoint FROM rate_limit_hits WHERE timestamp > datetime("now", "-7 days") GROUP BY ip_address, endpoint ORDER BY hit_count DESC LIMIT 5'
+            ).all().then(r => r.results || []),
+
+            // Tier distribution
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT tier, COUNT(*) as count FROM requests WHERE timestamp > datetime("now", "-24 hours") GROUP BY tier'
+            ).all().then(r => {
+              const distribution: any = { free: 0, pro: 0, ultra: 0, mega: 0 };
+              (r.results || []).forEach((row: any) => {
+                if (distribution.hasOwnProperty(row.tier)) {
+                  distribution[row.tier] = row.count;
+                }
+              });
+              return distribution;
+            })
+          ]);
+
+          const responseTime = Date.now() - startTime;
+
+          // Log analytics call
+          if (env.AETHER_ANALYTICS) {
+            await logRequest(env, path, method, 200, responseTime, ip, userAgent, 'admin', 'admin');
+          }
+
+          return json({
+            timestamp: new Date().toISOString(),
+            period: '24h',
+            metrics: {
+              total_requests: totalRequests,
+              unique_users: uniqueUsers,
+              error_rate: parseFloat(errorRate.toFixed(2)),
+              avg_response_time_ms: parseFloat(avgResponseTime.toFixed(2)),
+              top_endpoints: topEndpoints.map((e: any) => ({
+                endpoint: e.endpoint,
+                requests: e.requests,
+                error_rate: parseFloat(e.error_rate.toFixed(2))
+              })),
+              upgrade_candidates: upgradeCandidates.map((u: any) => ({
+                ip_address: u.ip_address,
+                hit_count: u.hit_count,
+                max_usage: u.max_usage,
+                endpoint: u.endpoint
+              })),
+              tier_distribution: tierDistribution
+            }
+          });
+        } catch (error) {
+          const responseTime = Date.now() - startTime;
+          
+          // Log error
+          if (env.AETHER_ANALYTICS) {
+            await logRequest(env, path, method, 500, responseTime, ip, userAgent, 'admin', 'admin', error instanceof Error ? error.message : String(error));
+          }
+
+          // Return partial data if available
+          return json({
+            timestamp: new Date().toISOString(),
+            period: '24h',
+            metrics: {
+              total_requests: 0,
+              unique_users: 0,
+              error_rate: 0,
+              avg_response_time_ms: 0,
+              top_endpoints: [],
+              upgrade_candidates: [],
+              tier_distribution: { free: 0, pro: 0, ultra: 0, mega: 0 },
+              error: 'Analytics query failed'
+            }
+          }, 500);
+        }
+      }
       
       // GET /pay - quick payment redirect (workaround for Vercel routing)
       if (path === '/pay' && method === 'GET') {

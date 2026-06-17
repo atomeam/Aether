@@ -395,6 +395,120 @@
     }
   },
   "paths": {
+    "/api/analytics": {
+      "get": {
+        "summary": "Analytics Dashboard",
+        "description": "Real-time profitability monitoring (admin only)",
+        "operationId": "getAnalytics",
+        "tags": ["System"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": {
+                      "type": "string"
+                    },
+                    "period": {
+                      "type": "string"
+                    },
+                    "metrics": {
+                      "type": "object",
+                      "properties": {
+                        "total_requests": {
+                          "type": "number"
+                        },
+                        "unique_users": {
+                          "type": "number"
+                        },
+                        "error_rate": {
+                          "type": "number"
+                        },
+                        "avg_response_time_ms": {
+                          "type": "number"
+                        },
+                        "top_endpoints": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "endpoint": {
+                                "type": "string"
+                              },
+                              "requests": {
+                                "type": "number"
+                              },
+                              "error_rate": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "upgrade_candidates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "ip_address": {
+                                "type": "string"
+                              },
+                              "hit_count": {
+                                "type": "number"
+                              },
+                              "max_usage": {
+                                "type": "number"
+                              },
+                              "endpoint": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "tier_distribution": {
+                          "type": "object",
+                          "properties": {
+                            "free": {
+                              "type": "number"
+                            },
+                            "pro": {
+                              "type": "number"
+                            },
+                            "ultra": {
+                              "type": "number"
+                            },
+                            "mega": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/a-to-mind/health": {
       "get": {
         "summary": "Health Check",
