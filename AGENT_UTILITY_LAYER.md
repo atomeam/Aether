@@ -207,10 +207,17 @@ HTTP Status Codes:
 
 ## Getting Started
 
-1. **Get API Key:** Sign up at [a-to-mind.com](https://a-to-mind.com)
+1. **Get API Key:** Sign up at [RapidAPI](https://rapidapi.com/studio/api_4b6d5ba0-1d47-439c-878f-a9473cc07905/publish/general)
 2. **Test Endpoints:** Use the Basic plan (free) for development
 3. **Integrate:** Copy the agent integration code for your language
 4. **Deploy:** Upgrade to Pro plan for production use
+
+## RapidAPI Listing
+
+**API ID:** `api_4b6d5ba0-1d47-439c-878f-a9473cc07905`
+**Listing URL:** https://rapidapi.com/studio/api_4b6d5ba0-1d47-439c-878f-a9473cc07905/publish/general
+**Category:** Artificial Intelligence → Text Analysis
+**Status:** Configured and ready for public launch
 
 ## Support
 
