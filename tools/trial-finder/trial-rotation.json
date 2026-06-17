@@ -1,0 +1,7 @@
+{
+  "currentService": "CircleCI",
+  "startDate": "2026-06-14T09:26:55.054Z",
+  "endDate": "2026-06-28T09:26:55.054Z",
+  "nextService": "Datadog",
+  "rotationStrategy": "grace-period"
+}

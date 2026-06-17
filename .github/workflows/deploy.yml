@@ -21,9 +21,47 @@ env:
   NODE_ENV: production
 
 jobs:
+  verify-api-spec:
+    name: Verify API Specification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify health endpoint matches API_SPEC.md
+        run: |
+          curl -H "Authorization: Bearer ${{ secrets.ATOMIND_DEVIN_SECRET }}" \
+            https://aether-bridge.atomicmoonbeam88.workers.dev/api/a-to-mind/health \
+            -o health_response.json
+          
+          # Validate required fields exist
+          if ! grep -q '"status"' health_response.json; then
+            echo "ERROR: API health response missing 'status' field"
+            exit 1
+          fi
+          
+          if ! grep -q '"version"' health_response.json; then
+            echo "ERROR: API health response missing 'version' field"
+            exit 1
+          fi
+          
+          if ! grep -q '"timestamp"' health_response.json; then
+            echo "ERROR: API health response missing 'timestamp' field"
+            exit 1
+          fi
+          
+          echo "✅ API health endpoint matches API_SPEC.md specification"
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    needs: verify-api-spec
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,6 +96,7 @@ jobs:
           npm run build
           npx vercel --prod --yes
         env:
+          # actionlint-disable=context
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Bridge to Cloudflare

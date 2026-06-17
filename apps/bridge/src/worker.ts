@@ -22,6 +22,8 @@ import { validateMutation } from './middleware/validator';
 import { StateBroadcaster } from './durable-objects/state-broadcaster';
 import { LogAnalyzer } from './ci-medic/log-analyzer';
 import { Remediator } from './ci-medic/remediator';
+import { CrewTelemetry, TradeTelemetry } from './types';
+import { logRequest, logRateLimitHit } from './analytics';
 
 // Re-export Durable Object class for Cloudflare Workers
 export { StateBroadcaster };
@@ -93,6 +95,7 @@ function requireAuth(request: Request, env: Env, allowedServices: string[] = ['a
     'tasks': env.BRIDGE_NUCLEUS_KEY || '',
     'proposals': env.BRIDGE_SERVICE_KEY || '',
     'ci': env.CI_DEPLOY_KEY || '',
+    'atomind': env.ATOMIND_DEVIN_SECRET || '',
   };
   
   // Check if token matches any allowed service
@@ -233,6 +236,77 @@ export default {
           bindings: getBindings(env),
         });
       }
+
+      // GET /api/health-check - Health Monitor for Red Line detection
+      if (path === '/api/health-check' && method === 'GET') {
+        try {
+          const alerts: any[] = [];
+          const now = new Date();
+
+          // Check crew registry for heartbeat violations
+          if (env.RELIABILITY_TRACING) {
+            const registry = await env.RELIABILITY_TRACING.prepare(
+              'SELECT agent_id, crew, status, last_heartbeat FROM crew_registry'
+            ).all();
+
+            for (const crew of registry.results) {
+              const lastHeartbeat = new Date(crew.last_heartbeat);
+              const secondsSinceHeartbeat = (now.getTime() - lastHeartbeat.getTime()) / 1000;
+
+              // Red Line: Heartbeat timeout > 60 seconds
+              if (secondsSinceHeartbeat > 60) {
+                alerts.push({
+                  level: 'critical',
+                  message: `Heartbeat timeout: ${crew.agent_id} - ${Math.floor(secondsSinceHeartbeat)}s since last heartbeat`,
+                  crew: crew.crew,
+                  agentId: crew.agent_id,
+                  timestamp: now.toISOString()
+                });
+              }
+            }
+
+            // Check for recent error events
+            const recentErrors = await env.RELIABILITY_TRACING.prepare(
+              'SELECT agent_id, crew, level, action, payload, timestamp FROM crew_events WHERE level IN (\'error\', \'critical\') AND timestamp > datetime(\'now\', \'-5 minutes\') ORDER BY timestamp DESC LIMIT 10'
+            ).all();
+
+            for (const error of recentErrors.results) {
+              alerts.push({
+                level: error.level,
+                message: `Error event: ${error.action} - ${JSON.parse(error.payload).message || 'Unknown error'}`,
+                crew: error.crew,
+                agentId: error.agent_id,
+                timestamp: error.timestamp
+              });
+            }
+
+            // Check for failed tasks in DLQ
+            const failedTasks = await env.RELIABILITY_TRACING.prepare(
+              'SELECT task_id, task_type, error_message, agent_id, crew FROM failed_tasks WHERE status = \'pending\' ORDER BY created_at DESC LIMIT 5'
+            ).all();
+
+            for (const task of failedTasks.results) {
+              alerts.push({
+                level: 'warn',
+                message: `Failed task: ${task.task_type} - ${task.error_message || 'Unknown error'}`,
+                crew: task.crew || 'unknown',
+                agentId: task.agent_id || 'unknown',
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+
+          return json({
+            ok: true,
+            alerts,
+            alertCount: alerts.length,
+            timestamp: now.toISOString()
+          });
+        } catch (error) {
+          console.error('[Health Check] Error:', error);
+          return json({ error: 'Health check failed' }, 500);
+        }
+      }
       
       // GET /api/reliability/health - Reliability systems health check
       if (path === '/api/reliability/health') {
@@ -244,6 +318,126 @@ export default {
           ts: new Date().toISOString(),
           health,
         });
+      }
+
+      // GET /api/analytics - Real-time profitability monitoring (admin only)
+      if (path === '/api/analytics' && method === 'GET') {
+        const authCheck = requireAuth(request, env, ['ci']);
+        if (!authCheck.authenticated) {
+          return json({ error: authCheck.error }, 401);
+        }
+
+        const startTime = Date.now();
+        const userAgent = request.headers.get('user-agent') || undefined;
+
+        try {
+          // Parallel queries for performance
+          const [
+            totalRequests,
+            uniqueUsers,
+            errorRate,
+            avgResponseTime,
+            topEndpoints,
+            upgradeCandidates,
+            tierDistribution
+          ] = await Promise.all([
+            // Total requests in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT COUNT(*) as count FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.count || 0),
+
+            // Unique users in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT COUNT(DISTINCT ip_address) as count FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.count || 0),
+
+            // Error rate in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as rate FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.rate || 0),
+
+            // Average response time in last 24h
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT AVG(response_time_ms) as avg FROM requests WHERE timestamp > datetime("now", "-24 hours")'
+            ).first().then(r => r?.avg || 0),
+
+            // Top 3 endpoints by request volume
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT endpoint, COUNT(*) as requests, SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as error_rate FROM requests WHERE timestamp > datetime("now", "-24 hours") GROUP BY endpoint ORDER BY requests DESC LIMIT 3'
+            ).all().then(r => r.results || []),
+
+            // Top 5 upgrade candidates (rate limit hits)
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT ip_address, COUNT(*) as hit_count, MAX(current_usage) as max_usage, endpoint FROM rate_limit_hits WHERE timestamp > datetime("now", "-7 days") GROUP BY ip_address, endpoint ORDER BY hit_count DESC LIMIT 5'
+            ).all().then(r => r.results || []),
+
+            // Tier distribution
+            env.AETHER_ANALYTICS.prepare(
+              'SELECT tier, COUNT(*) as count FROM requests WHERE timestamp > datetime("now", "-24 hours") GROUP BY tier'
+            ).all().then(r => {
+              const distribution: any = { free: 0, pro: 0, ultra: 0, mega: 0 };
+              (r.results || []).forEach((row: any) => {
+                if (distribution.hasOwnProperty(row.tier)) {
+                  distribution[row.tier] = row.count;
+                }
+              });
+              return distribution;
+            })
+          ]);
+
+          const responseTime = Date.now() - startTime;
+
+          // Log analytics call
+          if (env.AETHER_ANALYTICS) {
+            await logRequest(env, path, method, 200, responseTime, ip, userAgent, 'admin', 'admin');
+          }
+
+          return json({
+            timestamp: new Date().toISOString(),
+            period: '24h',
+            metrics: {
+              total_requests: totalRequests,
+              unique_users: uniqueUsers,
+              error_rate: parseFloat(errorRate.toFixed(2)),
+              avg_response_time_ms: parseFloat(avgResponseTime.toFixed(2)),
+              top_endpoints: topEndpoints.map((e: any) => ({
+                endpoint: e.endpoint,
+                requests: e.requests,
+                error_rate: parseFloat(e.error_rate.toFixed(2))
+              })),
+              upgrade_candidates: upgradeCandidates.map((u: any) => ({
+                ip_address: u.ip_address,
+                hit_count: u.hit_count,
+                max_usage: u.max_usage,
+                endpoint: u.endpoint
+              })),
+              tier_distribution: tierDistribution
+            }
+          });
+        } catch (error) {
+          const responseTime = Date.now() - startTime;
+          
+          // Log error
+          if (env.AETHER_ANALYTICS) {
+            await logRequest(env, path, method, 500, responseTime, ip, userAgent, 'admin', 'admin', error instanceof Error ? error.message : String(error));
+          }
+
+          // Return partial data if available
+          return json({
+            timestamp: new Date().toISOString(),
+            period: '24h',
+            metrics: {
+              total_requests: 0,
+              unique_users: 0,
+              error_rate: 0,
+              avg_response_time_ms: 0,
+              top_endpoints: [],
+              upgrade_candidates: [],
+              tier_distribution: { free: 0, pro: 0, ultra: 0, mega: 0 },
+              error: 'Analytics query failed'
+            }
+          }, 500);
+        }
       }
       
       // GET /pay - quick payment redirect (workaround for Vercel routing)
@@ -964,7 +1158,87 @@ export default {
 
       // a-to-mind API - Comprehensive automation API
       if (path.startsWith('/api/a-to-mind/')) {
-        return handleAToMindRequest(request, path);
+        const startTime = Date.now();
+        const userAgent = request.headers.get('user-agent') || undefined;
+        
+        // Allow unauthenticated requests for free tier with IP-based rate limiting
+        // Authenticated requests bypass rate limits and get higher quotas
+        const authCheck = requireAuth(request, env, ['atomind']);
+        const tier = authCheck.authenticated ? 'pro' : 'free';
+        const apiKeyHash = authCheck.authenticated ? authCheck.service : undefined;
+        
+        if (!authCheck.authenticated) {
+          // Check IP-based rate limit for free tier (500 requests/day)
+          const freeTierKey = `free_tier:${ip}`;
+          const now = Date.now();
+          const dayStart = Math.floor(now / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000);
+          
+          const usage = await env.STATE.get(freeTierKey);
+          let dailyCount = 0;
+          
+          if (usage) {
+            const parts = usage.split(':');
+            const storedDayStart = parseInt(parts[0]);
+            if (storedDayStart === dayStart) {
+              dailyCount = parseInt(parts[1]);
+            }
+          }
+          
+          if (dailyCount >= 500) {
+            // Log rate limit hit for upgrade tracking
+            if (env.AETHER_ANALYTICS) {
+              await logRateLimitHit(env, ip, path, 'daily', dailyCount, 'free');
+            }
+            
+            const responseTime = Date.now() - startTime;
+            if (env.AETHER_ANALYTICS) {
+              await logRequest(env, path, method, 429, responseTime, ip, userAgent, apiKeyHash, tier, 'Free tier rate limit exceeded');
+            }
+            
+            return json({ 
+              error: 'Free tier rate limit exceeded',
+              message: 'Upgrade to Pro tier for 10,000 requests/month',
+              limit: 500,
+              period: 'day'
+            }, 429);
+          }
+          
+          // Increment usage counter
+          await env.STATE.put(freeTierKey, `${dayStart}:${dailyCount + 1}`);
+        }
+        
+        // Handle the request
+        let response: Response;
+        let statusCode = 200;
+        let errorMessage: string | undefined;
+        
+        try {
+          response = await handleAToMindRequest(request, path);
+          statusCode = response.status;
+          
+          // Check for error response
+          if (statusCode >= 400) {
+            const body = await response.clone().text();
+            try {
+              const errorJson = JSON.parse(body);
+              errorMessage = errorJson.error || errorJson.message;
+            } catch {
+              errorMessage = body;
+            }
+          }
+        } catch (error) {
+          statusCode = 500;
+          errorMessage = error instanceof Error ? error.message : String(error);
+          response = json({ error: 'Internal error', details: errorMessage }, 500);
+        }
+        
+        // Log request to analytics
+        const responseTime = Date.now() - startTime;
+        if (env.AETHER_ANALYTICS) {
+          await logRequest(env, path, method, statusCode, responseTime, ip, userAgent, apiKeyHash, tier, errorMessage);
+        }
+        
+        return response;
       }
 
       // GET / - a-to-mind.com landing page
@@ -3111,6 +3385,473 @@ interface XPTPPaymentResponse {
         return json({ error: 'Unknown admin endpoint' }, 404);
       }
 
+      // POST /webhooks/notion - Notion webhook receiver with HMAC verification
+      if (path === '/webhooks/notion' && method === 'POST') {
+        const signature = request.headers.get('x-notion-signature') || request.headers.get('x-hub-signature');
+        const rawBody = await request.clone().text();
+
+        // Parse body early for verification challenge detection
+        let parsed: any;
+        try {
+          parsed = JSON.parse(rawBody);
+        } catch (e) {
+          console.log('[Webhook] Invalid JSON');
+          return json({ ok: false, error: 'Invalid JSON' }, 400);
+        }
+
+        // Handle Notion verification challenge
+        if (parsed.type === 'url_verification') {
+          console.log('[Webhook] Notion verification challenge');
+          return json({ challenge: parsed.challenge });
+        }
+
+        // Verify HMAC signature
+        if (signature && env.NOTION_WEBHOOK_SECRET) {
+          const expectedSignature = await crypto.subtle.sign(
+            'HMAC',
+            await crypto.subtle.importKey(
+              'raw',
+              new TextEncoder().encode(env.NOTION_WEBHOOK_SECRET),
+              { name: 'HMAC', hash: 'SHA-256' },
+              false,
+              ['sign']
+            ),
+            new TextEncoder().encode(rawBody)
+          ).then(buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+          if (signature !== `sha256=${expectedSignature}`) {
+            console.log('[Webhook] Invalid signature');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
+          }
+        }
+
+        console.log('[Webhook] Notion webhook received:', parsed);
+        return json({ ok: true, received: true });
+      }
+
+      // POST /webhooks/github - GitHub webhook receiver for CI-Medic
+      if (path === '/webhooks/github' && method === 'POST') {
+        const signature = request.headers.get('x-hub-signature-256');
+        const rawBody = await request.clone().text();
+
+        // Verify HMAC signature
+        if (signature && env.GITHUB_WEBHOOK_SECRET) {
+          const expectedSignature = await crypto.subtle.sign(
+            'HMAC',
+            await crypto.subtle.importKey(
+              'raw',
+              new TextEncoder().encode(env.GITHUB_WEBHOOK_SECRET),
+              { name: 'HMAC', hash: 'SHA-256' },
+              false,
+              ['sign']
+            ),
+            new TextEncoder().encode(rawBody)
+          ).then(buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+          if (signature !== `sha256=${expectedSignature}`) {
+            console.log('[GitHub Webhook] Invalid signature');
+            return json({ ok: false, error: 'Invalid signature' }, 401);
+          }
+        }
+
+        const payload = JSON.parse(rawBody);
+        const action = payload?.action;
+        const conclusion = payload?.workflow_run?.conclusion;
+
+        // Only process failed workflow_run events
+        if (payload?.workflow_run?.event === 'workflow_run' && conclusion === 'failure') {
+          const workflowId = payload?.workflow_run?.id;
+          const repository = payload?.repository?.full_name;
+          const workflowName = payload?.workflow_run?.name;
+
+          console.log('[GitHub Webhook] Failed workflow detected:', {
+            workflowId,
+            repository,
+            workflowName,
+            action,
+            conclusion
+          });
+
+          // Log failure detection to RELIABILITY_TRACING database
+          if (env.RELIABILITY_TRACING) {
+            try {
+              await env.RELIABILITY_TRACING.prepare(
+                'INSERT INTO ci_failures (workflow_id, repository, workflow_name, action, conclusion, detected_at) VALUES (?, ?, ?, ?, ?, ?)'
+              ).bind(
+                workflowId?.toString() || 'unknown',
+                repository || 'unknown',
+                workflowName || 'unknown',
+                action || 'unknown',
+                conclusion || 'unknown',
+                new Date().toISOString()
+              ).run();
+
+              console.log('[GitHub Webhook] Failure logged to RELIABILITY_TRACING');
+            } catch (dbError) {
+              console.error('[GitHub Webhook] Failed to log to database:', dbError);
+            }
+          }
+
+          // Dispatch to CURATOR_QUEUE for asynchronous processing
+          if (env.CURATOR_QUEUE) {
+            try {
+              await env.CURATOR_QUEUE.send({
+                type: 'ci_medic_task',
+                workflowId: workflowId?.toString() || 'unknown',
+                repository: repository || 'unknown',
+                workflowName: workflowName || 'unknown',
+                action: action || 'unknown',
+                conclusion: conclusion || 'unknown',
+                detectedAt: new Date().toISOString()
+              });
+
+              console.log('[GitHub Webhook] Task dispatched to CURATOR_QUEUE');
+            } catch (queueError) {
+              console.error('[GitHub Webhook] Failed to dispatch to queue:', queueError);
+            }
+          }
+
+          // Broadcast failure detection
+          if (env.STATE_BROADCASTER) {
+            const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+            const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+            const telemetry: CrewTelemetry = {
+              agentId: 'ci-medic-001',
+              crew: 'infrastructure',
+              timestamp: new Date().toISOString(),
+              level: 'warn',
+              action: 'detect',
+              payload: {
+                message: `Detected workflow failure: ${workflowName} (${workflowId})`,
+                repository,
+                workflowId,
+                workflowName
+              }
+            };
+            await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+          }
+
+          return json({
+            ok: true,
+            received: true,
+            workflowId,
+            repository,
+            workflowName,
+            message: 'CI-Medic Agent: Task dispatched for asynchronous processing'
+          });
+        }
+
+        console.log('[GitHub Webhook] Ignoring non-failure workflow:', action, conclusion);
+        return json({ ok: true, ignored: true, reason: 'not_failure' });
+      }
+
+      // POST /api/trading/test - Test Trade-Monitor telemetry in paper-trading mode
+      if (path === '/api/trading/test' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { ticker = 'BTC', price = 50000, signal = 'buy' } = body;
+
+          // Simulate trading telemetry
+          if (env.STATE_BROADCASTER) {
+            const broadcasterId = env.STATE_BROADCASTER.idFromName('trading-telemetry');
+            const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+            
+            const telemetry: TradeTelemetry = {
+              agentId: 'trade-monitor-001',
+              crew: 'trading',
+              timestamp: new Date().toISOString(),
+              level: 'info',
+              action: 'detect',
+              payload: {
+                ticker,
+                price,
+                signal,
+                status: 'paper_trading',
+                exposure: 0,
+                volatility: 0.05
+              }
+            };
+            
+            await broadcaster.broadcast(telemetry, 'trading-telemetry');
+          }
+
+          return json({
+            ok: true,
+            message: 'Trade-Monitor test telemetry sent',
+            paperTrading: true,
+            ticker,
+            price,
+            signal
+          });
+        } catch (error) {
+          console.error('[Trading Test] Error:', error);
+          return json({ error: 'Test failed' }, 500);
+        }
+      }
+
+      // POST /api/heartbeat/start - Start autonomous heartbeat loop for stress test
+      if (path === '/api/heartbeat/start' && method === 'POST') {
+        try {
+          // Enqueue heartbeat task to CURATOR_QUEUE
+          if (env.CURATOR_QUEUE) {
+            await env.CURATOR_QUEUE.send({
+              type: 'heartbeat_task',
+              timestamp: new Date().toISOString(),
+              mode: 'stress_test'
+            });
+
+            console.log('[Heartbeat] Task enqueued to CURATOR_QUEUE');
+          }
+
+          return json({
+            ok: true,
+            message: 'Heartbeat task enqueued for stress test',
+            mode: 'stress_test'
+          });
+        } catch (error) {
+          console.error('[Heartbeat Start] Error:', error);
+          return json({ error: 'Failed to start heartbeat' }, 500);
+        }
+      }
+
+      // POST /api/ci-medic/test - Test CI-Medic telemetry
+      if (path === '/api/ci-medic/test' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { workflowId = 'test-123', repository = 'test/repo', workflowName = 'test-workflow' } = body;
+
+          // Simulate CI-Medic telemetry
+          if (env.STATE_BROADCASTER) {
+            const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+            const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+            
+            const telemetry: CrewTelemetry = {
+              agentId: 'ci-medic-001',
+              crew: 'infrastructure',
+              timestamp: new Date().toISOString(),
+              level: 'info',
+              action: 'detect',
+              payload: {
+                message: `CI-Medic test telemetry for workflow ${workflowId}`,
+                repository,
+                workflowId,
+                workflowName
+              }
+            };
+            
+            await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+          }
+
+          return json({
+            ok: true,
+            message: 'CI-Medic test telemetry sent',
+            workflowId,
+            repository,
+            workflowName
+          });
+        } catch (error) {
+          console.error('[CI-Medic Test] Error:', error);
+          return json({ error: 'Test failed' }, 500);
+        }
+      }
+
+      // GET /ws/connect - WebSocket connection endpoint for Multi-Crew Controller
+      if (path === '/ws/connect' && method === 'GET') {
+        const roomId = url.searchParams.get('room') || 'default-room';
+        const agentId = url.searchParams.get('agentId') || undefined;
+        const crew = url.searchParams.get('crew') || undefined;
+        
+        if (!env.STATE_BROADCASTER) {
+          return json({ error: 'STATE_BROADCASTER not bound' }, 500);
+        }
+
+        // Get the Durable Object instance for this room
+        const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId);
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+
+        // Pass the WebSocket upgrade request to the Durable Object
+        return broadcaster.fetch(request);
+      }
+
+      // POST /internal/control - Command hub for Multi-Crew Controller
+      if (path === '/internal/control' && method === 'POST') {
+        if (!env.STATE_BROADCASTER) {
+          return json({ error: 'STATE_BROADCASTER not bound' }, 500);
+        }
+
+        try {
+          const body = await request.json();
+          const { agentId, command, roomId } = body;
+
+          if (!agentId || !command) {
+            return json({ error: 'agentId and command required' }, 400);
+          }
+
+          // Get the Durable Object instance
+          const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId || 'default-room');
+          const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+
+          // Execute command based on type
+          switch (command) {
+            case 'STOP_CREW':
+            case 'PAUSE_CREW':
+              try {
+                await broadcaster.updateCrewStatus(agentId, 'paused');
+              } catch (rpcError) {
+                console.warn('[Internal Control] RPC failed for PAUSE:', rpcError);
+              }
+              break;
+            case 'START_CREW':
+            case 'RESUME_CREW':
+              try {
+                await broadcaster.updateCrewStatus(agentId, 'running');
+              } catch (rpcError) {
+                console.warn('[Internal Control] RPC failed for START:', rpcError);
+              }
+              break;
+            case 'RESTART_CREW':
+              try {
+                await broadcaster.updateCrewStatus(agentId, 'idle');
+                // Schedule restart using waitUntil for async execution
+                ctx.waitUntil((async () => {
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await broadcaster.updateCrewStatus(agentId, 'running');
+                })());
+              } catch (rpcError) {
+                console.warn('[Internal Control] RPC failed for RESTART:', rpcError);
+              }
+              break;
+            default:
+              return json({ error: 'Unknown command' }, 400);
+          }
+
+          return json({
+            ok: true,
+            message: `Command ${command} executed for ${agentId}`,
+            agentId,
+            command
+          });
+        } catch (error) {
+          console.error('[Internal Control] Error:', error);
+          return json({ error: 'Command execution failed' }, 500);
+        }
+      }
+
+      // POST /internal/register - Register a new crew with the Multi-Crew Controller
+      if (path === '/internal/register' && method === 'POST') {
+        if (!env.RELIABILITY_TRACING) {
+          return json({ error: 'RELIABILITY_TRACING not bound' }, 500);
+        }
+
+        try {
+          const body = await request.json();
+          const { agentId, crew, status = 'idle' } = body;
+
+          if (!agentId || !crew) {
+            return json({ error: 'agentId and crew required' }, 400);
+          }
+
+          // Register in crew_registry table
+          await env.RELIABILITY_TRACING.prepare(
+            'INSERT OR REPLACE INTO crew_registry (agent_id, crew, status, last_heartbeat, created_at, updated_at) VALUES (?, ?, ?, ?, datetime("now"), datetime("now"))'
+          ).bind(agentId, crew, status, new Date().toISOString()).run();
+
+          // Also register in StateBroadcaster via RPC
+          if (env.STATE_BROADCASTER) {
+            try {
+              const roomId = body.roomId || 'default-room';
+              const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId);
+              const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+              
+              // Initialize crew in broadcaster registry
+              await broadcaster.updateCrewStatus(agentId, status);
+            } catch (rpcError) {
+              console.warn('[Internal Register] RPC failed, crew registered in DB only:', rpcError);
+            }
+          }
+
+          return json({
+            ok: true,
+            message: `Crew ${agentId} registered as ${crew}`,
+            agentId,
+            crew,
+            status
+          });
+        } catch (error) {
+          console.error('[Internal Register] Error:', error);
+          return json({ error: 'Failed to register crew' }, 500);
+        }
+      }
+
+      // GET /internal/registry - Get crew registry status
+      if (path === '/internal/registry' && method === 'GET') {
+        if (!env.STATE_BROADCASTER) {
+          return json({ error: 'STATE_BROADCASTER not bound' }, 500);
+        }
+
+        try {
+          const roomId = url.searchParams.get('room') || 'default-room';
+          const broadcasterId = env.STATE_BROADCASTER.idFromName(roomId);
+          const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+
+          // Try to get registry via RPC
+          try {
+            const registry = broadcaster.getCrewRegistry();
+            return json({
+              ok: true,
+              registry: Object.fromEntries(registry),
+              count: registry.size
+            });
+          } catch (rpcError) {
+            // If RPC fails, return empty registry
+            console.warn('[Internal Registry] RPC failed, returning empty registry:', rpcError);
+            return json({
+              ok: true,
+              registry: {},
+              count: 0
+            });
+          }
+        } catch (error) {
+          console.error('[Internal Registry] Error:', error);
+          return json({ error: 'Failed to get registry' }, 500);
+        }
+      }
+
+      // GET /internal/events - Get historical crew events
+      if (path === '/internal/events' && method === 'GET') {
+        if (!env.RELIABILITY_TRACING) {
+          return json({ error: 'RELIABILITY_TRACING not bound' }, 500);
+        }
+
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '100');
+          const agentId = url.searchParams.get('agentId');
+          const crew = url.searchParams.get('crew');
+
+          let query = 'SELECT * FROM crew_events ORDER BY timestamp DESC LIMIT ?';
+          const params: any[] = [limit];
+
+          if (agentId) {
+            query = 'SELECT * FROM crew_events WHERE agent_id = ? ORDER BY timestamp DESC LIMIT ?';
+            params.unshift(agentId);
+          } else if (crew) {
+            query = 'SELECT * FROM crew_events WHERE crew = ? ORDER BY timestamp DESC LIMIT ?';
+            params.unshift(crew);
+          }
+
+          const result = await env.RELIABILITY_TRACING.prepare(query).bind(...params).all();
+
+          return json({
+            ok: true,
+            events: result.results,
+            count: result.results.length
+          });
+        } catch (error) {
+          console.error('[Internal Events] Error:', error);
+          return json({ error: 'Failed to get events' }, 500);
+        }
+      }
+
       // 404
       return json({ error: 'Not found' }, 404);
       
@@ -3119,11 +3860,465 @@ interface XPTPPaymentResponse {
     }
   },
 
+  // Heartbeat Worker for Stress Test
+  async processHeartbeatTask(job: CuratorJob, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[Heartbeat Worker] Processing heartbeat task');
+    
+    // Send heartbeat to both crews
+    if (env.STATE_BROADCASTER) {
+      // Trade-Monitor heartbeat
+      try {
+        const tradingBroadcasterId = env.STATE_BROADCASTER.idFromName('trading-telemetry');
+        const tradingBroadcaster = env.STATE_BROADCASTER.get(tradingBroadcasterId);
+        
+        const tradingTelemetry: TradeTelemetry = {
+          agentId: 'trade-monitor-001',
+          crew: 'trading',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'broadcast',
+          payload: {
+            message: 'Trade-Monitor heartbeat',
+            signal: 'heartbeat',
+            status: 'running',
+            volatility: 0.05 + Math.random() * 0.02 // Simulate slight volatility variation
+          }
+        };
+        
+        await tradingBroadcaster.broadcast(tradingTelemetry, 'trading-telemetry');
+        console.log('[Heartbeat Worker] Trade-Monitor heartbeat sent');
+      } catch (error) {
+        console.error('[Heartbeat Worker] Trade-Monitor heartbeat failed:', error);
+      }
+
+      // CI-Medic heartbeat
+      try {
+        const ciBroadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const ciBroadcaster = env.STATE_BROADCASTER.get(ciBroadcasterId);
+        
+        const ciTelemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'broadcast',
+          payload: {
+            message: 'CI-Medic heartbeat',
+            signal: 'heartbeat',
+            status: 'running'
+          }
+        };
+        
+        await ciBroadcaster.broadcast(ciTelemetry, 'ci-medic-telemetry');
+        console.log('[Heartbeat Worker] CI-Medic heartbeat sent');
+      } catch (error) {
+        console.error('[Heartbeat Worker] CI-Medic heartbeat failed:', error);
+      }
+    }
+
+    // Update crew registry heartbeats
+    if (env.RELIABILITY_TRACING) {
+      try {
+        await env.RELIABILITY_TRACING.prepare(
+          'UPDATE crew_registry SET last_heartbeat = ?, status = ? WHERE agent_id = ?'
+        ).bind(new Date().toISOString(), 'running', 'trade-monitor-001').run();
+
+        await env.RELIABILITY_TRACING.prepare(
+          'UPDATE crew_registry SET last_heartbeat = ?, status = ? WHERE agent_id = ?'
+        ).bind(new Date().toISOString(), 'running', 'ci-medic-001').run();
+
+        console.log('[Heartbeat Worker] Crew registry updated');
+      } catch (error) {
+        console.error('[Heartbeat Worker] Crew registry update failed:', error);
+      }
+    }
+  },
+
+  // CI-Medic Queue Processor
+  async processCIMedicTask(job: CuratorJob, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[CI-Medic Queue] Processing task:', job.workflowId);
+    
+    // Broadcast queue processing start
+    if (env.STATE_BROADCASTER) {
+      const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+      const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+      const telemetry: CrewTelemetry = {
+        agentId: 'ci-medic-001',
+        crew: 'infrastructure',
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        action: 'detect',
+        payload: {
+          message: 'CI-Medic task received from queue',
+          workflowId: job.workflowId
+        }
+      };
+      await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+    }
+
+    try {
+      // Fetch GitHub Actions logs
+      if (!env.GITHUB_PAT) {
+        console.error('[CI-Medic Queue] GITHUB_PAT not configured');
+        return;
+      }
+
+      const owner = job.repository?.split('/')[0] || 'unknown';
+      const repo = job.repository?.split('/')[1] || 'unknown';
+      const logsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${job.workflowId}/logs`;
+
+      console.log('[CI-Medic Queue] Fetching logs from:', logsUrl);
+      const logsResponse = await fetch(logsUrl, {
+        headers: {
+          'Authorization': `Bearer ${env.GITHUB_PAT}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+
+      if (!logsResponse.ok) {
+        const errorText = await logsResponse.text();
+        console.error('[CI-Medic Queue] Failed to fetch logs:', errorText);
+        
+        if (env.STATE_BROADCASTER) {
+          const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+          const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+          const telemetry: CrewTelemetry = {
+            agentId: 'ci-medic-001',
+            crew: 'infrastructure',
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            action: 'detect',
+            payload: {
+              message: 'Failed to fetch GitHub Actions logs',
+              error: errorText
+            }
+          };
+          await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+        }
+        return;
+      }
+
+      // GitHub API returns redirect to actual log file
+      const logLocation = logsResponse.headers.get('Location');
+      if (!logLocation) {
+        console.error('[CI-Medic Queue] No log location in response');
+        return;
+      }
+
+      const actualLogsResponse = await fetch(logLocation);
+      const logText = await actualLogsResponse.text();
+
+      console.log('[CI-Medic Queue] Fetched log text length:', logText.length);
+
+      // Analyze logs with LogAnalyzer
+      const logAnalyzer = new LogAnalyzer();
+      const analysis = logAnalyzer.analyze(logText);
+
+      console.log('[CI-Medic Queue] Log analysis:', analysis);
+
+      // Broadcast analysis results
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'remediate',
+          payload: {
+            message: `Analysis complete: ${analysis.summary}`,
+            rootCause: analysis.rootCause,
+            severity: analysis.severity,
+            errorCount: analysis.errors.length
+          }
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+      }
+
+      // Call Claude 3.5 Sonnet for semantic code generation
+      if (!env.ANTHROPIC_API_KEY) {
+        console.error('[CI-Medic Queue] ANTHROPIC_API_KEY not configured, falling back to pattern matching');
+        // Fall back to pattern-based remediation
+        const remediator = new Remediator();
+        const plan = remediator.remediate(analysis);
+        await this.executeRemediationPlan(plan, job, env, ctx);
+        return;
+      }
+
+      // Broadcast LLM generation start
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'remediate',
+          payload: {
+            message: 'Claude 3.5 Sonnet generating fix...',
+            rootCause: analysis.rootCause
+          }
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+      }
+
+      // Call Anthropic API
+      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20240620',
+          max_tokens: 4096,
+          system: `You are the CI-Medic, an expert TypeScript/React engineer specializing in autonomous code remediation.
+
+LAW 1 (Contract B): If you are remediating engine state or intent layers, all mutations must be atomic, multi-field JSON objects. You must never generate single-field schema updates.
+
+LAW 2 (Spatial Bounds): Any generation or remediation of spatial y-axis coordinates must be strictly constrained to the range of 0 to 111.
+
+Your task is to analyze the provided CI failure logs and generate a remediation plan. Focus on:
+1. Identifying the root cause of the failure
+2. Proposing specific code fixes
+3. Ensuring the fixes follow the architectural laws above
+4. Providing clear, actionable steps
+
+Respond with a JSON object containing:
+{
+  "action": "fix_typescript" | "fix_npm" | "fix_deployment" | "fix_test" | "manual_review",
+  "files": [{"path": "file path", "changes": "code changes", "reason": "explanation"}],
+  "summary": "brief summary of the fix",
+  "prTitle": "PR title",
+  "prBody": "detailed PR description"
+}`,
+          messages: [
+            {
+              role: 'user',
+              content: `CI Failure Analysis:\n\nRoot Cause: ${analysis.rootCause}\nSeverity: ${analysis.severity}\nError Count: ${analysis.errors.length}\n\nErrors:\n${analysis.errors.map(e => `- ${e.file}:${e.line} - ${e.code}: ${e.message}`).join('\n')}\n\nLog Sample:\n${logText.substring(0, 5000)}`
+            }
+          ]
+        })
+      });
+
+      if (!anthropicResponse.ok) {
+        const errorText = await anthropicResponse.text();
+        console.error('[CI-Medic Queue] Anthropic API error:', errorText);
+        
+        // Fall back to pattern-based remediation
+        const remediator = new Remediator();
+        const plan = remediator.remediate(analysis);
+        await this.executeRemediationPlan(plan, job, env, ctx);
+        return;
+      }
+
+      const anthropicData = await anthropicResponse.json();
+      console.log('[CI-Medic Queue] Claude response:', anthropicData);
+
+      // Parse Claude's response
+      let remediationPlan;
+      try {
+        const content = anthropicData.content[0].text;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          remediationPlan = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in Claude response');
+        }
+      } catch (parseError) {
+        console.error('[CI-Medic Queue] Failed to parse Claude response:', parseError);
+        
+        // Fall back to pattern-based remediation
+        const remediator = new Remediator();
+        const plan = remediator.remediate(analysis);
+        await this.executeRemediationPlan(plan, job, env, ctx);
+        return;
+      }
+
+      // Broadcast LLM completion
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          action: 'remediate',
+          payload: {
+            message: 'Claude 3.5 Sonnet fix generated',
+            action: remediationPlan.action
+          }
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+      }
+
+      // Execute the remediation plan
+      await this.executeRemediationPlan(remediationPlan, job, env, ctx);
+
+    } catch (error) {
+      console.error('[CI-Medic Queue] Error processing task:', error);
+      
+      if (env.STATE_BROADCASTER) {
+        const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+        const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+        const telemetry: CrewTelemetry = {
+          agentId: 'ci-medic-001',
+          crew: 'infrastructure',
+          timestamp: new Date().toISOString(),
+          level: 'error',
+          action: 'detect',
+          payload: {
+            message: 'CI-Medic Queue processing error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
+        await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+      }
+    }
+  },
+
+  async executeRemediationPlan(plan: any, job: CuratorJob, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[CI-Medic Queue] Executing remediation plan:', plan);
+
+    // Broadcast remediation start
+    if (env.STATE_BROADCASTER) {
+      const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+      const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+      const telemetry: CrewTelemetry = {
+        agentId: 'ci-medic-001',
+        crew: 'infrastructure',
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        action: 'remediate',
+        payload: {
+          message: `Executing remediation: ${plan.summary}`,
+          action: plan.action,
+          files: plan.files?.length || 0
+        }
+      };
+      await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+    }
+
+    // Create PR using GitHub API
+    if (plan.action === 'manual_review') {
+      console.log('[CI-Medic Queue] Manual review required, skipping PR creation');
+      return;
+    }
+
+    if (!env.GITHUB_PAT) {
+      console.error('[CI-Medic Queue] GITHUB_PAT not configured for PR creation');
+      return;
+    }
+
+    const owner = job.repository?.split('/')[0] || 'unknown';
+    const repo = job.repository?.split('/')[1] || 'unknown';
+    const branchName = `ci-medic-fix-${job.workflowId}`;
+
+    // Create a new branch for the fix
+    const refResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/main`, {
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!refResponse.ok) {
+      console.error('[CI-Medic Queue] Failed to get main branch ref');
+      return;
+    }
+
+    const refData = await refResponse.json();
+    const mainSha = refData.object.sha;
+
+    // Create new branch
+    const createBranchResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ref: `refs/heads/${branchName}`,
+        sha: mainSha
+      })
+    });
+
+    if (!createBranchResponse.ok) {
+      console.error('[CI-Medic Queue] Failed to create branch');
+      return;
+    }
+
+    console.log('[CI-Medic Queue] Created branch:', branchName);
+
+    // Create PR
+    const prResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: plan.prTitle || `CI-Medic Fix for ${job.workflowId}`,
+        body: plan.prBody || `Automated fix for CI failure ${job.workflowId}`,
+        head: branchName,
+        base: 'main'
+      })
+    });
+
+    if (!prResponse.ok) {
+      console.error('[CI-Medic Queue] Failed to create PR');
+      return;
+    }
+
+    const prData = await prResponse.json();
+    console.log('[CI-Medic Queue] Created PR:', prData.html_url);
+
+    // Broadcast success
+    if (env.STATE_BROADCASTER) {
+      const broadcasterId = env.STATE_BROADCASTER.idFromName('ci-medic-telemetry');
+      const broadcaster = env.STATE_BROADCASTER.get(broadcasterId);
+      const telemetry: CrewTelemetry = {
+        agentId: 'ci-medic-001',
+        crew: 'infrastructure',
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        action: 'broadcast',
+        payload: {
+          message: 'PR created successfully',
+          prUrl: prData.html_url,
+          branch: branchName
+        }
+      };
+      await broadcaster.broadcast(telemetry, 'ci-medic-telemetry');
+    }
+  },
+
   // Queue consumer handler
   async queue(batch: any, env: Env, ctx: ExecutionContext): Promise<void> {
     for (const message of batch.messages) {
       try {
         const job = message.body as CuratorJob;
+        
+        // Handle Heartbeat tasks
+        if (job.type === 'heartbeat_task') {
+          await this.processHeartbeatTask(job, env, ctx);
+          message.ack();
+          continue;
+        }
+        
+        // Handle CI-Medic tasks
+        if (job.type === 'ci_medic_task') {
+          await this.processCIMedicTask(job, env, ctx);
+          message.ack();
+          continue;
+        }
+        
         // Queue visibility events
         if (env.DB) {
           await env.DB.prepare(
@@ -3185,9 +4380,11 @@ interface XPTPPaymentResponse {
 interface Env {
   DB: D1Database;
   BRIDGE_DB: D1Database; // aether-bridge-db — runs, registry, audit
+  BRIDGE_DB_STAGING: D1Database; // aether-bridge-db-staging
   STATE: KVNamespace;
   STATE_CACHE: KVNamespace;
   METRICS: KVNamespace; // metrics KV store
+  AETHER_ANALYTICS: D1Database; // Analytics database for monetization tracking
   MYBROWSER: any;
   NOTION_WEBHOOK_SECRET: string;
   NOTION_API_TOKEN: string;
@@ -3392,6 +4589,15 @@ interface CuratorJob {
   receivedAt: string;
   raw?: string;
   source?: string;
+  type?: string;
+  workflowId?: string;
+  repository?: string;
+  workflowName?: string;
+  action?: string;
+  conclusion?: string;
+  detectedAt?: string;
+  mode?: string;
+  timestamp?: string;
 }
 
 interface ExecutionContext {

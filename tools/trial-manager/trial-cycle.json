@@ -1,0 +1,29 @@
+{
+  "currentTrial": {
+    "service": "CircleCI",
+    "category": "CI/CD",
+    "trialType": "trial",
+    "duration": "14 days",
+    "durationDays": 14,
+    "features": [
+      "unlimited minutes",
+      "parallel jobs",
+      "advanced caching",
+      "Docker layer caching"
+    ],
+    "limitations": [
+      "requires credit card",
+      "auto-renews to paid"
+    ],
+    "valueScore": 64,
+    "signupUrl": "https://circleci.com/signup",
+    "requiresCreditCard": true,
+    "autoCancelRequired": true
+  },
+  "startDate": "2026-06-14T09:31:51.992Z",
+  "endDate": "2026-06-28T09:31:51.992Z",
+  "automationDeployed": true,
+  "cancellationScheduled": true,
+  "nextTrial": null,
+  "status": "active"
+}

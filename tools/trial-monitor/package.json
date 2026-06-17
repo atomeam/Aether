@@ -1,0 +1,23 @@
+{
+  "name": "trial-monitor",
+  "version": "1.0.0",
+  "description": "Trial monitoring service for danger date tracking and notifications",
+  "main": "trial-monitor.ts",
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx runner.ts",
+    "add": "npx tsx runner.ts add",
+    "list": "npx tsx runner.ts list",
+    "check": "npx tsx runner.ts check",
+    "monitor": "node automated-monitor.cjs",
+    "setup": "npx tsx quick-setup.ts",
+    "test": "npx tsx test-monitor.ts",
+    "dev": "npx tsx --watch runner.ts"
+  },
+  "dependencies": {
+    "@aether/contracts": "file:../../packages/contracts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "CircleCI": {
+    "runbookId": "circleci-automation",
+    "schedule": "0 */6 * * *",
+    "tasks": [
+      "build-trigger",
+      "test-execution",
+      "deployment-pipeline",
+      "cache-cleanup"
+    ],
+    "parameters": {
+      "service": "CircleCI",
+      "category": "CI/CD",
+      "automationPotential": {
+        "cronJobs": 20,
+        "manualHours": 40,
+        "automationHours": 2,
+        "timeSaved": 38
+      }
+    }
+  }
+}

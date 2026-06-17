@@ -1,0 +1,178 @@
+# ==============================================================================
+# AUTOMATION CONSOLIDATION V2 - CONFIGURATION
+# ==============================================================================
+# IMPORTANT SAFETY NOTES:
+# 1. Some workflows can start/stop services - review before enabling
+# 2. Email notifications require SMTP configuration - currently disabled
+# 3. Backup and cleanup workflows perform file system operations
+# 4. Monitor workflows have thresholds configured for alerts
+# ==============================================================================
+
+orchestrator:
+  port: 3333
+  log_level: info
+  runs_dir: C:\Users\adamm\automation_consolidation_v2\runs
+  max_runs_per_day: 1000
+  absolute_runs_dir: true
+
+scheduler:
+  enabled: true
+  timezone: America/New_York
+  max_concurrent_jobs: 4
+  # SAFETY: Limits concurrent jobs to prevent system overload
+
+# ==============================================================================
+# WORKFLOW CONFIGURATION
+# ==============================================================================
+# SAFETY CLASSIFICATIONS:
+# - SAFE: Read-only operations, monitoring, health checks
+# - CAUTION: File system operations (backups, cleanup)
+# - DANGEROUS: Can start/stop services (auto_restart, project_control)
+# ==============================================================================
+
+workflows:
+  # SAFE WORKFLOWS (Read-only monitoring and health checks)
+  
+  homebase_health_check:
+    enabled: false  # DISABLED - uses simulated data, use homebase_wrapper instead
+    schedule: "*/15 * * * *"  # Every 15 minutes
+    timeout: 60000
+    retries: 1
+    description: "DEPRECATED - Health check for HomeBase dashboard (simulated data)"
+    handler: "backbone/workflows/homebase_health_check/handler.ts"
+    safety: "SAFE"
+    
+  homebase_wrapper:
+    enabled: true
+    schedule: "*/30 * * * *"  # Every 30 minutes
+    timeout: 60000
+    retries: 1
+    description: "HomeBase wrapper (calls existing project)"
+    handler: "migrations/homebase_wrapper.ts"
+    safety: "SAFE"
+    
+  aether_backend_wrapper:
+    enabled: true
+    schedule: "0 */4 * * *"  # Every 4 hours
+    timeout: 300000
+    retries: 3
+    description: "Aether backend wrapper (calls existing project)"
+    handler: "migrations/aether_backend_wrapper.ts"
+    safety: "SAFE"
+    
+  project_health_check:
+    enabled: true
+    schedule: "0 */6 * * *"  # Every 6 hours
+    timeout: 60000
+    retries: 2
+    description: "Health check across all major projects (Aether, ALPHA, ALPHA-1, HomeBase)"
+    handler: "migrations/project_health_check.ts"
+    safety: "SAFE"
+    
+  system_monitor:
+    enabled: true
+    schedule: "*/30 * * * *"  # Every 30 minutes
+    timeout: 30000
+    retries: 1
+    description: "Monitor system resources (disk, memory) and alert on thresholds"
+    handler: "migrations/system_monitor.ts"
+    safety: "SAFE"
+    
+  failure_monitor:
+    enabled: true
+    schedule: "*/15 * * * *"  # Every 15 minutes
+    timeout: 30000
+    retries: 1
+    description: "Monitor workflow failures and send alerts when thresholds exceeded"
+    handler: "migrations/failure_monitor.ts"
+    safety: "SAFE"
+  
+  # CAUTION WORKFLOWS (File system operations)
+  
+  daily_backup:
+    enabled: true
+    schedule: "0 2 * * *"  # 2 AM daily
+    timeout: 600000
+    retries: 2
+    description: "Daily backup of all project directories with 7-day retention"
+    handler: "migrations/daily_backup.ts"
+    safety: "CAUTION"
+    
+  log_cleanup:
+    enabled: true
+    schedule: "0 3 * * *"  # 3 AM daily
+    timeout: 300000
+    retries: 1
+    description: "Compress logs older than 1 day, delete compressed logs older than 30 days"
+    handler: "migrations/log_cleanup.ts"
+    safety: "CAUTION"
+  
+  # DANGEROUS WORKFLOWS (Can start/stop services)
+  
+  auto_restart:
+    enabled: false  # DISABLED for safety - requires manual testing before enabling
+    schedule: "*/30 * * * *"  # Every 30 minutes (reduced frequency for safety)
+    timeout: 60000
+    retries: 1
+    description: "Monitor critical services and auto-restart if they fail - CAUTION: This workflow can start/stop services - DISABLED for safety"
+    handler: "migrations/auto_restart.ts"
+    safety: "DANGEROUS"
+    
+  project_control:
+    enabled: true
+    schedule: null  # Manual trigger only
+    timeout: 60000
+    retries: 1
+    description: "Control projects (start/stop/restart/status) - CAUTION: This workflow can start/stop services"
+    handler: "migrations/project_control.ts"
+    safety: "DANGEROUS"
+  
+  # SPECIAL/MANUAL WORKFLOWS
+  
+  registry_sync:
+    enabled: true  # Manual trigger workflow for Notion registry sync
+    schedule: null  # Manual trigger only
+    timeout: 120000
+    retries: 1
+    description: "Sync automation_consolidation_v2 state to Notion Automation Center Registry"
+    handler: "migrations/registry_sync.ts"
+    safety: "SAFE"
+  
+  devour_wad_wrapper:
+    enabled: false  # DISABLED - manual trigger workflow for DOOM WAD processing
+    schedule: null  # Manual trigger only
+    timeout: 120000
+    retries: 1
+    description: "DOOM WAD processor wrapper (calls existing Python script) - DISABLED"
+    handler: "migrations/devour_wad_wrapper.ts"
+    safety: "SAFE"
+
+logging:
+  format: json
+  output:
+    - console
+    - file
+  file:
+    path: ./logs/orchestrator.log
+    max_size: 10MB
+    max_files: 10
+
+monitoring:
+  health_check_interval: 60000
+  metrics_enabled: true
+  sentry_enabled: false
+  alert_thresholds:
+    failure_rate: 10  # Alert if failure rate > 10%
+    consecutive_failures: 3  # Alert if 3+ consecutive failures
+    disk_usage: 80  # Alert if disk usage > 80%
+    memory_usage: 85  # Alert if memory usage > 85%
+
+notification:
+  enabled: false  # DISABLED - Requires SMTP configuration to enable email notifications
+  email: "your-email@example.com"
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_username: ""
+  smtp_password: ""
+  # SECURITY NOTE: Never commit real SMTP credentials to repository
+  # Use environment variables or secret management for production

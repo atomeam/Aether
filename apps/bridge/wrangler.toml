@@ -45,6 +45,12 @@ binding = "RELIABILITY_TRACING"
 database_name = "reliability-tracing"
 database_id = "bd62f79d-c200-48d3-80ba-297932a8c4bf"
 
+# Analytics D1 Database
+[[d1_databases]]
+binding = "AETHER_ANALYTICS"
+database_name = "aether-analytics"
+database_id = "4f33ed5e-5765-448d-982c-794e7f71c381"
+
 [[kv_namespaces]]
 binding = "METRICS"
 id = "49202b2460a74d2dbd6d747d35dda5b7"

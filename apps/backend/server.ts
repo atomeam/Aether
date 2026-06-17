@@ -282,6 +282,34 @@ async function startServer() {
     });
   });
 
+  // a-to-mind API Health Proxy (server-side to avoid exposing secret to frontend)
+  app.get("/api/atomind-health", async (req, res) => {
+    try {
+      const ATOMIND_BASE_URL = process.env.ATOMIND_BASE_URL || 'https://aether-bridge.atomicmoonbeam88.workers.dev';
+      const ATOMIND_DEVIN_SECRET = process.env.ATOMIND_DEVIN_SECRET;
+
+      if (!ATOMIND_DEVIN_SECRET) {
+        return res.status(500).json({ error: 'ATOMIND_DEVIN_SECRET not configured' });
+      }
+
+      const response = await fetch(`${ATOMIND_BASE_URL}/api/a-to-mind/health`, {
+        headers: {
+          'Authorization': `Bearer ${ATOMIND_DEVIN_SECRET}`
+        }
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'Health check failed' });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('[Backend] a-to-mind health check failed:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Curator decisions (recent)
   app.get("/api/agents/curator/decisions", async (req, res) => {
     try {
