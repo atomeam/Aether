@@ -1,0 +1,794 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "a-to-mind Agent Toolkit",
+    "description": "Agent-optimized utility layer for AI systems. 7 essential text and data operations in a single API, designed specifically for autonomous agents, RAG implementations, and AI-powered systems. Fast, predictable, and reliable utility functions with single authentication and unified rate limiting.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "a-to-mind",
+      "url": "https://a-to-mind.com"
+    },
+    "x-rapidapi-info": {
+      "name": "a-to-mind Agent Toolkit",
+      "description": "Agent-optimized utility layer for AI systems",
+      "category": "Artificial Intelligence",
+      "subcategory": "Text Analysis"
+    },
+    "x-documentation": {
+      "readme": "The a-to-mind Agent Toolkit provides 7 essential text and data operations in a single API, designed specifically for autonomous agents, RAG implementations, and AI-powered systems.\n\n## Why Agents Need This\n\nAI agents require fast, predictable, and reliable utility functions for:\n- Text processing and analysis\n- Data validation and extraction\n- Content generation\n- Data transformation\n- Comparison operations\n\n## Agent-Optimized Design\n\n- Single authentication token for all operations\n- Unified rate limiting across all endpoints\n- Fast response times (Cloudflare Workers edge deployment)\n- Predictable schemas (Zod-validated)\n- No AI dependency costs (pure logic)\n\n## Pricing\n\n| Plan | Price | Requests | Use Case |\n|------|-------|----------|----------|\n| Basic | Free | 500/day | Development, testing |\n| Pro | $25/mo | 10,000/mo | Production agents |\n| Ultra | $75/mo | 50,000/mo | High-volume systems |\n| Mega | $150/mo | 200,000/mo | Enterprise deployments |\n\n## Getting Started\n\n1. Get API Key: Sign up at https://a-to-mind.com\n2. Test Endpoints: Use the Basic plan (free) for development\n3. Integrate: Copy the agent integration code for your language\n4. Deploy: Upgrade to Pro plan for production use",
+      "spotlights": [
+        {
+          "title": "Agent Integration Guide",
+          "link": "https://github.com/atomeam/Aether/blob/main/AGENT_UTILITY_LAYER.md"
+        },
+        {
+          "title": "API Specification",
+          "link": "https://github.com/atomeam/Aether/blob/main/API_SPEC.md"
+        }
+      ]
+    }
+  },
+  "servers": [
+    {
+      "url": "https://aether-bridge.atomicmoonbeam88.workers.dev",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Bearer token authentication"
+      }
+    },
+    "schemas": {
+      "AnalyzeRequest": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to analyze"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["general", "sentiment", "keywords"],
+            "default": "general",
+            "description": "Analysis type"
+          }
+        }
+      },
+      "AnalyzeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "analysis": {
+            "type": "object",
+            "properties": {
+              "wordCount": {
+                "type": "number"
+              },
+              "characterCount": {
+                "type": "number"
+              },
+              "characterCountNoSpaces": {
+                "type": "number"
+              },
+              "sentenceCount": {
+                "type": "number"
+              },
+              "paragraphCount": {
+                "type": "number"
+              },
+              "averageWordLength": {
+                "type": "number"
+              },
+              "readingTime": {
+                "type": "number"
+              },
+              "sentiment": {
+                "type": "string"
+              },
+              "positiveCount": {
+                "type": "number"
+              },
+              "negativeCount": {
+                "type": "number"
+              },
+              "confidence": {
+                "type": "number"
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "word": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "GenerateRequest": {
+        "type": "object",
+        "required": ["prompt"],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Input text/prompt"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["summary", "title", "hashtags"],
+            "default": "summary",
+            "description": "Generation type"
+          },
+          "length": {
+            "type": "string",
+            "enum": ["short", "medium", "long"],
+            "default": "medium",
+            "description": "Output length"
+          }
+        }
+      },
+      "GenerateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string",
+            "description": "Generated content"
+          }
+        }
+      },
+      "TransformRequest": {
+        "type": "object",
+        "required": ["data", "operation"],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Data to transform"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["uppercase", "lowercase", "reverse", "base64_encode", "base64_decode", "json_prettify", "json_minify"],
+            "description": "Transformation operation"
+          }
+        }
+      },
+      "TransformResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string",
+            "description": "Transformed data"
+          }
+        }
+      },
+      "ValidateRequest": {
+        "type": "object",
+        "required": ["data", "type"],
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Data to validate"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["email", "url", "phone", "json"],
+            "description": "Validation type"
+          }
+        }
+      },
+      "ValidateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "type": "boolean"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ExtractRequest": {
+        "type": "object",
+        "required": ["text", "type"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to extract from"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["emails", "urls", "phone_numbers", "hashtags", "mentions"],
+            "description": "Extraction type"
+          }
+        }
+      },
+      "ExtractResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "extracted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extracted items"
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of items extracted"
+          }
+        }
+      },
+      "CompareRequest": {
+        "type": "object",
+        "required": ["data1", "data2"],
+        "properties": {
+          "data1": {
+            "type": "string",
+            "description": "First data"
+          },
+          "data2": {
+            "type": "string",
+            "description": "Second data"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["text", "json"],
+            "default": "text",
+            "description": "Comparison type"
+          }
+        }
+      },
+      "CompareResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "comparison": {
+            "type": "object",
+            "properties": {
+              "similarity": {
+                "type": "number"
+              },
+              "commonWords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "difference": {
+                "type": "object",
+                "properties": {
+                  "inText1": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "inText2": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "equal": {
+                "type": "boolean"
+              },
+              "keys1": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "keys2": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "addedKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "removedKeys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "uptime": {
+            "type": "number"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/a-to-mind/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check API status and uptime",
+        "operationId": "checkHealth",
+        "tags": ["System"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/analyze": {
+      "post": {
+        "summary": "Analyze Text",
+        "description": "Analyze text for statistics, sentiment, or keywords",
+        "operationId": "analyzeText",
+        "tags": ["Text Processing"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/generate": {
+      "post": {
+        "summary": "Generate Content",
+        "description": "Generate summaries, titles, or hashtags",
+        "operationId": "generateContent",
+        "tags": ["Content Generation"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/transform": {
+      "post": {
+        "summary": "Transform Data",
+        "description": "Transform data with various operations",
+        "operationId": "transformData",
+        "tags": ["Data Processing"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransformRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transformed data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransformResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/validate": {
+      "post": {
+        "summary": "Validate Data",
+        "description": "Validate emails, URLs, phone numbers, or JSON",
+        "operationId": "validateData",
+        "tags": ["Data Validation"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/extract": {
+      "post": {
+        "summary": "Extract Data",
+        "description": "Extract emails, URLs, phone numbers, hashtags, or mentions",
+        "operationId": "extractData",
+        "tags": ["Data Extraction"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/a-to-mind/compare": {
+      "post": {
+        "summary": "Compare Data",
+        "description": "Compare text similarity or JSON structure",
+        "operationId": "compareData",
+        "tags": ["Data Comparison"],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comparison results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "System health and status"
+    },
+    {
+      "name": "Text Processing",
+      "description": "Text analysis and processing"
+    },
+    {
+      "name": "Content Generation",
+      "description": "Content generation utilities"
+    },
+    {
+      "name": "Data Processing",
+      "description": "Data transformation operations"
+    },
+    {
+      "name": "Data Validation",
+      "description": "Data format validation"
+    },
+    {
+      "name": "Data Extraction",
+      "description": "Data extraction utilities"
+    },
+    {
+      "name": "Data Comparison",
+      "description": "Data comparison operations"
+    }
+  ]
+}
