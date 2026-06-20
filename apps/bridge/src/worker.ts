@@ -22,6 +22,7 @@ import { validateMutation } from './middleware/validator';
 import { StateBroadcaster } from './durable-objects/state-broadcaster';
 import { LogAnalyzer } from './ci-medic/log-analyzer';
 import { Remediator } from './ci-medic/remediator';
+import { dispatchSaasRoute, SaasEnvType } from './routes/saas';
 
 // Re-export Durable Object class for Cloudflare Workers
 export { StateBroadcaster };
@@ -211,6 +212,18 @@ export default {
     try {
       const path = url.pathname;
       const method = request.method;
+      
+      // SaaS routes - tenant-isolated endpoints with Bearer-key auth
+      if (path.startsWith('/saas/')) {
+        const saasEnv: SaasEnvType = {
+          STATE: env.STATE,
+          BRIDGE_DB: env.BRIDGE_DB,
+          DB: env.DB,
+        };
+        const saasResponse = await dispatchSaasRoute(request, saasEnv, url);
+        if (saasResponse) return saasResponse;
+        // Fall through to other handlers if not a SaaS route
+      }
       
       // GET /health - returns v0.2 contract with bindings
       if (path === '/health') {
