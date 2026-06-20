@@ -36,7 +36,7 @@
   "license": "MIT",
   "dependencies": {
     "zod": "^3.22.4",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -47,7 +47,7 @@
     "eslint": "^8.56.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
+    "vitest": "^4.1.9"
   },
   "peerDependencies": {
     "pg": "^8.11.0",
