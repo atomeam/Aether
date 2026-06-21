@@ -1,136 +1,114 @@
-# 🕷️ Spider-Man Protocol v1.3
+# 🕷️ Spider-Man Protocol — v1.3 (Operational Source of Truth)
 
-**With great capability comes great responsibility.**
 
-## Overview
+> **Status:** ✅ ACTIVE — supersedes v1.2 · **Date:** 2026-06-21 · **Owner:** Atom Bomb
+> **One line:** Agents introduce themselves accurately (A2A), use standard tools (MCP),
+> and prove every consequential claim (Evidence Rule). No lanes. No fiction.
+>
+> *With great capability comes great responsibility.*
 
-Spider-Man Protocol is the Aether team standard for multi-agent operations. It replaces custom JSON plumbing with open standards (A2A + MCP) while preserving the evidence rule — the one rule that's truly ours.
 
-**v1.3 Changes:** Dropped the "lanes" abstraction. Replaced custom JSON-RPC transport with A2A protocol. Retained the evidence rule as our core responsibility clause.
+## What changed from v1.2
+- ❌ Removed: rigid capability "lanes" and hand-rolled `[AGENT-DIRECTIVE]` plumbing. Lanes
+  throttle agents that are learning new skills and cause the perpetual-handoff problem.
+- ✅ Adopted: open, free standards — **A2A** (Agent2Agent) for agent identity + collaboration,
+  **MCP** (Model Context Protocol) for tools. We don't reinvent these.
+- ✅ Kept (the part that's ours): the **Evidence Rule**. A2A intentionally leaves
+  trust/verification out of scope, so this is the layer we own.
 
----
 
-## Three Pillars
+## The Three Pillars
 
-### 1. A2A Agent Cards
 
-Each agent introduces itself accurately. No more "wait, which one of us does this?"
+### Pillar I — Accurate Self-Identification (A2A Agent Cards)
+Every agent publishes an Agent Card (self-describing JSON manifest) at
+`https://<agent-base-url>/.well-known/agent-card.json`, declaring name, description, version,
+capabilities, skills, and auth requirements. Fixes the two-Spider-Men problem: nobody guesses
+who does what — they read the card.
+- Cards advertise capabilities, not walls. Skills grow as an agent learns; update the card.
+- Claim-based ownership replaces lanes: any agent may claim any task it can prove it can do.
+- Roster is interchangeable. The cards below are swappable templates.
 
-**Standard Agent Card format:**
 
-```json
-{
-  "agentId": "unique-id",
-  "name": "Human-Readable Name",
-  "capabilities": ["tool1", "tool2"],
-  "version": "1.0.0",
-  "owner": "team-or-individual",
-  "contact": "handoff-endpoint"
-}
+### Pillar II — Standard Tooling (MCP)
+Tools/data connect via Model Context Protocol. MCP handles agent→tools; A2A handles agent→agent.
+
+
+### Pillar III — The Evidence Rule (responsibility clause)
+A capability claim is not a result. Any deployed/fixed/live/deleted assertion requires:
+1. The target — a URL or exact command.
+2. Expected vs. actual — what proves it, and the raw response observed.
+3. Two witnesses for anything user-facing or irreversible (actor + independent auditor).
+4. Honesty markers when incomplete: NEEDS-VERIFY · ASSUMPTION · UNCERTAIN · PROPOSED.
+
+
+Hard floors (capability does not waive these):
+- Irreversible/broad actions (deletes, prod deploys, cross-tenant writes) need explicit
+  confirmation + least-privilege creds.
+- Secrets / write-scoped tokens never get pasted into chat or docs.
+- No capability inflation, no invented executions, no off-ramps.
+
+
+## Agent Cards — interchangeable starter templates
+(Examples, not a fixed roster. Clone a card, change the `name`, any agent can fill any role.)
+
+
+```
+{ "name": "<agent>", "role": "Orchestrator / Planner / Auditor", "version": "1.3",
+"url": "https://<base>/.well-known/agent-card.json",
+"capabilities": { "streaming": true, "stateTransitionHistory": true },
+"skills": [
+{ "id": "plan", "name": "Planning & architecture" },
+{ "id": "ledger", "name": "Record-keeping & run ledger" },
+{ "id": "verify", "name": "Evidence audit (2nd witness)" },
+{ "id": "research", "name": "Web & workspace research" } ],
+"security": ["workspace-auth"] }
 ```
 
-**When to use:** On first contact, handoff, or when context is unclear.
 
----
-
-### 2. MCP — Model Context Protocol
-
-Everyone uses their real tools. No tool abstraction layers.
-
-**Principle:** If MCP has a standard tool for it, use it. Don't hand-roll.
-
-**Available MCP tools in Aether:**
-- `file_read` / `file_write` — workspace-restricted
-- `git_status` / `git_commit` / `git_diff`
-- `http_request` — GET/HEAD only
-- `get_agent_state` / `trigger_workflow`
-
----
-
-### 3. The Evidence Rule
-
-**The Spider-Man clause.** Any deployed / fixed / live claim needs:
-
-1. **URL** — where to verify
-2. **Expected vs Actual** — what should happen vs what happens
-3. **Two witnesses** for irreversible actions** — deletion, deployment to production, credential rotation
-
-**Example:**
-> ✅ **CLAIM:** Worker `aether-bridge-saas` deleted
-> **URL:** `https://aether-bridge-saas.atomicmoonbeam88.workers.dev/`
-> **Expected:** HTTP 404
-> **Actual:** HTTP 404
-> **Witness:** `curl` output in commit `abc123`
-
----
-
-## Agent Cards — Aether Stack
-
-### Axiom Agent
-```json
-{
-  "agentId": "axiom",
-  "name": "Axiom",
-  "role": "Primary orchestrator",
-  "capabilities": ["planning", "delegation", "verification"],
-  "version": "1.3.0"
-}
+```
+{ "name": "<agent>", "role": "Code Executor", "version": "1.3",
+"url": "https://<base>/.well-known/agent-card.json",
+"skills": [
+{ "id": "code", "name": "Write & refactor code" },
+{ "id": "terminal", "name": "Terminal execution" },
+{ "id": "test", "name": "Run tests & local builds" } ],
+"security": ["scoped-repo-credentials"] }
 ```
 
-### Devin Agent
-```json
-{
-  "agentId": "devin",
-  "name": "Devin",
-  "role": "Code executor",
-  "capabilities": ["terminal", "git", "file_ops", "browser"],
-  "version": "1.3.0"
-}
+
+```
+{ "name": "<agent>", "role": "Infra / GitHub / CI", "version": "1.3",
+"url": "https://<base>/.well-known/agent-card.json",
+"skills": [
+{ "id": "pr", "name": "Open & manage PRs" },
+{ "id": "ci", "name": "CI workflow runs & fixes" },
+{ "id": "kv-write", "name": "KV writers" } ],
+"security": ["github-app-token", "least-privilege"] }
 ```
 
-### Evaluator Agent
-```json
-{
-  "agentId": "evaluator",
-  "name": "Evaluator",
-  "role": "Code review and quality gate",
-  "capabilities": ["static_analysis", "test_review", "pattern_detection"],
-  "version": "1.3.0"
-}
+
+```
+{ "name": "<agent>", "role": "Platform / Deploy", "version": "1.3",
+"url": "https://<base>/.well-known/agent-card.json",
+"skills": [
+{ "id": "deploy", "name": "Deploy Workers/Pages" },
+{ "id": "state", "name": "Agent state (KV/R2/Durable Objects)" },
+{ "id": "d1", "name": "D1 queries & migrations" } ],
+"security": ["cloudflare-api-token", "confirmation-on-destructive"] }
 ```
 
-### Curator Agent
-```json
-{
-  "agentId": "curator",
-  "name": "Curator",
-  "role": "Security gate and request validation",
-  "capabilities": ["allowlist_filtering", "rate_limiting", "input_validation"],
-  "version": "1.3.0"
-}
-```
 
----
+## Quick Reference — verification snippets
+| Goal | Command | Pass |
+|---|---|---|
+| Verify deletion | `curl -i <worker-url>/api/...` | connection error / 404 (not 201) |
+| Verify live | `curl -i <url>/api/stack` | expected JSON body |
+| Verify auth gate | `curl -i -X POST <url>/api/saas/projects` (no key) | 401 |
+| Verify valid access | same, `-H "Authorization: Bearer $KEY"` | 2xx |
 
-## Quick Reference
 
-| Check | Command |
-|-------|---------|
-| Verify worker deleted | `curl -s -w "%{http_code}" <url>` → expect 404 |
-| Verify endpoint live | `curl -s <url>` → expect JSON |
-| Verify auth gate | `curl -s -X POST <url> -d '{}'` → expect 401 |
-
----
-
-## Changelog
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.3 | 2026-06-21 | Drop lanes, adopt A2A, keep evidence rule |
-| 1.2 | 2026-06-19 | Add lanes abstraction |
-| 1.1 | 2026-06-15 | Initial MCP integration |
-| 1.0 | 2026-06-01 | Original protocol |
-
----
-
-*Spider-Man Protocol v1.3 — because we know what it's like to have power we didn't ask for.*
+## Governance
+- This file is the source of truth; v1.2 is superseded.
+- Bump the version on any pillar or card change; cards version independently.
+- Disputes resolve toward more evidence, never toward "trust me."
