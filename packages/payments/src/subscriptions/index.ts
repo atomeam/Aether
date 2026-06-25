@@ -244,4 +244,4 @@ export class SubscriptionPaymentService {
 // EXPORTS
 // =============================================================================
 
-export type { SubscriptionPaymentConfig, CreateSubscriptionPaymentParams, RetryPaymentParams };
+// Note: Types are already exported at their definition (export interface ...)
