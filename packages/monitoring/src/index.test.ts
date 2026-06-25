@@ -369,7 +369,7 @@ describe('HealthCheckManager', () => {
     manager = new HealthCheckManager();
   });
 
-  it('registers a health check', () => {
+  it('registers a health check', async () => {
     const config: HealthCheckConfig = {
       name: 'test-check',
       check: {
