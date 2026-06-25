@@ -5,7 +5,7 @@ compatibility_date = "2026-06-20"
 [[d1_databases]]
 binding = "DB"
 database_name = "aether-dashboard-db"
-database_id = "YOUR_DATABASE_ID_HERE"
+database_id = "b85e86d3-a191-462b-8347-c23149fa8a2b"
 
 [triggers]
 crons = ["*/5 * * * *"]
