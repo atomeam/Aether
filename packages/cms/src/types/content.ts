@@ -25,10 +25,10 @@ export type FieldType =
   | 'component-array';
 
 export interface FieldDefinition {
-  id: string;
-  name: string;
-  type: FieldType;
-  required: boolean;
+  id?: string;
+  name?: string;
+  type?: FieldType;
+  required?: boolean;
   localized?: boolean;
   validation?: FieldValidation;
   defaultValue?: unknown;
@@ -66,10 +66,10 @@ export type RichTextFeature =
   | 'horizontal-rule';
 
 export interface ContentType {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   description?: string;
-  fields: FieldDefinition[];
+  fields?: FieldDefinition[];
   displayField?: string;
   singleton?: boolean;
   draftMode?: boolean;
@@ -87,30 +87,30 @@ export interface ContentTypePermissions {
 }
 
 export interface Content {
-  id: string;
-  typeId: string;
-  fields: Record<string, unknown>;
-  status: ContentStatus;
+  id?: string;
+  typeId?: string;
+  fields?: Record<string, unknown>;
+  status?: ContentStatus;
   locale?: string;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
+  version?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
   publishedAt?: Date;
   publishedBy?: string;
-  createdBy: string;
-  updatedBy: string;
+  createdBy?: string;
+  updatedBy?: string;
   scheduledAt?: Date;
 }
 
 export type ContentStatus = 'draft' | 'published' | 'archived' | 'scheduled';
 
 export interface ContentVersion {
-  id: string;
-  contentId: string;
-  version: number;
-  fields: Record<string, unknown>;
-  createdBy: string;
-  createdAt: Date;
+  id?: string;
+  contentId?: string;
+  version?: number;
+  fields?: Record<string, unknown>;
+  createdBy?: string;
+  createdAt?: Date;
   comment?: string;
 }
 

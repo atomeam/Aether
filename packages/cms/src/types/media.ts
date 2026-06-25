@@ -6,20 +6,20 @@
 export type MediaType = 'image' | 'video' | 'audio' | 'document' | 'other';
 
 export interface MediaAsset {
-  id: string;
-  name: string;
-  type: MediaType;
-  mimeType: string;
-  size: number;
-  url: string;
+  id?: string;
+  name?: string;
+  type?: MediaType;
+  mimeType?: string;
+  size?: number;
+  url?: string;
   thumbnailUrl?: string;
   altText?: string;
   description?: string;
   metadata?: MediaMetadata;
-  uploadedBy: string;
-  uploadedAt: Date;
+  uploadedBy?: string;
+  uploadedAt?: Date;
   folderId?: string;
-  tags: string[];
+  tags?: string[];
   width?: number;
   height?: number;
   duration?: number;
@@ -38,12 +38,12 @@ export interface MediaMetadata {
 }
 
 export interface MediaFolder {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   parentId?: string;
-  path: string;
-  createdAt: Date;
-  createdBy: string;
+  path?: string;
+  createdAt?: Date;
+  createdBy?: string;
 }
 
 export interface MediaTransformation {

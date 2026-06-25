@@ -4,8 +4,8 @@
  */
 
 export interface RichTextContent {
-  type: 'doc';
-  content: RichTextNode[];
+  type?: 'doc';
+  content?: RichTextNode[];
 }
 
 export type RichTextNode =
@@ -21,52 +21,52 @@ export type RichTextNode =
   | RichTextVideo;
 
 export interface RichTextParagraph {
-  type: 'paragraph';
+  type?: 'paragraph';
   content?: RichTextInline[];
   attrs?: Record<string, unknown>;
 }
 
 export interface RichTextHeading {
-  type: 'heading';
-  attrs: { level: 1 | 2 | 3 | 4 | 5 | 6 };
+  type?: 'heading';
+  attrs?: { level?: 1 | 2 | 3 | 4 | 5 | 6 };
   content?: RichTextInline[];
 }
 
 export interface RichTextBlockquote {
-  type: 'blockquote';
+  type?: 'blockquote';
   content?: RichTextNode[];
 }
 
 export interface RichTextCodeBlock {
-  type: 'codeBlock';
+  type?: 'codeBlock';
   attrs?: { language?: string };
   content?: RichTextInline[];
 }
 
 export interface RichTextBulletList {
-  type: 'bulletList';
-  content: RichTextListItem[];
+  type?: 'bulletList';
+  content?: RichTextListItem[];
 }
 
 export interface RichTextOrderedList {
-  type: 'orderedList';
+  type?: 'orderedList';
   attrs?: { start?: number };
-  content: RichTextListItem[];
+  content?: RichTextListItem[];
 }
 
 export interface RichTextListItem {
-  type: 'listItem';
+  type?: 'listItem';
   content?: RichTextNode[];
 }
 
 export interface RichTextHorizontalRule {
-  type: 'horizontalRule';
+  type?: 'horizontalRule';
 }
 
 export interface RichTextImage {
-  type: 'image';
-  attrs: {
-    src: string;
+  type?: 'image';
+  attrs?: {
+    src?: string;
     alt?: string;
     title?: string;
     width?: number;
@@ -75,9 +75,9 @@ export interface RichTextImage {
 }
 
 export interface RichTextVideo {
-  type: 'video';
-  attrs: {
-    src: string;
+  type?: 'video';
+  attrs?: {
+    src?: string;
     width?: number;
     height?: number;
     autoplay?: boolean;
@@ -97,61 +97,61 @@ export type RichTextInline =
   | RichTextHardBreak;
 
 export interface RichTextText {
-  type: 'text';
-  text: string;
+  type?: 'text';
+  text?: string;
   marks?: RichTextMark[];
 }
 
 export interface RichTextBold {
-  type: 'text';
-  text: string;
-  marks: [{ type: 'bold' }];
+  type?: 'text';
+  text?: string;
+  marks?: [{ type?: 'bold' }];
 }
 
 export interface RichTextItalic {
-  type: 'text';
-  text: string;
-  marks: [{ type: 'italic' }];
+  type?: 'text';
+  text?: string;
+  marks?: [{ type?: 'italic' }];
 }
 
 export interface RichTextUnderline {
-  type: 'text';
-  text: string;
-  marks: [{ type: 'underline' }];
+  type?: 'text';
+  text?: string;
+  marks?: [{ type?: 'underline' }];
 }
 
 export interface RichTextStrike {
-  type: 'text';
-  text: string;
-  marks: [{ type: 'strike' }];
+  type?: 'text';
+  text?: string;
+  marks?: [{ type?: 'strike' }];
 }
 
 export interface RichTextCode {
-  type: 'text';
-  text: string;
-  marks: [{ type: 'code' }];
+  type?: 'text';
+  text?: string;
+  marks?: [{ type?: 'code' }];
 }
 
 export interface RichTextLink {
-  type: 'text';
-  text: string;
-  marks: [{ type: 'link', attrs: { href: string; target?: string } }];
+  type?: 'text';
+  text?: string;
+  marks?: [{ type?: 'link', attrs?: { href?: string; target?: string } }];
 }
 
 export interface RichTextHardBreak {
-  type: 'hardBreak';
+  type?: 'hardBreak';
 }
 
 export type RichTextMark =
-  | { type: 'bold' }
-  | { type: 'italic' }
-  | { type: 'underline' }
-  | { type: 'strike' }
-  | { type: 'code' }
-  | { type: 'link'; attrs: { href: string; target?: string } };
+  | { type?: 'bold' }
+  | { type?: 'italic' }
+  | { type?: 'underline' }
+  | { type?: 'strike' }
+  | { type?: 'code' }
+  | { type?: 'link'; attrs?: { href?: string; target?: string } };
 
 export interface EditorConfig {
-  features: EditorFeature[];
+  features?: EditorFeature[];
   placeholder?: string;
   maxLength?: number;
   autoFocus?: boolean;

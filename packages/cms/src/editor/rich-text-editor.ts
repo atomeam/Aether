@@ -159,7 +159,8 @@ export class RichTextEditor {
 
     // Check for unsupported features
     const usedFeatures = this.detectFeatures(validated);
-    const unsupported = usedFeatures.filter(f => !this.config.features.includes(f));
+    const supportedFeatures = this.config.features ?? [];
+    const unsupported = usedFeatures.filter(f => !(supportedFeatures as string[]).includes(f));
     
     if (unsupported.length > 0) {
       errors.push(`Unsupported features used: ${unsupported.join(', ')}`);
