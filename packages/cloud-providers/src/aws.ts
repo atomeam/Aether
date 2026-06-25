@@ -28,7 +28,7 @@ export class AWSProvider {
   private config: CloudProviderConfig;
 
   constructor(config: CloudProviderConfig) {
-    const validated = CloudProviderConfigSchema.parse(config);
+    const validated = CloudProviderConfigSchema.parse(config) as CloudProviderConfig;
     this.config = validated;
   }
 

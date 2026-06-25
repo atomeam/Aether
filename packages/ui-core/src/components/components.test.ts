@@ -3,19 +3,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  ButtonPropsSchema,
-  InputPropsSchema,
-  SelectPropsSchema,
-  SelectOptionSchema,
-  SelectGroupSchema,
-  FormPropsSchema,
-  FormFieldPropsSchema,
-  FormLabelPropsSchema,
-} from './button';
-import { InputPropsSchema as InputSchema } from './input';
-import { SelectPropsSchema as SelectSchema } from './select';
-import { FormPropsSchema as FormSchema } from './form';
+import { ButtonPropsSchema } from './button';
+import { InputPropsSchema, InputPropsSchema as InputSchema } from './input';
+import { SelectPropsSchema, SelectPropsSchema as SelectSchema, SelectOptionSchema, SelectGroupSchema } from './select';
+import { FormPropsSchema, FormPropsSchema as FormSchema, FormFieldPropsSchema, FormLabelPropsSchema } from './form';
 
 describe('Button Props Schema', () => {
   it('validates valid button props', () => {

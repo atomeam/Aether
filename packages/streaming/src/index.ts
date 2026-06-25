@@ -686,10 +686,10 @@ export class StateManager {
    */
   private findOldestEntry(): string | null {
     let oldestKey: string | null = null;
-    let oldestTime = Date.now();
+    let oldestTime = Infinity;
 
     for (const [key, entry] of this.state.entries()) {
-      if (entry.timestamp.getTime() < oldestTime) {
+      if (oldestKey === null || entry.timestamp.getTime() < oldestTime) {
         oldestTime = entry.timestamp.getTime();
         oldestKey = key;
       }

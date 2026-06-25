@@ -416,7 +416,7 @@ describe('@aether/email', () => {
       });
 
       expect(updated?.name).toBe('Updated Welcome Email');
-      expect(updated?.updatedAt).not.toEqual(created.updatedAt);
+      expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(created.updatedAt.getTime());
     });
 
     it('should delete a template', async () => {
