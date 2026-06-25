@@ -142,12 +142,12 @@ export function evaluateConditionGroup(
   data: Record<string, unknown>
 ): boolean {
   const results = group.conditions.map((condition: Condition | ConditionGroup) => {
-    if ('operator' in condition) {
+    if ('operator' in condition && 'conditions' in condition === false) {
       // It's a Condition
-      return evaluateCondition(condition, data);
+      return evaluateCondition(condition as Condition, data);
     } else {
       // It's a nested ConditionGroup
-      return evaluateConditionGroup(condition, data);
+      return evaluateConditionGroup(condition as ConditionGroup, data);
     }
   });
 
