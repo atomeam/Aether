@@ -47,6 +47,9 @@ aether/
 └── src/             # Apex SPA
 ```
 
+## Docs
+- [Infinite fallback stack](docs/stack.md)
+
 ## Payment System
 
 **Aether Wallet**: `0xDe497AF77d0edf1cC8B902Ae854987F67c375Fa0`
