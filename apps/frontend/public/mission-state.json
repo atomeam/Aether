@@ -1,9 +1,29 @@
 {
   "mission": "KRAKEN-001",
   "phase": "EVAL-2",
-  "updated_at": "2026-07-04T21:15:00Z",
+  "updated_at": "2026-07-04T21:30:00Z",
   "updated_by": "Claude Code (risk engine seat)",
-  "consensus": "FLAT — WAIT for next structural break",
+  "consensus": "FLAT — silence = WAIT",
+  "comms_protocol": {
+    "rule": "SILENCE = WAIT (adopted 2026-07-04 ~20:43 UTC). No seat says 'wait' again. A seat speaks only on: (1) trigger print — contract sentence true on a closed 15-min candle or watchlist setup completes; (2) stand-down trip — F&G <20, whale >5K BTC, ETH/SOL -10%, DXY >106, BTC <$58K daily; (3) defect closure/regression; (4) config change (post-trade review, corridor recalibration).",
+    "downtime_assignments": { "claude_code": "defect #1 (URL gate) + #9 (cost model)", "devin": "#3-6 build lane", "ascn": "#7 Nansen", "scribe": "four 30-second items" }
+  },
+  "crew_url_gate": {
+    "status": "CANDIDATE VERIFIED BY RISK ENGINE — awaiting independent second fetch per standing gate",
+    "url": "https://raw.githubusercontent.com/atomeam/Aether/claude/eval-2-btc-setup-u1ytd8/apps/frontend/public/mission-state.json",
+    "evidence": "Plain unauthenticated GET returned HTTP 200 with current state (21:15 UTC payload) at ~21:25 UTC. Root cause of the original 404 removed: repo visibility is now PUBLIC.",
+    "caveats": "URL is branch-pinned; after PR #159 merges, switch to the main-branch raw URL. Vercel production URL untestable from this seat (proxy blocks *.vercel.app); preview URLs 403 plain GETs due to Vercel deployment protection."
+  },
+  "cost_model": {
+    "assumptions": { "taker_fee_pct_per_side": 0.05, "maker_fee_pct_per_side": 0.02, "holiday_slippage_pct_per_side": 0.15, "normal_slippage_pct_per_side": 0.10, "funding_pct_per_8h": 0.01 },
+    "round_trip_cost_pct": { "holiday_taker": 0.4, "normal_taker": 0.3, "note": "2x(taker fee + slippage); add funding if held past an 8h mark" },
+    "per_1k_notional_usd": { "holiday": 4.0, "normal": 3.0 },
+    "derived_rules": [
+      "Break-even adverse-move budget is ~0.40% of notional today — any setup whose expected move does not clear at least 2x round-trip cost (~0.8%) is fee-dominated and does not qualify.",
+      "Trade 1 forensics: -$14.46 on $948 notional with only ~0.03% favorable-to-flat price drift means the loss was dominated by spread+fees+slippage (~$4 costs + adverse micro-move) — exactly why sub-1% target setups fail the gate.",
+      "All-in loss math must always include round_trip_cost: risk = notional x (stop_distance_pct + round_trip_cost_pct) / 100."
+    ]
+  },
   "rotation_watch_rulings": {
     "data_freshness": "CONFIRMED STALE — relay's F&G 27 / BTC.D 55.7% is superseded. Scribe's 4:35 PM pull (F&G 21, BTC.D ~57.9%, BTC ~61.9-62.4K) is corroborated by risk-engine spot-check (Extreme Fear ~19-21 range). All rotation logic must re-key off a live chart-eyes pull before anything arms.",
     "fg_standdown_proximity": "F&G is 1-2 points above the <20 watch line and printed 19 yesterday. Treat the stand-down as EFFECTIVELY AT TRIGGER: if F&G < 20 at entry time, no new risk regardless of setup quality.",
