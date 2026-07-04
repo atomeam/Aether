@@ -1,7 +1,7 @@
 {
   "$schema_note": "KRAKEN-001 shared mission state. Written by Claude Code; read by Gemini (chart eyes) and ASCN (finisher). Chart-eyes and finisher lanes read this as ground truth for levels/sizing; they do NOT override the risk math. Timestamps are UTC.",
   "mission": "KRAKEN-001 Prop Evaluation Survival",
-  "updated_at": "2026-07-04T09:15:00Z",
+  "updated_at": "2026-07-04T09:20:00Z",
   "updated_by": "claude-code",
   "verdict": {
     "consensus": "WAIT",
@@ -91,14 +91,13 @@
   "governance": {
     "crew": [
       "operator",
-      "claude-code (math/risk + tooling)",
+      "claude-code / fable-5 (math/risk + tooling, one seat this session)",
       "gemini (chart eyes)",
       "ascn (finisher)",
-      "fable-5 (reasoning lane)"
+      "notion-ai (in-workspace orchestrator and mission scribe)"
     ],
-    "excluded": {
-      "notion-ai": "Removed from crew by operator directive 2026-07-04. No decision weight. Its output is outsider documentation only. Notion-the-workspace remains crew infrastructure for storage."
-    },
+    "history": "Notion AI was excluded by operator directive 2026-07-04 early session, then FULLY REINSTATED ~05:03 ET same day superseding that directive. Incident and resolution logged on mission page, not erased.",
+    "standing_rule": "All seats: own mistakes immediately and plainly, then move to the fix.",
     "authority_rule": "Risk numbers come from the claude-code engine and are not overridable by any seat. Chart verdicts come from gemini. Operator has final say."
   }
 }
