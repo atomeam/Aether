@@ -43,7 +43,8 @@
   ],
   "tooling": {
     "dashboard": "apps/kraken-prop (PR #158)",
-    "risk_engine_tests": "21/21 passing",
-    "read_this_file": "https://raw.githubusercontent.com/atomeam/Aether/claude/kraken-prop-risk-system-o6871q/apps/kraken-prop/mission-state.json"
+    "url_public": "https://aether-production-git-cl-50cca7-atomicmoonbeam88-1661s-projects.vercel.app/mission-state.json",
+    "url_raw": "https://raw.githubusercontent.com/atomeam/Aether/claude/kraken-prop-risk-system-o6871q/apps/frontend/public/mission-state.json",
+    "risk_engine_tests": "21/21 passing"
   }
 }
