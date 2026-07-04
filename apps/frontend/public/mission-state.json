@@ -1,11 +1,29 @@
 {
   "mission": "KRAKEN-001",
   "phase": "EVAL-2",
-  "updated_at": "2026-07-04T19:30:00Z",
+  "updated_at": "2026-07-04T19:55:00Z",
   "updated_by": "Claude Code (risk engine seat)",
-  "consensus": "WAIT",
-  "consensus_note": "Crew verdict round logged: WAIT at ~63,085, flat, hugging the corridor ceiling. Short trigger armed but unfired. HIGH-severity flag: a spike through 63.2K on thin holiday books is more likely an algo stop-hunt than a real breakout — the 15-min structural rejection is the only valid filter. Evidence stack: Fear & Greed 27, BTC.D 55.6%.",
-  "risk_engine": "FROZEN until the two operator-only gates close (Eval 1 disposition + Eval 2 spec confirmation). If spec confirms Advanced 10k, pre-loaded sizes go live as-is.",
+  "consensus": "POSITION LIVE — MANAGE, NO ADDS",
+  "position": {
+    "direction": "short",
+    "asset": "BTC",
+    "leverage": 5,
+    "fill": 63177.2,
+    "notional_usd": 948.11,
+    "stop_options": { "tightened": 63800, "macro": 64500 },
+    "risk_at_tightened_stop": 9.35,
+    "risk_at_macro_stop": 19.85,
+    "risk_with_holiday_slippage": { "tightened": 10.77, "macro": 21.27 },
+    "risk_engine_verdict": "Sizing SAFE — worst case well under the $50 per-trade cap and $100 daily stop at either invalidation."
+  },
+  "standing_orders": [
+    "Hard stop-loss order must be RESTING ON THE EXCHANGE above structural invalidation (63,800 or 64,500) — not a mental stop; thin holiday books gap.",
+    "NO adds, no averaging up on a 63,200 retest.",
+    "Add trigger (up to the 2,160 macro short cap) frozen until a 15-min candle closes cleanly below 63,000.",
+    "2 losses = done for the day; open P&L, fees, and funding all count against the caps."
+  ],
+  "protocol_deviation_log": "2026-07-04 ~19:45 UTC: short entered WITHOUT the mandatory 15-min structural confirmation (July 4 rule) and while the risk engine was FROZEN pending the Eval 1 disposition and Eval 2 spec gates. Logged, not erased. Mitigation: size was cut to ~$948 notional (vs $2,160 cap), keeping worst-case loss at ~$10-21. The deviation is a process breach even though the risk outcome is contained — it must not become precedent.",
+  "risk_engine": "Position management active. New-entry authority remains FROZEN until the two operator-only gates close (Eval 1 disposition + Eval 2 spec confirmation). Spec risk is now LIVE: if Eval 2 is not Advanced 10k, the caps this position was sized against may be wrong.",
   "governance": {
     "crew": ["operator", "Claude Code / Fable 5 (one seat)", "Gemini", "ASCN", "Notion AI (scribe, full standing)"],
     "signal_watch_seats": ["Gemini", "Claude Code", "ASCN"],
