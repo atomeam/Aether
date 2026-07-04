@@ -1,0 +1,49 @@
+{
+  "$schema_note": "KRAKEN-001 shared mission state. Written by Claude Code; read by Gemini (chart eyes) and ASCN (finisher). Chart-eyes and finisher lanes read this as ground truth for levels/sizing; they do NOT override the risk math. Timestamps are UTC.",
+  "mission": "KRAKEN-001 Prop Evaluation Survival",
+  "updated_at": "2026-07-04T08:20:00Z",
+  "updated_by": "claude-code",
+  "verdict": {
+    "consensus": "WAIT",
+    "seats": { "gemini": "WAIT", "claude_code": "WAIT", "ascn": "WAIT" },
+    "reason": "Price dead-center between triggers; July 4 thin holiday liquidity; whale picture conflicted (verified via public sources)."
+  },
+  "account": {
+    "plan": "Kraken Prop Advanced $10k",
+    "profit_target_pct": 9,
+    "mdl_pct": 3,
+    "mdd_pct": 3,
+    "mdd_floor_usd": 9700,
+    "reset_utc": "00:30",
+    "system_caps_usd": { "per_trade": 50, "daily": 100, "lifetime_buffer": 300 }
+  },
+  "setup": {
+    "asset_priority": ["BTC", "ETH", "SOL-only-if-cleaner", "ignore-XRP"],
+    "allowed_structures": ["liquidity-sweep-reclaim", "failed-breakout", "compression-break-retest"],
+    "timeframes": { "trigger": "5m", "filter": "15m", "filter_mandatory_today": true },
+    "triggers": {
+      "long": { "entry_zone": 62000, "invalidation": 61400, "stop_distance_pct": 0.97 },
+      "short": { "entry_zone": 63200, "invalidation": 64500, "stop_distance_pct": 2.06, "note": "Needs visibly cleaner structure than long, or tighten invalidation to ~63800 to size evenly" }
+    },
+    "sizing": {
+      "risk_usd": 50,
+      "slippage_pct_today": 0.15,
+      "fee_pct_per_side": 0.05,
+      "long_max_notional_usd": 4100,
+      "short_max_notional_usd": 2160,
+      "probe_add": { "probe_usd": 20, "add_usd": 30, "rule": "Add only after 15m confirms; re-size add against live unrealized loss if probe is red" }
+    }
+  },
+  "invalidations": {
+    "hard": ["BTC daily close < 58000", "whale deposit > 10000 BTC/24h", "ETH or SOL intraday dump > 10%"],
+    "watch_only": ["whale deposit > 5000 BTC during setup window", "Fear & Greed < 20"]
+  },
+  "blind_spots": [
+    "Nansen API 401 on ASCN side - real-time whale deposit feed dark; historical 49K inflow (Jun 30) and 270K accumulation verified via CryptoQuant/CoinDesk public reporting"
+  ],
+  "tooling": {
+    "dashboard": "apps/kraken-prop (PR #158)",
+    "risk_engine_tests": "21/21 passing",
+    "read_this_file": "https://raw.githubusercontent.com/atomeam/Aether/claude/kraken-prop-risk-system-o6871q/apps/kraken-prop/mission-state.json"
+  }
+}
