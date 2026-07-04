@@ -59,6 +59,8 @@ export interface RiskState {
   bindingLimit: "MDL" | "MDD";
   /** Fraction of today's MDL consumed, 0..1+ */
   mdlUsedFrac: number;
+  /** Fraction of the lifetime MDD buffer consumed, 0..1+ */
+  mddUsedFrac: number;
   status: "GREEN" | "YELLOW" | "RED" | "BREACHED";
   /** % adverse move on open notional that breaches (Infinity if flat) */
   breachMovePct: number;
@@ -77,11 +79,15 @@ export function computeRiskState(a: AccountInputs): RiskState {
   const bindingBuffer = Math.min(remainingMdl, remainingMdd);
   const bindingLimit = remainingMdl <= remainingMdd ? "MDL" : "MDD";
   const mdlUsedFrac = mdlLimit > 0 ? Math.max(0, dayLoss) / mdlLimit : 1;
+  const mddBudget = a.startingBalance * (a.mddPct / 100);
+  const mddUsedFrac =
+    mddBudget > 0 ? Math.max(0, mddBudget - remainingMdd) / mddBudget : 1;
+  const worstFrac = Math.max(mdlUsedFrac, mddUsedFrac);
 
   let status: RiskState["status"];
   if (bindingBuffer <= 0) status = "BREACHED";
-  else if (mdlUsedFrac >= 0.6 || remainingMdd <= mdlLimit) status = "RED";
-  else if (mdlUsedFrac >= 0.3) status = "YELLOW";
+  else if (worstFrac >= 0.6) status = "RED";
+  else if (worstFrac >= 0.3) status = "YELLOW";
   else status = "GREEN";
 
   const breachMovePct =
@@ -100,6 +106,7 @@ export function computeRiskState(a: AccountInputs): RiskState {
     bindingBuffer,
     bindingLimit,
     mdlUsedFrac,
+    mddUsedFrac,
     status,
     breachMovePct,
     profitTarget,
@@ -176,12 +183,14 @@ export function sizePosition(s: SizingInputs): SizingResult {
 
 /**
  * Survival-first safe next-trade loss: half of the binding buffer, capped at
- * a fixed fraction of day-start (default 0.75% = 1/4 of the 3% MDL).
+ * a fixed fraction of day-start. Default 0.5% — sized for accounts where the
+ * lifetime MDD equals a single full MDL day (e.g. Advanced 3%/3%): six
+ * losing trades to consume the whole lifetime buffer, not two.
  */
 export function safeNextTradeLoss(
   state: RiskState,
   dayStart: number,
-  perTradeCapPct = 0.75,
+  perTradeCapPct = 0.5,
 ): number {
   return Math.max(
     0,

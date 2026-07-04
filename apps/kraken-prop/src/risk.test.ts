@@ -62,7 +62,24 @@ describe("computeRiskState", () => {
     expect(s.remainingMdl).toBeCloseTo(717);
     expect(s.remainingMdd).toBeCloseTo(400);
     expect(s.bindingLimit).toBe("MDD");
-    expect(s.status).toBe("RED"); // MDD room smaller than one full MDL
+    expect(s.status).toBe("RED"); // 73% of lifetime MDD consumed
+  });
+
+  it("canonical Advanced $10k / 9% target / 3% MDL / 3% MDD", () => {
+    const s = computeRiskState({
+      ...base,
+      startingBalance: 10000,
+      mddPct: 3,
+      profitTargetPct: 9,
+      dayStart: 10000,
+      balance: 10000,
+    });
+    expect(s.mdlLimit).toBe(300);
+    expect(s.mddFloor).toBe(9700);
+    expect(s.remainingMdd).toBe(300); // lifetime = exactly ONE max-loss day
+    expect(s.status).toBe("GREEN"); // fresh account starts green
+    expect(s.profitTarget).toBeCloseTo(10900);
+    expect(safeNextTradeLoss(s, 10000)).toBeCloseTo(50);
   });
 
   it("breach move percent on open notional", () => {
@@ -112,9 +129,9 @@ describe("sizePosition", () => {
 });
 
 describe("safeNextTradeLoss", () => {
-  it("caps at 0.75% of day-start on a fresh account", () => {
+  it("caps at 0.5% of day-start on a fresh account", () => {
     const s = computeRiskState(base);
-    expect(safeNextTradeLoss(s, base.dayStart)).toBeCloseTo(187.5);
+    expect(safeNextTradeLoss(s, base.dayStart)).toBeCloseTo(125);
   });
   it("halves a depleted buffer", () => {
     const s = computeRiskState({ ...base, unrealizedPnl: -600 });

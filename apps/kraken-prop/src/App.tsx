@@ -67,13 +67,15 @@ const CHECKLIST = [
 ];
 
 export default function App() {
+  // Defaults = the live mission account: Kraken Advanced $10k,
+  // 9% profit target, 3% MDL, 3% MDD.
   const [a, setA] = useState<AccountInputs>({
-    startingBalance: 25000,
+    startingBalance: 10000,
     mdlPct: 3,
-    mddPct: 6,
-    profitTargetPct: 10,
-    dayStart: 25000,
-    balance: 25000,
+    mddPct: 3,
+    profitTargetPct: 9,
+    dayStart: 10000,
+    balance: 10000,
     unrealizedPnl: 0,
     pendingFees: 0,
     feeRatePct: 0.05,
@@ -149,7 +151,7 @@ export default function App() {
           <NumField label="Starting balance ($)" value={a.startingBalance} onChange={set("startingBalance")} step={1000} />
           <NumField label="Profit target (%)" value={a.profitTargetPct} onChange={set("profitTargetPct")} step={0.5} />
           <NumField label="MDL (%)" value={a.mdlPct} onChange={set("mdlPct")} step={0.5} hint="Kraken publishes 3%" />
-          <NumField label="MDD from start (%)" value={a.mddPct} onChange={set("mddPct")} step={0.5} hint="NEEDS INPUT: check your plan tier" />
+          <NumField label="MDD from start (%)" value={a.mddPct} onChange={set("mddPct")} step={0.5} hint="Advanced $10k plan: 3%" />
           <label className="field">
             <span>Profit split</span>
             <div className="toggle">
@@ -199,6 +201,13 @@ export default function App() {
             />
           </div>
           <small>{pct(state.mdlUsedFrac * 100)} of today's MDL used</small>
+          <div className="meter">
+            <div
+              className="fill"
+              style={{ width: `${Math.min(100, state.mddUsedFrac * 100)}%` }}
+            />
+          </div>
+          <small>{pct(state.mddUsedFrac * 100)} of lifetime MDD used — never comes back</small>
         </section>
 
         <section className="card">
