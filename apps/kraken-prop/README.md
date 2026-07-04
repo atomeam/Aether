@@ -44,7 +44,7 @@ Let `S` = starting balance, `D` = day-start value at last 00:30 UTC reset,
 | Breach move on open notional `N` | `bindingBuffer / N × 100%` |
 | Round-trip commission | `N × feeRate × 2` |
 | Funding drag over `k` 8h periods | `N × fundingRate × k` |
-| Fee-adjusted max notional for risk `R`, stop `s%` | `R / (s% + 2·fee% + k·funding%)` |
+| Fee+slippage-adjusted max notional for risk `R`, stop `s%`, slippage `x%` | `R / (s% + x% + 2·fee% + k·funding%)` |
 | Liquidation distance (isolated, approx) | `1/leverage − maintenanceMargin` |
 | Safe next-trade loss | `min(bindingBuffer × 0.5, D × 0.5%)` |
 
@@ -68,6 +68,18 @@ The structural fact that dominates this plan: **the lifetime MDD equals a
 single full MDL day.** One max-loss day ends the eval. That is why the
 personal daily stop is 1% (a third of Kraken's 3%) and per-trade risk is
 0.5% — six losing trades, not two, to consume the lifetime buffer.
+
+### The one pre-trade question (KRAKEN-001 protocol)
+
+> "If this stop gets hit immediately, including fees and slight slippage,
+> is the total damage still comfortably under $50?"
+
+If no, skip. If yes, only then does chart context matter. Encoded as
+`fitsSystem()` in `src/risk.ts`: **$50 all-in per trade / $100 daily /
+never risk more than half the remaining buffer toward the $300 floor.**
+Leverage is a capital-efficiency tool: in the sizing math it only reduces
+margin — it never increases the allowed notional, and the liquidation-distance
+check flags any stop that leverage has made fake.
 
 ### Reference math at other sizes (MDD **ASSUMPTION 6%** — verify per tier)
 

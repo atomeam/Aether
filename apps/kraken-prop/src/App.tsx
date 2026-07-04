@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   computeRiskState,
+  fitsSystem,
   fundingDrag,
   msToNextReset,
   roundTripFees,
@@ -84,6 +85,7 @@ export default function App() {
   });
   const [split, setSplit] = useState<"90/10" | "80/20">("90/10");
   const [stopPct, setStopPct] = useState(1.5);
+  const [slippagePct, setSlippagePct] = useState(0.05);
   const [leverage, setLeverage] = useState(5);
   const [overnight, setOvernight] = useState(false);
   const [checks, setChecks] = useState<boolean[]>(CHECKLIST.map(() => false));
@@ -102,9 +104,11 @@ export default function App() {
         fundingPeriods: overnight ? 3 : 0,
         fundingRatePct: a.fundingRatePct,
         leverage,
+        slippagePct,
       }),
-    [safeLoss, stopPct, a.feeRatePct, overnight, a.fundingRatePct, leverage],
+    [safeLoss, stopPct, a.feeRatePct, overnight, a.fundingRatePct, leverage, slippagePct],
   );
+  const verdict = fitsSystem(sizing.totalLossAtStop, state, a.dayStart);
   const countdown = useCountdown();
   const allChecked = checks.every(Boolean);
   const canTrade = allChecked && state.status !== "RED" && state.status !== "BREACHED" && safeLoss > 0;
@@ -213,6 +217,7 @@ export default function App() {
         <section className="card">
           <h2>Position sizing (risk = safe next-trade loss)</h2>
           <NumField label="Stop distance (%)" value={stopPct} onChange={setStopPct} step={0.1} />
+          <NumField label="Slippage on stop (%)" value={slippagePct} onChange={setSlippagePct} step={0.01} hint="Assumed adverse fill past the stop" />
           <NumField label="Leverage (×)" value={leverage} onChange={setLeverage} step={1} />
           <label className="field checkbox">
             <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} />
@@ -223,7 +228,7 @@ export default function App() {
             <div><dt>Margin required</dt><dd>{usd(sizing.margin)}</dd></div>
             <div><dt>Round-trip fees</dt><dd>{usd(sizing.estFees)}</dd></div>
             <div><dt>Funding drag</dt><dd>{usd(sizing.estFunding)} {overnight && <em> (also drains buffer: {usd(fundingDrag(a.openNotional, a.fundingRatePct, 3))} on current open)</em>}</dd></div>
-            <div><dt>Total loss at stop</dt><dd>{usd(sizing.totalLossAtStop)}</dd></div>
+            <div><dt>Total loss at stop (incl. slippage)</dt><dd>{usd(sizing.totalLossAtStop)}</dd></div>
             <div><dt>Est. liquidation distance</dt><dd>{pct(sizing.liqDistancePct)}</dd></div>
           </dl>
           {sizing.stopBeyondLiquidation && (
@@ -232,6 +237,11 @@ export default function App() {
           {overnight && (
             <div className="warn soft">Overnight holds bleed funding against a fixed MDD. Default policy: don't.</div>
           )}
+          <div className={`verdict ${verdict.fits ? "yes" : "no"}`}>
+            {verdict.fits
+              ? "Fits the $50 / $100 / $300 system"
+              : verdict.reasons[0]}
+          </div>
         </section>
 
         <section className="card">

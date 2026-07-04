@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeRiskState,
+  fitsSystem,
   fundingDrag,
   msToNextReset,
   roundTripFees,
@@ -98,20 +99,34 @@ describe("fees and funding", () => {
 });
 
 describe("sizePosition", () => {
-  it("fee-adjusted notional for $150 risk, 1.5% stop", () => {
+  it("fee+slippage-adjusted notional for $50 risk, 1.5% stop", () => {
     const r = sizePosition({
-      riskDollars: 150,
+      riskDollars: 50,
       stopDistancePct: 1.5,
       feeRatePct: 0.05,
       fundingPeriods: 0,
       fundingRatePct: 0.01,
       leverage: 5,
+      slippagePct: 0.05,
     });
-    // 150 / (1.5 + 0.1)% = 9375
-    expect(r.maxNotional).toBeCloseTo(9375);
-    expect(r.totalLossAtStop).toBeCloseTo(150);
-    expect(r.margin).toBeCloseTo(1875);
+    // 50 / (1.5 + 0.05 + 0.1)% ≈ 3030.30
+    expect(r.maxNotional).toBeCloseTo(3030.3, 1);
+    expect(r.totalLossAtStop).toBeCloseTo(50);
+    expect(r.margin).toBeCloseTo(606.06, 1);
     expect(r.stopBeyondLiquidation).toBe(false);
+  });
+
+  it("leverage changes margin, never notional (capital efficiency only)", () => {
+    const at5 = sizePosition({
+      riskDollars: 50, stopDistancePct: 1.5, feeRatePct: 0.05,
+      fundingPeriods: 0, fundingRatePct: 0.01, leverage: 5, slippagePct: 0.05,
+    });
+    const at10 = sizePosition({ ...{
+      riskDollars: 50, stopDistancePct: 1.5, feeRatePct: 0.05,
+      fundingPeriods: 0, fundingRatePct: 0.01, slippagePct: 0.05 }, leverage: 10,
+    });
+    expect(at10.maxNotional).toBe(at5.maxNotional);
+    expect(at10.margin).toBeCloseTo(at5.margin / 2);
   });
 
   it("flags a stop beyond liquidation at high leverage", () => {
@@ -122,6 +137,7 @@ describe("sizePosition", () => {
       fundingPeriods: 0,
       fundingRatePct: 0.01,
       leverage: 50,
+      slippagePct: 0.05,
     });
     expect(r.liqDistancePct).toBeCloseTo(1.5);
     expect(r.stopBeyondLiquidation).toBe(true);
@@ -140,6 +156,43 @@ describe("safeNextTradeLoss", () => {
   it("zero when breached", () => {
     const s = computeRiskState({ ...base, unrealizedPnl: -900 });
     expect(safeNextTradeLoss(s, base.dayStart)).toBe(0);
+  });
+});
+
+describe("fitsSystem ($50 / $100 / $300)", () => {
+  const tenK: AccountInputs = {
+    ...base,
+    startingBalance: 10000,
+    mddPct: 3,
+    profitTargetPct: 9,
+    dayStart: 10000,
+    balance: 10000,
+  };
+
+  it("passes a $45 worst-case loss on a fresh account", () => {
+    const s = computeRiskState(tenK);
+    expect(fitsSystem(45, s, 10000).fits).toBe(true);
+  });
+
+  it("rejects a loss over the $50 per-trade cap", () => {
+    const s = computeRiskState(tenK);
+    const v = fitsSystem(60, s, 10000);
+    expect(v.fits).toBe(false);
+    expect(v.reasons[0]).toContain("per-trade cap");
+  });
+
+  it("rejects when the day's damage would pass the $100 daily stop", () => {
+    const s = computeRiskState({ ...tenK, unrealizedPnl: -70 });
+    const v = fitsSystem(45, s, 10000);
+    expect(v.fits).toBe(false);
+    expect(v.reasons.join()).toContain("daily stop");
+  });
+
+  it("rejects when the loss eats over half the remaining buffer", () => {
+    const s = computeRiskState({ ...tenK, unrealizedPnl: -220 });
+    const v = fitsSystem(45, s, 10000);
+    expect(v.fits).toBe(false);
+    expect(v.reasons.join()).toContain("buffer");
   });
 });
 

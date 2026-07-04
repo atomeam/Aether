@@ -138,6 +138,8 @@ export interface SizingInputs {
   fundingPeriods: number;
   fundingRatePct: number;
   leverage: number;
+  /** Assumed adverse slippage on the stop fill, percent of price (e.g. 0.05) */
+  slippagePct: number;
 }
 
 export interface SizingResult {
@@ -160,9 +162,10 @@ export interface SizingResult {
 const MAINTENANCE_MARGIN_PCT = 0.5;
 
 export function sizePosition(s: SizingInputs): SizingResult {
-  // loss(notional) = notional * (stop% + 2*fee% + periods*funding%) / 100
+  // loss(notional) = notional * (stop% + slippage% + 2*fee% + periods*funding%) / 100
   const dragPct =
     s.stopDistancePct +
+    s.slippagePct +
     2 * s.feeRatePct +
     s.fundingPeriods * s.fundingRatePct;
   const maxNotional = dragPct > 0 ? (s.riskDollars * 100) / dragPct : 0;
@@ -175,7 +178,9 @@ export function sizePosition(s: SizingInputs): SizingResult {
     estFees,
     estFunding,
     totalLossAtStop:
-      maxNotional * (s.stopDistancePct / 100) + estFees + estFunding,
+      maxNotional * ((s.stopDistancePct + s.slippagePct) / 100) +
+      estFees +
+      estFunding,
     liqDistancePct,
     stopBeyondLiquidation: s.stopDistancePct >= liqDistancePct,
   };
@@ -196,6 +201,51 @@ export function safeNextTradeLoss(
     0,
     Math.min(state.bindingBuffer * 0.5, dayStart * (perTradeCapPct / 100)),
   );
+}
+
+/**
+ * The KRAKEN-001 hard system for the Advanced $10k account:
+ * $50 all-in per trade / $100 personal daily stop / $300 lifetime-aware floor.
+ * A trade "fits the system" only if worst-case damage (stop + slippage +
+ * fees + funding) clears every gate. Leverage is a capital-efficiency tool:
+ * it never raises these caps, it only reduces margin.
+ */
+export interface SystemLimits {
+  perTradeMax: number;
+  dailyStopMax: number;
+}
+
+export const KRAKEN_001_LIMITS: SystemLimits = {
+  perTradeMax: 50,
+  dailyStopMax: 100,
+};
+
+export interface SystemVerdict {
+  fits: boolean;
+  reasons: string[];
+}
+
+export function fitsSystem(
+  worstCaseLoss: number,
+  state: RiskState,
+  dayStart: number,
+  limits: SystemLimits = KRAKEN_001_LIMITS,
+): SystemVerdict {
+  const reasons: string[] = [];
+  if (worstCaseLoss > limits.perTradeMax)
+    reasons.push(
+      `worst-case loss $${worstCaseLoss.toFixed(2)} exceeds the $${limits.perTradeMax} per-trade cap`,
+    );
+  const dayLossAfter = Math.max(0, state.dayLoss) + worstCaseLoss;
+  if (dayLossAfter > limits.dailyStopMax)
+    reasons.push(
+      `today's damage would reach $${dayLossAfter.toFixed(2)}, past the $${limits.dailyStopMax} daily stop`,
+    );
+  if (worstCaseLoss > state.bindingBuffer * 0.5)
+    reasons.push(
+      `loss would consume over half the remaining ${state.bindingLimit} buffer ($${state.bindingBuffer.toFixed(2)})`,
+    );
+  return { fits: reasons.length === 0, reasons };
 }
 
 /** Milliseconds until the next 00:30 UTC reset. */
