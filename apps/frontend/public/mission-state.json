@@ -1,9 +1,17 @@
 {
   "mission": "KRAKEN-001",
   "phase": "EVAL-2",
-  "updated_at": "2026-07-04T20:30:00Z",
+  "updated_at": "2026-07-04T21:15:00Z",
   "updated_by": "Claude Code (risk engine seat)",
   "consensus": "FLAT — WAIT for next structural break",
+  "rotation_watch_rulings": {
+    "data_freshness": "CONFIRMED STALE — relay's F&G 27 / BTC.D 55.7% is superseded. Scribe's 4:35 PM pull (F&G 21, BTC.D ~57.9%, BTC ~61.9-62.4K) is corroborated by risk-engine spot-check (Extreme Fear ~19-21 range). All rotation logic must re-key off a live chart-eyes pull before anything arms.",
+    "fg_standdown_proximity": "F&G is 1-2 points above the <20 watch line and printed 19 yesterday. Treat the stand-down as EFFECTIVELY AT TRIGGER: if F&G < 20 at entry time, no new risk regardless of setup quality.",
+    "eth_long_rr": "REJECTED AS SPECCED. Entry 1800-1820 / stop 1720 / target 1920-1950 = ~1:1.0 worst-fill, ~1:1.4 midpoint — NOT 1:2.5 as advertised. Scribe's math verified correct. A top-ranked pick at ~1:1 does not qualify; re-spec with tighter stop or better entry before re-submission.",
+    "offlist_symbols": "AVAX / TAO / HYPE NOT CLEARED. They are off the approved shortlist (BTC/ETH/SOL/XRP) and this seat cannot fetch live spread/depth data (network policy) to clear them against the thin/jumpy/spread-sensitive criterion. Blocked until the operator or a data-capable seat produces order-book evidence. R:R math itself checks out (AVAX ~1:2.9, TAO ~1:2.3, HYPE ok) but R:R does not override the liquidity gate.",
+    "reference_sizing": "Scribe pre-calcs (ETH ~$950, AVAX ~$350, TAO ~$450, HYPE ~$670 at $50 cap + 0.30% round-trip) are arithmetically consistent — logged as REFERENCE ONLY, not armed.",
+    "binding_constraints": "1 position max. 1 loss already booked — next loss ends the day. New-entry authority still FROZEN pending Eval 1 disposition + Eval 2 spec confirmation. Four armed setups still means at most ONE trade, and only after gates close."
+  },
   "position": null,
   "account_status": {
     "balance": 9985.54,
