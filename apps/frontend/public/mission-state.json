@@ -1,10 +1,11 @@
 {
   "mission": "KRAKEN-001",
   "phase": "EVAL-2",
-  "updated_at": "2026-07-04T18:45:00Z",
+  "updated_at": "2026-07-04T19:30:00Z",
   "updated_by": "Claude Code (risk engine seat)",
   "consensus": "WAIT",
-  "consensus_note": "Price testing the 63.2K short boundary (~63,120-63,200 across CoinDesk/CoinMarketCap/CoinGecko at ~18:30 UTC) but NO 5-min close-through + 15-min structural confirm is on record from any chart-eyes seat. Boundary touch without confirmation is not a trigger.",
+  "consensus_note": "Crew verdict round logged: WAIT at ~63,085, flat, hugging the corridor ceiling. Short trigger armed but unfired. HIGH-severity flag: a spike through 63.2K on thin holiday books is more likely an algo stop-hunt than a real breakout — the 15-min structural rejection is the only valid filter. Evidence stack: Fear & Greed 27, BTC.D 55.6%.",
+  "risk_engine": "FROZEN until the two operator-only gates close (Eval 1 disposition + Eval 2 spec confirmation). If spec confirms Advanced 10k, pre-loaded sizes go live as-is.",
   "governance": {
     "crew": ["operator", "Claude Code / Fable 5 (one seat)", "Gemini", "ASCN", "Notion AI (scribe, full standing)"],
     "signal_watch_seats": ["Gemini", "Claude Code", "ASCN"],
