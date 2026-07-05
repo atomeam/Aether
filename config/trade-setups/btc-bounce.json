@@ -1,0 +1,76 @@
+{
+  "id": "btc-bounce",
+  "name": "BTC Bounce (mean-reversion long)",
+  "version": "1.0.0",
+  "description": "Buy a confirmed bounce off a defined support zone during a Fear sentiment regime. Illustrative levels only; automation MUST re-fetch live data and re-derive levels before acting.",
+  "disclaimer": "Not financial advice. Educational planning template. Crypto is volatile; you can lose your entire position.",
+  "requiresLiveConfirmation": true,
+  "instrument": "BTC/USD",
+  "direction": "long",
+  "type": "mean-reversion",
+  "snapshot": {
+    "capturedAt": "2026-07-05",
+    "btcPriceUsd": 62900,
+    "btc24hChangePct": 0.7,
+    "btc24hSpotVolumeUsd": 17500000000,
+    "btcDominancePct": 55.5,
+    "fearGreedIndex": {
+      "regime": "fear",
+      "observedRange": [22, 36],
+      "note": "Sources disagree; all read Fear. Re-pull live before use."
+    },
+    "sources": [
+      "coinmarketcap.com",
+      "coingecko.com",
+      "coinbase.com",
+      "alternative.me",
+      "cfgi.io"
+    ]
+  },
+  "entryConditions": {
+    "sentiment": { "fearGreedMax": 40, "note": "Only trade while index is in Fear (< 40)." },
+    "priceLocation": "at_or_just_above_support_zone",
+    "trigger": {
+      "type": "bullish_rejection_candle",
+      "timeframes": ["1h", "4h"],
+      "requires": ["long_lower_wick", "volume_spike", "close_inside_zone"],
+      "frontRunning": "forbidden"
+    }
+  },
+  "levels": {
+    "note": "ILLUSTRATIVE — captured 2026-07-05. Re-derive from the live chart before trading.",
+    "supportZoneUsd": [61800, 62200],
+    "entryMidUsd": 62000,
+    "stopLossUsd": 61200,
+    "target1Usd": 63500,
+    "target2Usd": 64200
+  },
+  "riskMetrics": {
+    "stopDistanceUsd": 800,
+    "riskPctFromMidZone": 1.29,
+    "riskPctFromZoneTop": 1.61,
+    "rewardRiskToTarget1": 1.88,
+    "rewardRiskToTarget2": 2.75
+  },
+  "riskManagement": {
+    "riskPerTradePctOfEquity": { "min": 0.5, "max": 1.0 },
+    "maxLeverage": 2,
+    "maxLeverageAllowedByExchange": 5,
+    "positionSizeFormula": "riskBudgetUsd / stopDistanceUsd",
+    "dailyLossGuardrailPct": 3,
+    "stopTradingAfterConsecutiveStopOuts": 2,
+    "closeBeforeOvernightIfProhibited": true
+  },
+  "exit": {
+    "hardStop": "candle_close_below_stopLossUsd",
+    "scaleOutAtTarget1": true,
+    "trailRemainderToTarget2": true,
+    "timeStop": "stand_aside_if_no_clean_rejection_candle_in_session",
+    "averagingDown": "forbidden"
+  },
+  "notes": [
+    "Thin liquidity raises stop-hunt/whipsaw risk; keep the stop below round numbers and size small.",
+    "Risk-off correlation regime: a BTC long captures a broad-market bounce with less single-alt risk.",
+    "Avoid ETH-specific and meme-coin longs for this setup."
+  ]
+}
