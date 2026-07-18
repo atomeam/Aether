@@ -22,6 +22,7 @@ Consistent JSON shapes and exit-code semantics for all Aether CLI adapters.
 exit 0: start/pause/resume/stop completed
 exit 1: missing tmux session, invalid config
 exit 2: thyme binary returned non-zero
+exit 4: session not found (status, stop when not running)
 ```
 
 **Outputs:**
@@ -69,14 +70,14 @@ exit 2: jq/fx parse error on the input
 exit 0: command succeeded
 exit 1: missing args, invalid UUID format
 exit 2: task export or task add failed internally
-exit 4: UUID not found in task database
+exit 4: UUID not found in task database (get, done only)
 ```
 
 **Outputs:**
 - `list [filter]` → `[{ uuid, description, status, entry, end, tags, project, priority, due, waiting, modify, start }]`
-- `get <uuid>` → `{ uuid, description, status, entry, end, tags, project, priority, due, waiting, modify, start }` or `{ "error": "not found", "uuid": "..." }`
+- `get <uuid>` → `{ uuid, description, status, ... }` (exit 0) or `{ "error": "not found", "uuid": "..." }` (exit 4)
 - `create <desc> [tags]` → `{ id, description, entry, modified, status, uuid }`
-- `done <uuid>` → `{ "uuid": "...", "id": 1, "status": "completed", "action": "done" }` or `{ "error": "not found", "uuid": "..." }`
+- `done <uuid>` → `{ "uuid": "...", "id": 1, "status": "completed", "action": "done" }` (exit 0) or `{ "error": "not found", "uuid": "..." }` (exit 4)
 
 **Notes:**
 - Filters (`status:pending`, `project:NAME`, `+tag`) are applied via jq after full export (task 2.6.2 expression bug)
