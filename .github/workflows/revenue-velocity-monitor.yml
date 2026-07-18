@@ -10,12 +10,11 @@ on:
         description: 'Revenue threshold in cents (default 50000 = $500)'
         required: false
         default: '50000'
+  push:
+    branches: [main]
 
 permissions:
   contents: read
-
-# Skip on push events - only run on schedule or manual dispatch
-if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
 env:
   REVENUE_THRESHOLD: ${{ inputs.threshold || '50000' }}
@@ -24,8 +23,10 @@ jobs:
   monitor:
     name: Check Stripe revenue and attribute to milestones
     runs-on: ubuntu-latest
-    # Only run if Stripe key is configured
-    if: ${{ secrets.STRIPE_SECRET_KEY != '' }}
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 

@@ -88,6 +88,13 @@ export const ComponentActionSchema = z.union([
     toolName: z.string(),
     toolArgs: z.record(z.unknown()),
   }),
+  // CLI skill invocations (adapter-backed tools)
+  z.object({
+    action: z.literal('CLI_SKILL_CALL'),
+    skillName: z.string(),
+    command: z.string(),
+    args: z.record(z.unknown()),
+  }),
 ]);
 
 export type ComponentAction = z.infer<typeof ComponentActionSchema>;

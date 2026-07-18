@@ -76,8 +76,16 @@ export function curateActions(actions: unknown): CuratorVerdict {
       if (action.plan.type && !ALLOWED_COMPONENT_TYPES.has(action.plan.type)) {
         rejectedActionIds.push(action.targetId);
       }
+    } else if (action.action === 'CLI_SKILL_CALL') {
+      // CLI skill validation: block wuzz against production targets
+      if (action.skillName === 'wuzz' && action.command === 'launch') {
+        const url = action.args?.url as string | undefined;
+        if (url && isProductionUrl(url)) {
+          rejectedActionIds.push(`cli:${action.skillName}:${action.command}`);
+        }
+      }
     }
-    // REMOVE is allowed
+    // REMOVE, MCP_TOOL_CALL are allowed
   }
 
   if (rejectedActionIds.length > 0) {
@@ -231,4 +239,17 @@ export function getCuratorStatus(): {
     caps: DEFAULT_CAPS,
     revert: getRevertStatus(),
   };
+}
+
+/**
+ * Check if a URL points to a production target (blocks wuzz)
+ */
+function isProductionUrl(url: string): boolean {
+  const productionPatterns = [
+    /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i,
+    /^https?:\/\/.*\.(local|internal|dev|test|staging)$/i,
+    /^https?:\/\/localhost/i,
+  ];
+  const isLocal = productionPatterns.some(p => p.test(url));
+  return !isLocal;
 }

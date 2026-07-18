@@ -3,17 +3,20 @@ name: GitHub Watchtower
 on:
   schedule:
     - cron: '0 * * * *' # Every hour
-  workflow_dispatch: {}
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
   pull-requests: read
 
-# Skip on push events - only run on schedule or manual dispatch
-if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-
 jobs:
   watch:
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     name: Monitor repo activity and open PRs
     runs-on: ubuntu-latest
     steps:
