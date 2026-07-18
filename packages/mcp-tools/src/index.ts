@@ -10,6 +10,10 @@ export interface Tool {
   execute: (args: Record<string, unknown>) => Promise<unknown>;
 }
 
+// Re-export CLI skill types
+export { CLISkill, CliExitCode, CliSkillResult, executeCliSkill, interpretExitCode } from './cli-skill';
+export { cliSkills, thymeSkill, wuzzSkill, fxSkill, taskwarriorSkill } from './cli-adapters';
+
 // File read tool
 const fileReadTool: Tool = {
   name: 'file_read',
@@ -295,3 +299,10 @@ const listChaosScenariosTool: Tool = {
 // Add to registry
 toolRegistry.chaos_inject = chaosInjectTool;
 toolRegistry.list_chaos_scenarios = listChaosScenariosTool;
+
+// --- CLI Skills (adapter-backed tools) ---
+import { cliSkills } from './cli-adapters';
+
+for (const skill of cliSkills) {
+  toolRegistry[skill.name] = skill;
+}

@@ -3,19 +3,21 @@ name: Profit Cockpit
 on:
   schedule:
     - cron: '40 * * * *' # Every hour at :40
-  workflow_dispatch: {}
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
-
-# Skip on push events - only run on schedule or manual dispatch
-if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
 jobs:
   profit:
     name: Refresh profit metrics
     runs-on: ubuntu-latest
-    if: ${{ secrets.STRIPE_SECRET_KEY != '' }}
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - name: Fetch Stripe revenue (last 24h)
         id: revenue

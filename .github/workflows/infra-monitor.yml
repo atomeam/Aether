@@ -3,13 +3,16 @@ name: Infrastructure Monitor
 on:
   schedule:
     - cron: '0 * * * *' # Every hour
-  workflow_dispatch: {}
-
-# Skip on push events - only run on schedule or manual dispatch
-if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   monitor:
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     name: Check Workers Builds and deployment status
     runs-on: ubuntu-latest
     steps:
