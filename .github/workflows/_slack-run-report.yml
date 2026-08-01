@@ -42,24 +42,33 @@ jobs:
     if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
     steps:
       - name: Post RUN header
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          TASK_ID: ${{ inputs.task_id }}
+          TYPE: ${{ inputs.type }}
+          ACTOR: ${{ inputs.actor }}
+          STATE: ${{ inputs.state }}
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+          CI_RUN_URL: ${{ inputs.ci_run_url }}
+          RESULT: ${{ inputs.result }}
         run: |
           STARTED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           ENDED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          RUN_HEADER="RUN: ${{ inputs.run_id }}
-          TASK: ${{ inputs.task_id }}
-          TYPE: ${{ inputs.type }}
-          ACTOR: ${{ inputs.actor }}
-          STATE: ${{ inputs.state }}
+          RUN_HEADER="RUN: ${RUN_ID}
+          TASK: ${TASK_ID}
+          TYPE: ${TYPE}
+          ACTOR: ${ACTOR}
+          STATE: ${STATE}
           STARTED: ${STARTED}
           ENDED: ${ENDED}
-          COMMIT: ${{ inputs.commit_sha }}
-          CI: ${{ inputs.ci_run_url }}
+          COMMIT: ${COMMIT_SHA}
+          CI: ${CI_RUN_URL}
           EVIDENCE: See CI run"
 
           RESULT_LINE=""
-          if [ -n "${{ inputs.result }}" ]; then
-            RESULT_LINE="RESULT (${{ inputs.run_id }}): ${{ inputs.result }}"
+          if [ -n "${RESULT}" ]; then
+            RESULT_LINE="RESULT (${RUN_ID}): ${RESULT}"
           fi
 
           # Escape newlines for JSON
