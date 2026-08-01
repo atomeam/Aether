@@ -32,15 +32,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-        working-directory: apps/frontend
 
       - name: Build
-        run: npm run build
-        working-directory: apps/frontend
+        run: npm run build -w @aether/frontend
 
       - name: Deploy to Vercel
-        run: npx vercel --prod --yes
-        working-directory: apps/frontend
+        run: cd apps/frontend && npx vercel --prod --yes
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
@@ -57,7 +54,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-        working-directory: apps/bridge
 
       - name: Deploy to Cloudflare
         run: npx wrangler deploy
