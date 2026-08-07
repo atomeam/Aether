@@ -1,0 +1,97 @@
+{
+  "mission": "KRAKEN-001",
+  "phase": "EVAL-2",
+  "updated_at": "2026-07-04T21:30:00Z",
+  "updated_by": "Claude Code (risk engine seat)",
+  "consensus": "FLAT — silence = WAIT",
+  "comms_protocol": {
+    "rule": "SILENCE = WAIT (adopted 2026-07-04 ~20:43 UTC). No seat says 'wait' again. A seat speaks only on: (1) trigger print — contract sentence true on a closed 15-min candle or watchlist setup completes; (2) stand-down trip — F&G <20, whale >5K BTC, ETH/SOL -10%, DXY >106, BTC <$58K daily; (3) defect closure/regression; (4) config change (post-trade review, corridor recalibration).",
+    "downtime_assignments": { "claude_code": "defect #1 (URL gate) + #9 (cost model)", "devin": "#3-6 build lane", "ascn": "#7 Nansen", "scribe": "four 30-second items" }
+  },
+  "crew_url_gate": {
+    "status": "CANDIDATE VERIFIED BY RISK ENGINE — awaiting independent second fetch per standing gate",
+    "url": "https://raw.githubusercontent.com/atomeam/Aether/claude/eval-2-btc-setup-u1ytd8/apps/frontend/public/mission-state.json",
+    "evidence": "Plain unauthenticated GET returned HTTP 200 with current state (21:15 UTC payload) at ~21:25 UTC. Root cause of the original 404 removed: repo visibility is now PUBLIC.",
+    "caveats": "URL is branch-pinned; after PR #159 merges, switch to the main-branch raw URL. Vercel production URL untestable from this seat (proxy blocks *.vercel.app); preview URLs 403 plain GETs due to Vercel deployment protection."
+  },
+  "cost_model": {
+    "assumptions": { "taker_fee_pct_per_side": 0.05, "maker_fee_pct_per_side": 0.02, "holiday_slippage_pct_per_side": 0.15, "normal_slippage_pct_per_side": 0.10, "funding_pct_per_8h": 0.01 },
+    "round_trip_cost_pct": { "holiday_taker": 0.4, "normal_taker": 0.3, "note": "2x(taker fee + slippage); add funding if held past an 8h mark" },
+    "per_1k_notional_usd": { "holiday": 4.0, "normal": 3.0 },
+    "derived_rules": [
+      "Break-even adverse-move budget is ~0.40% of notional today — any setup whose expected move does not clear at least 2x round-trip cost (~0.8%) is fee-dominated and does not qualify.",
+      "Trade 1 forensics: -$14.46 on $948 notional with only ~0.03% favorable-to-flat price drift means the loss was dominated by spread+fees+slippage (~$4 costs + adverse micro-move) — exactly why sub-1% target setups fail the gate.",
+      "All-in loss math must always include round_trip_cost: risk = notional x (stop_distance_pct + round_trip_cost_pct) / 100."
+    ]
+  },
+  "rotation_watch_rulings": {
+    "data_freshness": "CONFIRMED STALE — relay's F&G 27 / BTC.D 55.7% is superseded. Scribe's 4:35 PM pull (F&G 21, BTC.D ~57.9%, BTC ~61.9-62.4K) is corroborated by risk-engine spot-check (Extreme Fear ~19-21 range). All rotation logic must re-key off a live chart-eyes pull before anything arms.",
+    "fg_standdown_proximity": "F&G is 1-2 points above the <20 watch line and printed 19 yesterday. Treat the stand-down as EFFECTIVELY AT TRIGGER: if F&G < 20 at entry time, no new risk regardless of setup quality.",
+    "eth_long_rr": "REJECTED AS SPECCED. Entry 1800-1820 / stop 1720 / target 1920-1950 = ~1:1.0 worst-fill, ~1:1.4 midpoint — NOT 1:2.5 as advertised. Scribe's math verified correct. A top-ranked pick at ~1:1 does not qualify; re-spec with tighter stop or better entry before re-submission.",
+    "offlist_symbols": "AVAX / TAO / HYPE NOT CLEARED. They are off the approved shortlist (BTC/ETH/SOL/XRP) and this seat cannot fetch live spread/depth data (network policy) to clear them against the thin/jumpy/spread-sensitive criterion. Blocked until the operator or a data-capable seat produces order-book evidence. R:R math itself checks out (AVAX ~1:2.9, TAO ~1:2.3, HYPE ok) but R:R does not override the liquidity gate.",
+    "reference_sizing": "Scribe pre-calcs (ETH ~$950, AVAX ~$350, TAO ~$450, HYPE ~$670 at $50 cap + 0.30% round-trip) are arithmetically consistent — logged as REFERENCE ONLY, not armed.",
+    "binding_constraints": "1 position max. 1 loss already booked — next loss ends the day. New-entry authority still FROZEN pending Eval 1 disposition + Eval 2 spec confirmation. Four armed setups still means at most ONE trade, and only after gates close."
+  },
+  "position": null,
+  "account_status": {
+    "balance": 9985.54,
+    "trade_1_result": -14.46,
+    "daily_buffer_remaining": 85.54,
+    "lifetime_buffer_remaining": 285.54,
+    "mdd_floor_distance": 285.54,
+    "losses_today": 1,
+    "loss_rule": "1 of 2 — ONE more losing trade ends the day"
+  },
+  "trade_log": [
+    {
+      "id": "EVAL2-T1",
+      "date": "2026-07-04",
+      "direction": "short",
+      "asset": "BTC",
+      "leverage": 5,
+      "fill": 63177.2,
+      "notional_usd": 948.11,
+      "exit": "manual flatten ~20:15 UTC at ~63,157 mid",
+      "result_usd": -14.46,
+      "notes": "Entered without mandatory 15-min confirmation while risk engine was frozen (see protocol_deviation_log). Sized small; loss well inside $50 cap. Closed by operator when price action went flat — capital preserved."
+    }
+  ],
+  "triggers_rearmed": {
+    "short": "15-min candle prints a clean close below 63,000 — then rejection setup per pre-loaded plan",
+    "long": "liquidity sweep below 61,800 + reclaim of 62,000, retest holds"
+  },
+  "protocol_deviation_log": "2026-07-04 ~19:45 UTC: short entered WITHOUT the mandatory 15-min structural confirmation (July 4 rule) and while the risk engine was FROZEN pending the Eval 1 disposition and Eval 2 spec gates. Logged, not erased. Outcome: closed at -$14.46. Contained loss does not validate the process breach — no precedent.",
+  "risk_engine": "FLAT. New-entry authority remains FROZEN until the two operator-only gates close (Eval 1 disposition + Eval 2 spec confirmation). Additionally: 1 loss on the books today — next loss ends the trading day per the 2-loss rule.",
+  "governance": {
+    "crew": ["operator", "Claude Code / Fable 5 (one seat)", "Gemini", "ASCN", "Notion AI (scribe, full standing)"],
+    "signal_watch_seats": ["Gemini", "Claude Code", "ASCN"],
+    "authority": "Risk numbers from Claude Code engine are non-overridable; signal-watch shared across all three seats; operator final say."
+  },
+  "account": {
+    "plan": "Advanced 10k (ASSUMED for Eval 2 — pending operator confirmation)",
+    "target_pct": 9,
+    "mdl_pct": 3,
+    "mdd_pct": 3,
+    "mdd_floor": 9700,
+    "caps": { "per_trade": 50, "daily": 100, "lifetime": 300 },
+    "daily_reset_utc": "00:30"
+  },
+  "blocking_items": [
+    "Eval 1 disposition unlogged (breached / expired / abandoned / still running) — operator input required",
+    "Eval 2 plan specs unconfirmed — if not Advanced 10k, ALL sizing below is invalid until re-derived",
+    "Fresh chart verdicts needed from Gemini and ASCN — trigger levels are ~10h old and price is at the short boundary"
+  ],
+  "risk_gate": "NO RISK ON until all blocking_items clear. A boundary touch during an unconfirmed-spec, unlogged-disposition window is exactly the revenge-trade trap the mission flags.",
+  "triggers": {
+    "long": { "entry": 62000, "sweep_below": 61800, "invalidation": 61400, "targets": [63500, 64200], "max_notional": 4100 },
+    "short": { "entry_rejection": 63200, "close_back_below": 63000, "invalidation": 64500, "targets": [61500, 60800], "max_notional": 2160, "note": "needs visibly cleaner structure than the long, or tighten invalidation to ~63800 to size evenly" }
+  },
+  "sizing": { "risk": 50, "slippage_pct": 0.15, "probe": 20, "add": 30, "add_rule": "add only after 15-min retest confirms; re-size add against live unrealized loss if probe is red" },
+  "timeframes": { "trigger": "5m", "filter": "15m", "filter_mandatory": true, "reason": "July 4 thin holiday books" },
+  "invalidations_hard": ["BTC daily close < 58000", "whale deposit > 10000 BTC/24h", "ETH/SOL dump > 10%"],
+  "invalidations_watch": ["whale deposit > 5000 BTC during setup window", "Fear & Greed < 20"],
+  "data_gaps": [
+    "Exchange OHLC APIs (Kraken/Binance/Coinbase) blocked by session network policy — Claude Code seat cannot independently verify 5-min/15-min candle structure this round; price read is from public tickers only",
+    "Nansen API 401 on ASCN side — real-time whale feed dark"
+  ]
+}
