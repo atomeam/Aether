@@ -2,7 +2,7 @@
  * @aether/payments - Invoice Service Tests
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { InvoiceService } from '../invoices/index.js';
 
 describe('InvoiceService', () => {
@@ -154,7 +154,7 @@ describe('InvoiceService', () => {
         description: 'Product B',
         quantity: 1,
         unitPrice: 50,
-        amount: 50,
+        
       });
 
       expect(updatedInvoice.lineItems).toHaveLength(2);
@@ -174,7 +174,7 @@ describe('InvoiceService', () => {
         description: 'Product A',
         quantity: 2,
         unitPrice: 25,
-        amount: 50,
+        
       });
 
       expect(updatedInvoice.subtotal).toBe(50);
@@ -200,7 +200,7 @@ describe('InvoiceService', () => {
             description: 'Product B',
             quantity: 1,
             unitPrice: 50,
-            amount: 50,
+            
           },
         ],
       });
@@ -411,7 +411,7 @@ describe('InvoiceService', () => {
       const invoice = await invoiceService.generateOneTimeInvoice({
         customerId: 'cus_123',
         description: 'One-time purchase',
-        amount: 50,
+        
         currency: 'USD',
         taxRate: 0.1,
       });

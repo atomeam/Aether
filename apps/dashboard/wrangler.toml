@@ -1,15 +1,1 @@
-name = "aether-dashboard-worker"
-main = "src/index.ts"
-compatibility_date = "2026-06-20"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "aether-dashboard-db"
-database_id = "YOUR_DATABASE_ID_HERE"
-
-[triggers]
-crons = ["*/5 * * * *"]
-
-[vars]
-CF_ACCOUNT_ID = "YOUR_ACCOUNT_ID_HERE"
-# CF_API_TOKEN set via: wrangler secret put CF_API_TOKEN
+name = "aether-dashboard-worker"\nmain = "src/index.ts"\ncompatibility_date = "2026-06-20"\n\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "aether-dashboard-db"\ndatabase_id = "b85e86d3-a191-462b-8347-c23149fa8a2b"\n\n[triggers]\ncrons = ["*/5 * * * *"]\n\n[vars]\nCF_ACCOUNT_ID = "YOUR_ACCOUNT_ID_HERE"\n# CF_API_TOKEN set via: wrangler secret put CF_API_TOKEN

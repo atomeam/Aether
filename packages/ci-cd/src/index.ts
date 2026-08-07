@@ -342,6 +342,8 @@ export async function executeBuild(config: BuildConfig): Promise<BuildResult> {
   try {
     // In a real implementation, this would execute the build command
     // For now, we simulate a successful build
+    // Use await to ensure the async operation completes before calculating duration
+    await new Promise(resolve => setTimeout(resolve, 1));
     const duration = Date.now() - startTime;
 
     return {

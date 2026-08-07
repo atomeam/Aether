@@ -369,7 +369,7 @@ describe('HealthCheckManager', () => {
     manager = new HealthCheckManager();
   });
 
-  it('registers a health check', () => {
+  it('registers a health check', async () => {
     const config: HealthCheckConfig = {
       name: 'test-check',
       check: {
@@ -398,7 +398,7 @@ describe('HealthCheckManager', () => {
     expect(result.status).toBe('healthy');
   });
 
-  it('unregisters a health check', () => {
+  it('unregisters a health check', async () => {
     manager.register({
       name: 'test-check',
       check: { type: 'http', url: 'https://api.example.com/health' },
